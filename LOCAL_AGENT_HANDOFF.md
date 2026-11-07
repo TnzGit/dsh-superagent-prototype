@@ -10,7 +10,7 @@
 
 **远程已提交：** 本地优先模型队列和路由判定原语、路径 allowlist 与单项目写互斥、微信 HMAC 验证和入站 HTTP 服务、DSH SourceKind 插件（默认关闭）、OpenClaw `before_dispatch` 入站插件、Node 测试与 CI、可关闭 GitHub Source 的启动分支以及无凭据 `gh` shim。每一项请以当前 PR/CI 代码为准，不要假设它们已经进入主分支。
 
-**尚未打通：** OpenClaw → 腾讯微信的 DSH **出站回复接收器及实际发送**；真实 OpenClaw/Gateway 版本下的身份字段校验；多项目注册表与真正的 Worker/Ticket 绑定；非 Git 项目的快照/应用/回滚；模型队列与 DSH 的实际每次 LLM 请求钩子集成；云端路由 UI 和成本审计。这些是远程侧继续开发的项目，不自动委托本地 Agent。
+**尚未实机验收：** OpenClaw → 腾讯微信的 DSH **签名出站接收器已提交模拟实现，但原生发送需要真实 Gateway + 腾讯账号验证**；真实 OpenClaw/Gateway 版本下的身份字段校验；多项目注册表与真正的 Worker/Ticket 绑定；非 Git 项目的快照/应用/回滚；模型队列与 DSH 的实际每次 LLM 请求钩子集成；云端路由 UI 和成本审计。这些是远程侧继续开发的项目，不自动委托本地 Agent。
 
 **绝对禁止**：未验证以上能力便发布为生产版、填写假测试结果、暴露端口到公网、复制口令到聊天/GitHub、擅自 push、部署、合并、改生产项目或运行破坏性命令。
 
@@ -78,7 +78,7 @@ node --experimental-strip-types scripts/run-local-model-proxy.mjs
 
 先在隔离测试环境安装本仓库的 `integrations/openclaw-weixin-dsh` 插件，并用 `openclaw plugins inspect dsh-weixin-bridge --runtime --json` 核对注册的 hook；**不要在未完成出站适配与权限审核前把它作为主微信入口上线**。
 
-桥接当前只注册签名入站 HTTP `/v1/weixin/inbound`，绑定 `127.0.0.1`；涉及 `DSH_WEIXIN_BRIDGE_SECRET`、`DSH_WEIXIN_BRIDGE_PORT`、`DSH_WEIXIN_BRIDGE_URL`、`DSH_WEIXIN_BRIDGE_SEND_URL` 的设置都使用本地安全存储。OpenClaw → DSH 端已模拟验证；DSH → OpenClaw 真正发送回复**尚未实现**，不能声称双向消息成功。
+桥接当前只注册签名入站 HTTP `/v1/weixin/inbound`，绑定 `127.0.0.1`；涉及 `DSH_WEIXIN_BRIDGE_SECRET`、`DSH_WEIXIN_BRIDGE_PORT`、`DSH_WEIXIN_BRIDGE_URL`、`DSH_WEIXIN_BRIDGE_SEND_URL` 的设置都使用本地安全存储。OpenClaw → DSH 端已模拟验证；DSH → OpenClaw 的 **默认关闭** HTTP 出站接收器现已提交到 `integrations/openclaw-weixin-dsh/outbound.mjs`；会通过 Gateway 进程内 Tencent channel adapter 发送而非直接请求腾讯私有 iLink API。其 `DSH_WEIXIN_BRIDGE_OUTBOUND_ENABLED=1` 只能在获得用户明确授权、真实 Gateway 与白名单测试就绪后打开。实现已覆盖模拟身份允许名单、HMAC、持久投递记录、未知发送结果阻止自动重复发送；**真实两端联调仍未通过**。
 
 对接本地前，探查 `openclaw message send --help`、官方插件 outbound 适配器和 Gateway 已有 RPC；提供版本/类型签名与候选调用方式给远程 ChatGPT，由远程侧实现后再做真实发送验收。禁止尝试未经确认的私有 iLink 协议写接口或模拟第三方身份。
 
@@ -88,6 +88,12 @@ node --experimental-strip-types scripts/run-local-model-proxy.mjs
 - OpenClaw 入站插件先前错误读取 `event.channelId ?? ctx.channel`；现在先检查 `event.channel`，再使用 `ctx.channelId` 兼容降级。
 - SDK 静态验证不代表真实微信聊天可以投递回复。腾讯插件 `sendText` 还依赖 **`contextToken`**，不能直接构造假 iLink 消息；出站桥接必须复用 Gateway 进程内的正式 Channel adapter 或可信 Gateway RPC。
 - 目前 Gateway 未启动也没有得到授权，**不要重装或覆盖残留的 OpenClaw 配置，更不要替用户扫码**。需要用户决定复用原 Gateway 还是启用隔离的新 Gateway，才能继续实机联调。
+
+### Outbound prototype: 实机验收范围（必须先授权）
+
+新的出站接口是 `/plugins/dsh-weixin-bridge/outbound`，绑定到**同一 OpenClaw Gateway 进程**。使用现有 `api.runtime.channel.outbound.loadAdapter('openclaw-weixin')` / Tencent `sendText`，`contextToken` 保持由腾讯插件本身检索。不要替换成另一个 CLI 进程中的内存 Map，也不要手动复制或持久化 context token。
+
+真实 Gateway 起来后，仅在测试微信号与私聊双方均授权的隔离环境中，逐项验证：inbound hook 有效、DSH 允许名单、原生回复、超过 3500 codepoints 的分块、同 ID 重试不重发、Gateway 重启后的持久记录、Native send 结果未知时暂停并人工处理。**不能因为 CI mock 成功就开启生产端口。**
 
 ## 4. 本地项目环境（仅清查和沙箱验证）
 
