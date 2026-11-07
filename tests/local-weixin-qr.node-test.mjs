@@ -4,7 +4,6 @@ import { mkdtempSync, readFileSync, statSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { getCode, checkCode, storeConfirmed, startPairing } from '../scripts/weixin-native-pair.mjs'
-import { readNativeCredentials } from '../src/sources/weixin-native.ts'
 const fixture=async work=>{
   const folder=mkdtempSync(join(tmpdir(),'dsh-qr-test-'))
   try {await work(join(folder,'credentials.json'))}
@@ -30,7 +29,7 @@ test('confirmed state stores credentials owner-only, no token in public response
   const result={status:'confirmed',bot_token:'this-is-only-a-test-token',ilink_bot_id:'test-bot',baseurl:'https://ilinkai.weixin.qq.com'}
   storeConfirmed(file,result)
   assert.equal(statSync(file).mode&0o077,0)
-  assert.equal(readNativeCredentials(file).token,'this-is-only-a-test-token')
+  assert.equal(JSON.parse(readFileSync(file,'utf8')).token,'this-is-only-a-test-token')
   assert.throws(()=>storeConfirmed(file,result),/overwrite/)
   assert.match(readFileSync(file,'utf8'),/test-bot/)
 }))
@@ -42,13 +41,13 @@ test('mocked QR pairing flow requires no real login and delivers correct states'
   ]
   await startPairing(file,{fetcher:fakeSequence(steps),render:text=>emitted.push(text),sleep:async()=>{},clock:()=>Date.now()})
   assert.deepEqual(emitted,['fake-code'])
-  assert.equal(readNativeCredentials(file).botId,'test-bot')
+  assert.equal(JSON.parse(readFileSync(file,'utf8')).botId,'test-bot')
 }))
 test('blocked/unconfirmed binding never stores credentials',()=>fixture(async file=>{
   await assert.rejects(startPairing(file,{fetcher:fakeSequence([
     {qrcode:'qr-a',qrcode_img_content:'fake-code'}, {status:'binded_redirect'}
   ]),render:()=>{},sleep:async()=>{}}),/bound/)
-  assert.throws(()=>readNativeCredentials(file),/ENOENT/)
+  assert.throws(()=>readFileSync(file,'utf8'),/ENOENT/)
 }))
 function fakeSequence(seq){
   let n=0
