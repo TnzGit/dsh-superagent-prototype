@@ -19,7 +19,7 @@ PR：https://github.com/TnzGit/dsh-superagent-prototype/pull/1
 
 ### 重要状态：不要误把旧代码当作新实现
 
-当前 PR 以前提交过 `integrations/openclaw-weixin-dsh/*`、`src/sources/openclaw-bridge.ts` 等 **OpenClaw 依赖的实验原型**。这些不符合现在的要求，**不得启动、测试真实账号或部署**。新的 DSH 原生 Weixin Source 必须由远程 ChatGPT 实现或完成适配、提交测试通过后才能进入真实配对阶段。若还未提供，第一阶段可以完成所有环境准备，但本轮 QR 配对状态应写为 `BLOCKED — waiting for remote native Source`，不要拿旧 OpenClaw 原型硬凑。
+本轮已经**删除** `integrations/openclaw-weixin-dsh/*`、`src/sources/openclaw-bridge.ts` 和旧桥接测试，不再构建 OpenClaw 插件。远程已提交 `src/sources/weixin-native.ts`、`src/local-first/weixin-native-protocol.ts`、`scripts/weixin-native-pair.mjs` 以及协议/QR 离线测试。原生 Source 默认关闭，离线构建成功和真实微信账号接通是两个不同阶段；必须由本地 Agent 先验证兼容性和二维码工具依赖，**不要拿 mock 测试当作扫码成功**。
 
 ## 阶段 A — 无人值守准备（现在开始；不扫码）
 
@@ -43,10 +43,10 @@ pnpm --version
 ```bash
 pnpm install --frozen-lockfile
 pnpm check
-node --experimental-strip-types --test tests/local-projects.node-test.mjs tests/local-model-queue.node-test.mjs scripts/probe-local-llm.node-test.mjs tests/local-openai-queue-proxy.node-test.mjs
+node --experimental-strip-types --test tests/local-projects.node-test.mjs tests/local-model-queue.node-test.mjs scripts/probe-local-llm.node-test.mjs tests/local-openai-queue-proxy.node-test.mjs tests/local-weixin-native.node-test.mjs tests/local-weixin-qr.node-test.mjs
 ```
 
-只在仓库已包含**真正的 DSH-native Weixin**实现时运行其原生协议与 Source 测试；应覆盖二维码各状态（mock）、登录完成后的凭据存储权限、长轮询游标、重复消息、允许名单、`context_token` 回复及过期 token。全部使用模拟服务器，不要在本阶段向真实微信服务调用登录或发送请求。
+新增原生协议与 Source 测试覆盖二维码状态（mock）、登录凭据权限、长轮询游标、重复消息 ID、允许名单、`context_token` 回复与 token 过期错误。全部使用模拟服务器，本阶段**不得向真实微信服务申请二维码或发送消息**。如缺少 `qrencode`，检查能否在隔离环境中安装本地二维码工具，勿调用第三方外部 QR 渲染服务。
 
 记录退出码与最小失败日志。过去的 macOS `/var` vs `/private/var` 差异已由远程测试夹具修复，确认回归即可。
 
@@ -72,14 +72,14 @@ node --experimental-strip-types --test tests/local-projects.node-test.mjs tests/
 
 对**远程已提交的原生 iLink Source/QR 组件**执行离线检查：
 
-1. 运行时是否完全不导入 `openclaw`、Gateway 或旧 bridge。
+1. 运行时是否完全不导入 `openclaw`、Gateway 或旧 bridge；确认 DSH bundle 的 `weixin-watch` 默认 `disabled: true`。
 2. 扫码流程是否可以在本机安全展示 QR：`wait`、`scaned`、`confirmed`、`expired`、`need_verifycode`、`scaned_but_redirect` 等状态可由 mock 验证。
 3. 登录前**没有读取或复用**旧 OpenClaw 账号、token、credentials 或 Chat 内容；扫码后只在新 DSH staging profile 的安全凭据文件/安全存储中保存 token，权限为用户独占。
 4. 确保 `context_token`、`get_updates_buf` 游标和每条 Trigger ID 的持久性策略明确，且断电/重启不会导致无界重复工作或发送。
 5. 确保仅私聊、允许名单、关闭危险操作和云端外发，默认不开启真实轮询。
 6. 检查原有 Clawbot 可能处于旧绑定状态时的错误处理：**只报告状态，不绕过验证或擅自解绑**。
 
-如果新的原生 Source 代码尚未完成，仅做 API/SDK/依赖静态核验、测试和配置预案，明确报告剩余事项给远程 ChatGPT。**不要预先请求二维码或假装准备完成。**
+运行 `node --experimental-strip-types scripts/weixin-native-pair.mjs --check`（**仅检查本地 qrencode 可用性，不触发任何微信网络请求**）。若该工具未安装、DSH Source 构建不通过、版本适配缺失或隔离配置不能准备，报告阻塞给远程 ChatGPT；**不能提前请求二维码或假装准备完成**。
 
 ## 阶段 A 完成后的强制停止点
 
@@ -103,8 +103,8 @@ node --experimental-strip-types --test tests/local-projects.node-test.mjs tests/
 
 ## 阶段 B — 仅收到用户明确扫码同意后开始
 
-1. 启动**仅 DSH 原生** iLink 二维码登录，生成临时 QR，以本机终端/内网页面安全展示给用户；不使用第三方外部 QR 图片服务。用户自行扫码确认，遇到手机验证码由用户输入，local Agent 不替用户确认。
-2. 校验官方返回 `confirmed`、bot token、bot ID、HTTPS API base；将 token 存入 DSH staging 安全存储，不在 CLI 输出、GitHub、日志或聊天中回显。
+1. **用户明确同意扫码后**，先在新建的用户独占（0700）目录选择一个尚不存在的绝对凭据路径，在本机终端运行：`node --experimental-strip-types scripts/weixin-native-pair.mjs --user-approved --output /PRIVATE/OWNER_ONLY_DIR/weixin-credentials.json`。必须本地存在 `qrencode` 来显示二维码；不使用外部 QR 图片服务。用户自行扫码和微信确认，遇到手机验证码由用户亲自输入。不能由 Agent 替用户确认。
+2. 校验官方返回 `confirmed`、bot token、bot ID 与 HTTPS base URL，检查新文件为 0600，目录为 0700。将绝对路径通过环境变量 `DSH_WEIXIN_NATIVE_CREDENTIALS_FILE` 配给**隔离 DSH staging 进程**，不把 token 本身写入环境变量、公开源码、日志或聊天。Source 配置中的 `allowedPeers` 与 DSH Policy 的 `allowed` 必须分别手动登记获准微信发送者后才能接收任务。
 3. 只对用户批准的私人微信测试会话做收消息 → Trigger → Policy → Ticket → Worker（本地单并发 Qwen）→ Outbox → iLink 原生回复的闭环测试。确认 `context_token` 的正确关联。
 4. 回归相同消息 ID 去重、非允许名单拒绝、跨项目路径拒绝、长轮询游标恢复、重启与失联、无自动付费回退、异常发送不盲目重发。
 5. 如果扫码后绑定得到的是新机器人而不是原 Clawbot，不要假称“接管成功”；报告差异并再次询问用户是否接受切换或需要旧端解绑。绝不尝试绕过微信服务端限制。
