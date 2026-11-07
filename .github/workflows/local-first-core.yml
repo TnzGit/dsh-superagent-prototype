@@ -24,6 +24,19 @@ jobs:
       - name: OpenAI queue proxy integration tests (bounded execution)
         run: timeout -k 5s 45s node --experimental-strip-types --test tests/local-openai-queue-proxy.node-test.mjs
 
+  macos-portability:
+    runs-on: macos-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '25'
+      - name: Verify local-first tests against macOS path canonicalization and Node 25
+        run: node --experimental-strip-types --test tests/local-model-queue.node-test.mjs tests/local-projects.node-test.mjs tests/local-weixin-bridge.node-test.mjs tests/local-openclaw-plugin.node-test.mjs scripts/probe-local-llm.node-test.mjs
+      - name: Verify model queue proxy across macOS streams
+        run: node --experimental-strip-types --test tests/local-openai-queue-proxy.node-test.mjs
+
   dsh-typecheck-and-build:
     runs-on: ubuntu-latest
     timeout-minutes: 3
