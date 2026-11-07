@@ -17,8 +17,7 @@
     "./github-watch": "./lib/github-watch.js",
     "./feishu-watch": "./lib/feishu-watch.js",
     "./package.json": "./package.json",
-    "./locale/*.json": "./locale/*.json",
-    "./openclaw-bridge": "./lib/openclaw-bridge.js"
+    "./locale/*.json": "./locale/*.json"
   },
   "files": [
     "lib",
