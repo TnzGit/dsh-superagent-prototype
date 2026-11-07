@@ -1,0 +1,25 @@
+# Example for LiteLLM Gateway. NOT automatically loaded by dsh-superagent.
+# Verify the model ID against /v1/models on your *actual* vLLM/SGLang endpoint.
+# No cloud fallback is configured. Do NOT commit real keys.
+model_list:
+  - model_name: dsh-local-primary
+    litellm_params:
+      model: openai/REPLACE_WITH_ACTUAL_VLLM_MODEL_ID
+      api_base: os.environ/LOCAL_PRIMARY_BASE_URL
+      api_key: os.environ/LOCAL_PRIMARY_API_KEY
+      timeout: 300
+  # Enable only after validating real capability, stability, memory and capacity:
+  # - model_name: dsh-local-secondary
+  #   litellm_params:
+  #     model: openai/REPLACE_WITH_ACTUAL_SECONDARY_MODEL_ID
+  #     api_base: os.environ/LOCAL_SECONDARY_BASE_URL
+  #     api_key: os.environ/LOCAL_SECONDARY_API_KEY
+  #     timeout: 300
+
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+
+# A model gateway does not by itself serialize *all* DSH assessment and worker
+# calls into the single-concurrency primary endpoint. Add and validate the
+# per-endpoint request scheduler before running multiple concurrent workers.
+# Cloud providers deliberately absent: cost and project-data egress require opt-in.
