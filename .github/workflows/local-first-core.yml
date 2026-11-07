@@ -1,8 +1,6 @@
 name: Local-first core tests
 on:
   pull_request:
-  push:
-    branches: [feat/local-first-wechat-foundation]
   workflow_dispatch:
 permissions:
   contents: read
