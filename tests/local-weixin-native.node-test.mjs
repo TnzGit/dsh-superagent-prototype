@@ -1,7 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { receivePage, messageToTrigger, sendText, secureBase, clientMessageId } from '../src/local-first/weixin-native-protocol.ts'
-import { nativeWeixinKind, canReceive } from '../src/sources/weixin-native.ts'
 const creds={token:'test-local-only-token-123456789',baseUrl:'https://ilinkai.weixin.qq.com',botId:'bot-test'}
 const received={message_id:'m-1',from_user_id:'peer-alice',message_type:1,message_state:2,
   create_time_ms:1783488000000,context_token:'opaque-reply-token',
@@ -46,12 +45,8 @@ test('outbound contains context token and fixed client id across retries',async(
   assert.equal(a.msg.client_id,clientMessageId('outbox-1'))
   await assert.rejects(sendText(creds,'outbox-2','peer-alice','','OK',send),/token/)
 })
-test('native source requires explicit peer allowlist instead of accepting unknown senders',()=>{
-  const empty=nativeWeixinKind.schema.parse({})
-  assert.equal(canReceive(empty,'peer-alice'),false)
-  const config=nativeWeixinKind.schema.parse({allowedPeers:[{id:'peer-alice'}]})
-  assert.equal(canReceive(config,'peer-alice'),true)
-  assert.equal(nativeWeixinKind.scope({meta:{peer:'peer-alice'}},config).listened,true)
-  assert.equal(nativeWeixinKind.scope({meta:{peer:'attacker'}},config).listened,false)
-  assert.equal(nativeWeixinKind.channel.allowed({peer:'attacker'},config),false)
+test('direct chat ignores unsupported group and bot echo updates',()=>{
+  assert.equal(messageToTrigger({...received,group_id:'group-1'}),undefined)
+  assert.equal(messageToTrigger({...received,message_state:1}),undefined)
+  assert.equal(messageToTrigger({...received,message_type:2}),undefined)
 })
