@@ -1,7 +1,7 @@
 /** Direct Weixin iLink bot protocol. No OpenClaw runtime or plugin SDK. */
 import { createHash, randomBytes } from 'node:crypto'
 import type { Trigger } from '../core/index.ts'
-import { key } from '../core/index.ts'
+import { key } from '../core/ids.ts'
 
 export const WEIXIN_SOURCE = 'weixin'
 export const DEFAULT_BASE = 'https://ilinkai.weixin.qq.com'
