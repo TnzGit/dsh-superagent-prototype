@@ -39,13 +39,15 @@ const checkBase = (base: string): string => {
   return url.origin + path
 }
 const read = async (req: IncomingMessage, limit: number): Promise<Buffer> => {
+  // Do not throw from within "for await": that destroys IncomingMessage and may prevent the
+  // server from returning a usable 413 response to an oversized local client.
   const chunks: Buffer[] = []; let bytes = 0
   for await (const chunk of req) {
     const item = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)
     bytes += item.length
-    if (bytes > limit) throw new RangeError('request_too_large')
-    chunks.push(item)
+    if (bytes <= limit) chunks.push(item)
   }
+  if (bytes > limit) throw new RangeError('request_too_large')
   return Buffer.concat(chunks)
 }
 
@@ -73,6 +75,11 @@ export function createOpenAIQueueProxy(config: ProxyOptions) {
     const controller = new AbortController()
     const disconnect = () => { if (!res.writableEnded) controller.abort() }
     req.once('aborted', disconnect); res.once('close', disconnect)
+    if (req.method === 'POST' && Number(req.headers['content-length'] ?? 0) > maxBody) {
+      response(res, 413, 'request_too_large')
+      req.resume()
+      return
+    }
     let body: Buffer | undefined
     try { if (req.method === 'POST') body = await read(req, maxBody) }
     catch (error) { if (!controller.signal.aborted) response(res, error instanceof RangeError ? 413 : 400, 'invalid_body'); return }
