@@ -41,18 +41,20 @@ node --experimental-strip-types --test tests/local-*.node-test.mjs scripts/probe
 
 ## 2. Qwen3.8-Flash-Next 实机探针（只读）
 
-使用真实 OpenAI-compatible 服务 base URL、`/v1/models` 返回的精确 model ID，并在本地安全环境设置 `LOCAL_LLM_API_KEY`（如需要）。禁止把实际 API key、模型原始响应或私有文档发给远程：
+已在 2026-11-08 实测：vLLM 0.29.1rc1.dev402、模型 ID 为 `Qwen3.8-Flash-Next`、上游监听 **8002** 端口。地址来自用户私有 LAN 配置，**不要写入公开仓库**，由本地环境变量注入。只在上游确实需要时才设置 `LOCAL_LLM_API_KEY`。不要使用不通的默认 HTTP 80 端口。禁止把实际 API key、模型原始响应或私有文档发给远程：
 
 ```bash
-LOCAL_LLM_BASE_URL="http://127.0.0.1:8000/v1" \
+LOCAL_LLM_BASE_URL="http://REPLACE_WITH_PRIVATE_LLM_HOST:8002/v1" \
 LOCAL_LLM_MODEL="从 /v1/models 确认的真实 ID" \
 node scripts/probe-local-llm.mjs
-LOCAL_LLM_BASE_URL="http://127.0.0.1:8000/v1" \
+LOCAL_LLM_BASE_URL="http://REPLACE_WITH_PRIVATE_LLM_HOST:8002/v1" \
 LOCAL_LLM_MODEL="从 /v1/models 确认的真实 ID" \
 node scripts/probe-local-llm.mjs --tools
 ```
 
 这里的 127.0.0.1 是示例，不代表实际服务地址。确认跨机访问、认证、工具调用数据格式、显存余量、预填充及生成速度。**不要直接压测 400K**：先做小型确认，再经操作者同意按 8K / 32K / 64K / 更大长度逐级验证，记录 OOM/延迟。并发默认 1，只做受控的两个客户端竞争测验，验证端点的真实单并发性质；不自动触发云端付费 API。
+
+**已完成的实机数据不必重复测到相同风险程度**：8K/32K/64K 均通过；短输出 decode 约 60–80 tok/s，冷 prefill 样本约 4.2K tok/s；上游 vLLM 能 concurrent batching，并非硬单并发。保留代理的真实串行化；400K 不重压测。下一轮只在有变更时做回归，并区分短样本估算与稳定基准。
 
 记录输出：真实模型 ID、服务实现与版本、上下文上限（实测与声明分开）、tool calling 成功/失败、单并发观测、p50/p95、token/s、估算内存，任何限制均如实注明。
 
@@ -63,7 +65,7 @@ node scripts/probe-local-llm.mjs --tools
 
 ```bash
 export LOCAL_MODEL_PROXY_CLIENT_KEY='仅在本机安全注入的32位以上随机密钥'
-export LOCAL_MODEL_PROXY_UPSTREAM='http://127.0.0.1:8000/v1'
+export LOCAL_MODEL_PROXY_UPSTREAM='http://REPLACE_WITH_PRIVATE_LLM_HOST:8002/v1'
 export LOCAL_MODEL_PROXY_PORT=8123
 node --experimental-strip-types scripts/run-local-model-proxy.mjs
 ```
@@ -72,13 +74,20 @@ node --experimental-strip-types scripts/run-local-model-proxy.mjs
 
 ## 3. 微信环境探查（不发真实消息前先确认授权）
 
-使用用户**自己操作的**官方扫码登录完成腾讯 `@tencent-weixin/openclaw-weixin` 接入，检查当前安装包精确版本；确认 `openclaw-weixin` 渠道的 inbound `before_dispatch` 事件在真实 Gateway 中是否提供 `channelId/accountId/senderId/messageId/content/timestamp`，字段缺失只报告**字段名、类型和是否存在**，不打印原文、账号 ID、二维码 token、聊天内容。
+使用用户**自己操作的**官方扫码登录完成腾讯 `@tencent-weixin/openclaw-weixin` 接入，检查当前安装包精确版本；确认 `openclaw-weixin` 渠道的 inbound `before_dispatch` 实际使用的事件字段 `event.channel/event.senderId/event.messageId/event.body/event.content/event.timestamp` 与上下文字段 `ctx.channelId/ctx.accountId/ctx.senderId`；这些字段已通过 OpenClaw 2026.11.1 静态类型检查确认，下一步是 **运行时**实测，字段缺失只报告**字段名、类型和是否存在**，不打印原文、账号 ID、二维码 token、聊天内容。
 
 先在隔离测试环境安装本仓库的 `integrations/openclaw-weixin-dsh` 插件，并用 `openclaw plugins inspect dsh-weixin-bridge --runtime --json` 核对注册的 hook；**不要在未完成出站适配与权限审核前把它作为主微信入口上线**。
 
 桥接当前只注册签名入站 HTTP `/v1/weixin/inbound`，绑定 `127.0.0.1`；涉及 `DSH_WEIXIN_BRIDGE_SECRET`、`DSH_WEIXIN_BRIDGE_PORT`、`DSH_WEIXIN_BRIDGE_URL`、`DSH_WEIXIN_BRIDGE_SEND_URL` 的设置都使用本地安全存储。OpenClaw → DSH 端已模拟验证；DSH → OpenClaw 真正发送回复**尚未实现**，不能声称双向消息成功。
 
 对接本地前，探查 `openclaw message send --help`、官方插件 outbound 适配器和 Gateway 已有 RPC；提供版本/类型签名与候选调用方式给远程 ChatGPT，由远程侧实现后再做真实发送验收。禁止尝试未经确认的私有 iLink 协议写接口或模拟第三方身份。
+
+### 本轮已解决的差异，下一次仅回归
+
+- macOS `/var` 与 `/private/var` realpath 差异已由远程修复测试夹具，不修改项目路径安全逻辑。
+- OpenClaw 入站插件先前错误读取 `event.channelId ?? ctx.channel`；现在先检查 `event.channel`，再使用 `ctx.channelId` 兼容降级。
+- SDK 静态验证不代表真实微信聊天可以投递回复。腾讯插件 `sendText` 还依赖 **`contextToken`**，不能直接构造假 iLink 消息；出站桥接必须复用 Gateway 进程内的正式 Channel adapter 或可信 Gateway RPC。
+- 目前 Gateway 未启动也没有得到授权，**不要重装或覆盖残留的 OpenClaw 配置，更不要替用户扫码**。需要用户决定复用原 Gateway 还是启用隔离的新 Gateway，才能继续实机联调。
 
 ## 4. 本地项目环境（仅清查和沙箱验证）
 
