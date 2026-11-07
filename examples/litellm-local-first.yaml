@@ -7,7 +7,9 @@ model_list:
       model: openai/REPLACE_WITH_ACTUAL_VLLM_MODEL_ID
       api_base: os.environ/LOCAL_PRIMARY_BASE_URL
       api_key: os.environ/LOCAL_PRIMARY_API_KEY
-      timeout: 300
+      # Short-output decode was ~60–80 tok/s on the validated host.
+      # Allow long local generations time to finish; the queue wait budget is separate.
+      timeout: 900
   # Enable only after validating real capability, stability, memory and capacity:
   # - model_name: dsh-local-secondary
   #   litellm_params:
@@ -23,3 +25,7 @@ general_settings:
 # calls into the single-concurrency primary endpoint. Add and validate the
 # per-endpoint request scheduler before running multiple concurrent workers.
 # Cloud providers deliberately absent: cost and project-data egress require opt-in.
+
+# Operators must route EVERY DSH role using this primary model through the
+# single-slot local OpenAI queue proxy. Direct calls to vLLM can bypass its
+# concurrency limit; external clients must be separately constrained.
