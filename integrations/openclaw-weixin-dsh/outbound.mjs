@@ -88,11 +88,13 @@ export function createOutboundHandler({secret, store, peerStore, sendText, now=(
         return 'unknown'
       }
     }
-    let pending=inFlight.get(key)
+    const existing=inFlight.get(key)
+    if(existing && existing.digest!==digest) {write(res,409,'conflict');return true}
+    let pending=existing?.promise
     if(!pending) {
       pending=Promise.resolve().then(send)
-      inFlight.set(key,pending)
-      void pending.finally(()=>{if(inFlight.get(key)===pending) inFlight.delete(key)}).catch(()=>{})
+      inFlight.set(key,{digest,promise:pending})
+      void pending.finally(()=>{if(inFlight.get(key)?.promise===pending) inFlight.delete(key)}).catch(()=>{})
     }
     try {
       const outcome=await pending
