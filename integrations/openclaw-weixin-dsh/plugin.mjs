@@ -1,5 +1,6 @@
 /** OpenClaw-side inbound adapter: the DeepSeek Superagent is the sole executor. */
 import { createHmac } from 'node:crypto'
+import { createOutboundHandler, OUTBOUND_PATH, peerKey } from './outbound.mjs'
 const CHANNEL='openclaw-weixin'
 const MISSING='Superagent 通道未配置或消息缺少可信身份，请检查桥接设置。'
 const UNAVAILABLE='Superagent 暂时不可用，本次请求未确认接收，请稍后重试。'
@@ -16,6 +17,32 @@ export function createPlugin({ env=process.env, fetcher=fetch, clock=()=>Date.no
   return {
     id:'dsh-weixin-bridge',name:'DSH Weixin bridge',
     register(api) {
+      if(api.registrationMode === 'cli-metadata') return
+      // Explicit operator opt-in. Persist only hashes of admitted channel identities.
+      let peerStore
+      if(env.DSH_WEIXIN_BRIDGE_OUTBOUND_ENABLED==='1') {
+        if(!api.runtime?.state?.openKeyedStore || !api.runtime?.channel?.outbound?.loadAdapter ||
+          typeof api.registerHttpRoute!=='function') throw Error('OpenClaw host lacks required durable outbound runtime')
+        peerStore=api.runtime.state.openKeyedStore({
+          namespace:'dsh-weixin-peers-v1',maxEntries:10000,defaultTtlMs:90*24*3600000
+        })
+        const receipts=api.runtime.state.openKeyedStore({
+          namespace:'dsh-weixin-outbound-receipts-v1',maxEntries:50000,defaultTtlMs:90*24*3600000
+        })
+        const handler=createOutboundHandler({
+          secret:env.DSH_WEIXIN_BRIDGE_SECRET,store:receipts,peerStore,clock,
+          sendText:async({accountId,peerId,text})=>{
+            const adapter=await api.runtime.channel.outbound.loadAdapter(CHANNEL)
+            if(!adapter?.sendText) throw Error('Tencent Weixin channel outbound is unavailable')
+            // Tencent's existing native adapter retrieves contextToken from its Gateway session.
+            const receipt=await adapter.sendText({cfg:api.config,to:peerId,text,accountId})
+            if(!receipt || typeof receipt.messageId!=='string' || !receipt.messageId)
+              throw Error('Tencent Weixin adapter returned no confirmed message ID')
+          },
+          log:reason=>api.logger?.warn?.('dsh-weixin: '+reason)
+        })
+        api.registerHttpRoute({path:OUTBOUND_PATH,auth:'plugin',match:'exact',handler})
+      }
       api.on('before_dispatch',async(event,ctx)=>{
         // OpenClaw 2026.11.1: the channel name is event.channel, not event.channelId.
         // ctx.channelId identifies the channel on this hook; older host shapes are fallback only.
@@ -39,6 +66,11 @@ export function createPlugin({ env=process.env, fetcher=fetch, clock=()=>Date.no
         try {
           const result=await fetcher(url,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),
             headers:{'Content-Type':'application/json','x-dsh-timestamp':timestamp,'x-dsh-signature':signature},body:raw})
+          if(result.status===202 && peerStore) {
+            // Store a trusted inbound identity only after DSH acknowledges durable receipt.
+            try {await peerStore.register(peerKey(accountId,peerId),{seenAt:clock()})}
+            catch{return {handled:true,text:UNAVAILABLE}}
+          }
           return {handled:true,text:result.status===202?ACCEPTED:UNAVAILABLE}
         }catch{
           // Failure is claimed: NEVER fall through to an unrelated OpenClaw model turn.
