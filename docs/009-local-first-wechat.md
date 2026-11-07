@@ -86,11 +86,11 @@ The existing Superagent supports `eval.model` and `executor.model` (provider/mod
 2. Optional small local model(s): message classification, duplicate detection, short summarization, search reranking, simple revisions — only after tool/function-call and quality benchmarks. Do not send critical code changes to a weaker route just because the primary is busy.
 3. Cloud/manual: genuinely difficult reasoning or a missing capability, after explicit operator opt-in, with project egress controls and per-run spending ceiling.
 
-Use the existing per-role model selection plus LiteLLM or a verified DSH-native router. **Do not implement another provider adapter or generic gateway in this fork.** A strict priority chain should consider (a) capability, (b) privacy, (c) operator price ceiling, (d) live health, (e) queue wait time; only then cost. Routing must record the actual selected model and why.
+Use the existing per-role model selection plus LiteLLM or a verified DSH-native router. **Do not duplicate LiteLLM's full provider catalog.** A deliberately narrow `openai-queue-proxy.ts` already exists as an optional single-endpoint, serialized OpenAI-compatible front door; it is **not** a general provider router and must be explicitly configured for DSH requests. Do not bypass it by pointing a second DSH role straight at the vLLM server. A strict priority chain should consider (a) capability, (b) privacy, (c) operator price ceiling, (d) live health, (e) queue wait time; only then cost. Routing must record the actual selected model and why.
 
-With one primary model at concurrency 1, `executor.maxWorkers=1` is the safe initial limit but is **not enough**: evaluations and other DSH sessions can still contend for the same endpoint. A central per-endpoint semaphore/priority queue is required; interactive acknowledgment and short evaluation get reserved priority, with fairness so long jobs cannot starve. Busy is not the same as failed; do not automatically escalate paid API due solely to queueing. If output length is 10,000 tokens at 200 tok/s, decoding alone is ~50 seconds; if prompt length is 60,000 at 3,000 tok/s, prefill alone is ~20 seconds. Budget accordingly.
+With one primary model at concurrency 1, `executor.maxWorkers=1` is the safe initial limit but is **not enough**: evaluations and other DSH sessions can still contend for the same endpoint. A central per-endpoint semaphore/priority queue is required; interactive acknowledgment and short evaluation get reserved priority, with fairness so long jobs cannot starve. Busy is not the same as failed; do not automatically escalate paid API due solely to queueing. Local host validation on 2026-11-08 observed **60–80 generated tok/s for short responses** (not the previously assumed 200): 10,000 generated tokens would take **125–167 s just for decoding** at that rate, before prefill, tool calls, queueing or network overhead. An uncached prefill sample measured about **4,185 tok/s** at 8.6K tokens; prefix-cache hits can be much faster and are workload-specific. Size per-request timeout and queue wait separately using observed p95 and output-token budgets; avoid automatic paid fallback when the queue is merely occupied. Budget accordingly.
 
-Nominal 400K context must be tested with the real deployment, not inferred from `/models`. Favor retrieval, bounded context, stable prefix caching, summaries and task-specific context budgets; do not stuff entire repositories into every request. Secondary models on the same GPU may compete for memory/throughput, so benchmark actual concurrent deployment before enabling.
+The deployment advertises max_model_len 400,000; 8K, 32K and 64K were tested without OOM on 2026-11-08, but 400K remains **unverified** and may require separate explicit host authorization. Favor retrieval, bounded context, stable prefix caching, summaries and task-specific context budgets; do not stuff entire repositories into every request. Secondary models on the same GPU may compete for memory/throughput, so benchmark actual concurrent deployment before enabling.
 
 ## Phased work and acceptance
 
@@ -113,6 +113,17 @@ node --test scripts/probe-local-llm.node-test.mjs
 ```
 
 The probe checks `/models`, one small completion, and optionally one tool-call request. It cannot prove 400K context, prolonged stability, throughput, KV cache behavior, or production readiness. Use `LOCAL_LLM_API_KEY` environment variable if authentication is required; never put real credentials in issues, PRs, chat, or tracked YAML.
+
+## 2026-11-08 environment validation (desensitized)
+
+The operator's local-Agent report is **not checked into the public fork**, since it contains local filesystem and LAN topology. Salient verified facts, without local addresses:
+
+- vLLM `0.29.1rc1.dev402` served model id `Qwen3.8-Flash-Next` via an OpenAI-compatible `/v1` endpoint on **port 8002**, not the previously assumed default port 80. Do not hard-code the operator's LAN address in public docs; all deployment commands must read the configured URL.
+- Tool calling and streaming worked. The 3bpw AutoRound + MTP model passed 8K/32K/64K context smoke tests; 400K was not tested.
+- With small requests, vLLM's continuous batching accepted more than one request concurrently; **the queue proxy remains mandatory** if strictly one active inference is required across DSH roles.
+- Reported decode measurements were short-output observations (~60–80 tok/s). Do not interpret them as a statistically stable large-generation benchmark.
+- OpenClaw `2026.11.1` exposes `event.channel` and `ctx.channelId` in the `before_dispatch` contract. The Tencent plugin `2.4.10` relies on conversation `contextToken` for outbound Weixin delivery. The real Gateway was not running, so no two-way WeChat validation occurred.
+- The existing OpenClaw runtime must be selected and authenticated before activating the bridge. An OpenClaw CLI absence is **not** permission to replace or overwrite the user's existing application/profile.
 
 ## Rollback and report requirements
 
