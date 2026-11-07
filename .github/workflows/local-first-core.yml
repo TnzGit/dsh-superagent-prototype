@@ -6,9 +6,14 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Cancel stale branch runs, including older tests that deadlocked before queue-state timeouts existed.
+concurrency:
+  group: local-first-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
 jobs:
   local-first-core:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -19,6 +24,7 @@ jobs:
 
   dsh-typecheck-and-build:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
