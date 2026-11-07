@@ -22,6 +22,23 @@ test('OpenClaw Weixin event is signed into DSH without a model turn',async()=>{
     assert.equal(received.length,1);assert.equal(received[0].source,'openclaw-weixin')
   } finally { await new Promise(resolve=>server.close(resolve)) }
 })
+test('OpenClaw 2026.11.1 typed event.channel and ctx.channelId claim the real Weixin message',async()=>{
+  const captured=[]
+  const plugin=createPlugin({env:{DSH_WEIXIN_BRIDGE_SECRET:secret,DSH_WEIXIN_BRIDGE_URL:'http://127.0.0.1:8129/v1/weixin/inbound'},
+    fetcher:async(_url,opts)=>{captured.push(JSON.parse(opts.body));return {status:202}}})
+  const result=await dispatch(plugin,{
+    channel:'openclaw-weixin',senderId:'wx-peer',messageId:'2026-typed',content:'request',
+    timestamp:Date.now()
+  },{channelId:'openclaw-weixin',accountId:'wx-account',senderId:'wx-peer'})
+  assert.equal(result.handled,true)
+  assert.equal(captured.length,1)
+  assert.deepEqual({accountId:captured[0].accountId,peerId:captured[0].peerId,text:captured[0].text},
+    {accountId:'wx-account',peerId:'wx-peer',text:'request'})
+})
+test('typed event.channel overrides a misleading context and another channel passes through',async()=>{
+  const p=createPlugin({env:{}})
+  assert.equal(await dispatch(p,{channel:'telegram',content:'hello'}, {channelId:'openclaw-weixin'}),undefined)
+})
 test('other channels remain unaffected',async()=>{
   assert.equal(await dispatch(createPlugin({env:{}}),{channelId:'telegram',body:'hello'}),undefined)
 })
