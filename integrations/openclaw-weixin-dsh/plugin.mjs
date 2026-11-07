@@ -30,7 +30,9 @@ export function createPlugin({ env=process.env, fetcher=fetch, clock=()=>Date.no
         let url
         try{url=loopbackUrl(env.DSH_WEIXIN_BRIDGE_URL)}catch{return {handled:true,text:MISSING}}
         const timestamp=String(clock())
-        const raw=JSON.stringify({accountId,peerId,messageId,receivedAt:new Date(event.timestamp ?? clock()).toISOString(),text})
+        let receivedAt
+        try { receivedAt=new Date(event.timestamp ?? clock()).toISOString() } catch { return {handled:true,text:MISSING} }
+        const raw=JSON.stringify({accountId,peerId,messageId,receivedAt,text})
         const signature='sha256='+createHmac('sha256',secret).update(timestamp).update('.').update(raw).digest('hex')
         try {
           const result=await fetcher(url,{method:'POST',redirect:'error',signal:AbortSignal.timeout(10000),
