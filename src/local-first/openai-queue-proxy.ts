@@ -84,7 +84,7 @@ export function createOpenAIQueueProxy(config: ProxyOptions) {
       const timer = setTimeout(stop, upstreamTimeout)
       try {
         const upstream = await fetcher(base + route.slice(3), {
-          method: req.method, redirect: 'error', body,
+          method: req.method, redirect: 'error', body: body ? Uint8Array.from(body) : undefined,
           headers: { ...(body ? { 'Content-Type': req.headers['content-type'] || 'application/json' } : {}),
             ...(config.upstreamKey ? { Authorization: 'Bearer ' + config.upstreamKey } : {}) },
           signal: abort.signal,
