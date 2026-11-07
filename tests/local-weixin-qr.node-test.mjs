@@ -23,6 +23,8 @@ test('QR challenge and poll statuses are parsed with no OpenClaw dependency',asy
   const status=await checkCode('challenge','https://ilinkai.weixin.qq.com',undefined,fake({status:'wait'},calls))
   assert.equal(status.status,'wait')
   assert.ok(calls[1].url.includes('qrcode=challenge'))
+  assert.equal(calls[1].init.headers.AuthorizationType,undefined)
+  assert.equal(calls[1].init.headers['X-WECHAT-UIN'],undefined)
 })
 test('confirmed state stores credentials owner-only, no token in public response',()=>fixture(async file=>{
   const result={status:'confirmed',bot_token:'this-is-only-a-test-token',ilink_bot_id:'test-bot',baseurl:'https://ilinkai.weixin.qq.com'}
