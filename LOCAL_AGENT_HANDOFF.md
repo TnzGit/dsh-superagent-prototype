@@ -1,121 +1,121 @@
-# Local Agent handoff — 环境联调专用（远程优先规则）
+# 本地 Agent 任务书：DSH 原生微信通道（分两阶段，扫码必须由用户授权）
 
-**执行前确认：这不是要求本地 Agent 重写 Superagent。** 远程 ChatGPT 负责所有能在 GitHub/云端完成的设计、编码、静态检查、单测、模拟测试和 PR；本地 Agent 仅负责必须通过本地系统权限、微信账号、真实 Qwen 服务、私有工作区才能完成的探针、安装、联调、日志和回滚。不要重复实现已提交的模块，不要主动扩大范围。发现代码缺陷时，提供最小复现和脱敏日志给远程 ChatGPT，由远程侧先修复。
+> 2026-11-08 用户最终选定的使用方式：**DSH Superagent 直接使用微信 Clawbot/iLink 通道；完全不使用 OpenClaw**。旧 OpenClaw 早已停用。不要安装/启动 OpenClaw、其 Gateway、\`@tencent-weixin/openclaw-weixin\` OpenClaw 插件，也不要导入其旧凭据或旧配置。用户希望复用过去的微信入口，但**原机器人身份能否沿用必须通过扫码和官方后端确认，不得预先保证**。
 
-基础仓库：https://github.com/TnzGit/dsh-superagent-prototype
-开发分支：`feat/local-first-wechat-foundation`
-评审入口：https://github.com/TnzGit/dsh-superagent-prototype/pull/1
+本任务要求严格的**两段式流程**：先完成不需要用户参与的所有可做验证，**写报告并停止**，然后向用户明确请求二维码扫码配对；用户本人扫码确认之后，才做实际微信收发与任务闭环。遇到远程未实现的代码请交给远程 ChatGPT，而不是本地 Agent 自行开发。
 
-## 0. 已完成 / 未完成界线
+仓库：https://github.com/TnzGit/dsh-superagent-prototype  
+开发分支：\`feat/local-first-wechat-foundation\`  
+PR：https://github.com/TnzGit/dsh-superagent-prototype/pull/1  
+最新决策文档：\`docs/010-direct-weixin-channel.md\`  
+历史文档：\`docs/009-local-first-wechat.md\`（OpenClaw 桥接方案已废弃）  
+已有实机报告：2026-11-08 的 \`REPORT-local-verification-20261108.md\`（不要把其私有 IP/本机路径复制进公开仓库）
 
-**远程已提交：** 本地优先模型队列和路由判定原语、路径 allowlist 与单项目写互斥、微信 HMAC 验证和入站 HTTP 服务、DSH SourceKind 插件（默认关闭）、OpenClaw `before_dispatch` 入站插件、Node 测试与 CI、可关闭 GitHub Source 的启动分支以及无凭据 `gh` shim。每一项请以当前 PR/CI 代码为准，不要假设它们已经进入主分支。
+## 最高优先级：开发与测试责任分工
 
-**尚未实机验收：** OpenClaw → 腾讯微信的 DSH **签名出站接收器已提交模拟实现，但原生发送需要真实 Gateway + 腾讯账号验证**；真实 OpenClaw/Gateway 版本下的身份字段校验；多项目注册表与真正的 Worker/Ticket 绑定；非 Git 项目的快照/应用/回滚；模型队列与 DSH 的实际每次 LLM 请求钩子集成；云端路由 UI 和成本审计。这些是远程侧继续开发的项目，不自动委托本地 Agent。
+**远程 ChatGPT 负责一切能远程完成的事情**：架构、代码实现、从 MIT 源码适配 DSH 原生 Source、QR 登录组件、测试、CI、PR 和修复；本地 Agent **只负责远程无法实际访问的** macOS 系统、真实 DSH checkout、真实本地 Qwen、私有文件系统和扫码后微信账号验证。即使发现缺失的源代码或测试，也只报告最小复现和缺口给远程 ChatGPT，等待远程提交更新，除非用户另行明确授权改变分工。
 
-**绝对禁止**：未验证以上能力便发布为生产版、填写假测试结果、暴露端口到公网、复制口令到聊天/GitHub、擅自 push、部署、合并、改生产项目或运行破坏性命令。
+优先复用经过许可核查的 \`samanhappy/dsh-superagent\` 原生 Weixin Source（MIT/NOTICE，含 \`weixin.ts\`、\`weixin-api.ts\`、\`weixin-login.ts\`、\`weixin-channel.ts\`、\`weixin-trigger.ts\`、\`weixin-read.ts\` 和测试），而不是自行从零编写 iLink 协议。腾讯的 \`Tencent/openclaw-weixin/docs/protocol_zh_CN.md\` 可作为**通信协议参考**，但不能安装它的 OpenClaw 插件，也无需 OpenClaw SDK。
 
-## 1. 本地环境清查（只读）
+### 重要状态：不要误把旧代码当作新实现
 
-从仓库拉取上述分支，禁止直接覆盖主分支或用户的未提交修改。记录系统版本、DSH/Node/pnpm/OpenClaw 版本、插件列表与 `openclaw plugins inspect ... --runtime --json` 能否识别 `before_dispatch`。具体命令供按需执行：
+当前 PR 以前提交过 \`integrations/openclaw-weixin-dsh/*\`、\`src/sources/openclaw-bridge.ts\` 等 **OpenClaw 依赖的实验原型**。这些不符合现在的要求，**不得启动、测试真实账号或部署**。新的 DSH 原生 Weixin Source 必须由远程 ChatGPT 实现或完成适配、提交测试通过后才能进入真实配对阶段。若还未提供，第一阶段可以完成所有环境准备，但本轮 QR 配对状态应写为 \`BLOCKED — waiting for remote native Source\`，不要拿旧 OpenClaw 原型硬凑。
 
-```bash
+## 阶段 A — 无人值守准备（现在开始；不扫码）
+
+### A1. 更新独立工作区、检查可用版本
+
+现有 macOS worktree 中已有上一轮验证文件；先检查未提交变更。不要切到或覆盖生产 DSH profile、主分支、OpenClaw 残留环境。
+
+\`\`\`bash
 git status --short
 git fetch origin feat/local-first-wechat-foundation
-git switch --track -c feat/local-first-wechat-foundation origin/feat/local-first-wechat-foundation
-node --version; pnpm --version; dsh --version
-openclaw --version
-openclaw plugins list
-```
+git rev-parse HEAD
+git rev-parse origin/feat/local-first-wechat-foundation
+node --version
+pnpm --version
+\`\`\`
 
-**若本地已有同名分支或工作区有改动，不使用 `git switch -c` 或任何强制命令覆盖；先报告并使用独立 checkout/worktree。**
+若工作区干净，可安全更新独立测试 worktree；否则报告冲突并保持现状。兼容性基线：macOS / Node 25.9.0、pnpm 全局 11.24.0 且仓库固定 11.7.0；DSH checkout \`0.2.2-alpha.2\`，而本 fork 依赖 \`0.2.1-alpha.2\`，**应核验而非私自升级或替换 DSH**。本机 \`dsh\` 未在 PATH，不等于没有可用 checkout；查明安全的 CLI/宿主启动方式。
 
-安装依赖并测试，不上传机器或项目内容：
+### A2. 检查构建与离线测试
 
-```bash
+\`\`\`bash
 pnpm install --frozen-lockfile
 pnpm check
-node --experimental-strip-types --test tests/local-*.node-test.mjs scripts/probe-local-llm.node-test.mjs
-```
+node --experimental-strip-types --test tests/local-projects.node-test.mjs tests/local-model-queue.node-test.mjs scripts/probe-local-llm.node-test.mjs tests/local-openai-queue-proxy.node-test.mjs
+\`\`\`
 
-对不同 DSH/Node/OpenClaw 版本记录差异；不能用“跑通”替代真实命令与退出码。远程 CI 成功仅证明模拟环境的版本，不代表本机集成成功。
+只在仓库已包含**真正的 DSH-native Weixin**实现时运行其原生协议与 Source 测试；应覆盖二维码各状态（mock）、登录完成后的凭据存储权限、长轮询游标、重复消息、允许名单、\`context_token\` 回复及过期 token。全部使用模拟服务器，不要在本阶段向真实微信服务调用登录或发送请求。
 
-## 2. Qwen3.8-Flash-Next 实机探针（只读）
+记录退出码与最小失败日志。过去的 macOS \`/var\` vs \`/private/var\` 差异已由远程测试夹具修复，确认回归即可。
 
-已在 2026-11-08 实测：vLLM 0.29.1rc1.dev402、模型 ID 为 `Qwen3.8-Flash-Next`、上游监听 **8002** 端口。地址来自用户私有 LAN 配置，**不要写入公开仓库**，由本地环境变量注入。只在上游确实需要时才设置 `LOCAL_LLM_API_KEY`。不要使用不通的默认 HTTP 80 端口。禁止把实际 API key、模型原始响应或私有文档发给远程：
+### A3. DSH 独立测试 Profile 与项目工作区
 
-```bash
-LOCAL_LLM_BASE_URL="http://REPLACE_WITH_PRIVATE_LLM_HOST:8002/v1" \
-LOCAL_LLM_MODEL="从 /v1/models 确认的真实 ID" \
-node scripts/probe-local-llm.mjs
-LOCAL_LLM_BASE_URL="http://REPLACE_WITH_PRIVATE_LLM_HOST:8002/v1" \
-LOCAL_LLM_MODEL="从 /v1/models 确认的真实 ID" \
-node scripts/probe-local-llm.mjs --tools
-```
+准备与现有业务完全隔离的 DSH profile、状态目录、SQLite 备份策略、测试工作区；默认所有微信 Source 关闭，原始 GitHub/Feishu 项目不变。
 
-这里的 127.0.0.1 是示例，不代表实际服务地址。确认跨机访问、认证、工具调用数据格式、显存余量、预填充及生成速度。**不要直接压测 400K**：先做小型确认，再经操作者同意按 8K / 32K / 64K / 更大长度逐级验证，记录 OOM/延迟。并发默认 1，只做受控的两个客户端竞争测验，验证端点的真实单并发性质；不自动触发云端付费 API。
+列出一个一次性 Git 项目与一个一次性非 Git 项目，验证 allowlist、符号链接拒绝、跨项目隔离和同项目写互斥。**项目注册表还没有完整接入 DSH Ticket/Worker**；如未接入，标为 \`BLOCKED\` 并交给远程 ChatGPT，而不是本地重写。
 
-**已完成的实机数据不必重复测到相同风险程度**：8K/32K/64K 均通过；短输出 decode 约 60–80 tok/s，冷 prefill 样本约 4.2K tok/s；上游 vLLM 能 concurrent batching，并非硬单并发。保留代理的真实串行化；400K 不重压测。下一轮只在有变更时做回归，并区分短样本估算与稳定基准。
+确认 worker 文件系统沙箱、测试命令、危险操作审批和回滚策略；没有隔离就不允许真实生产项目写入。
 
-记录输出：真实模型 ID、服务实现与版本、上下文上限（实测与声明分开）、tool calling 成功/失败、单并发观测、p50/p95、token/s、估算内存，任何限制均如实注明。
+### A4. 本地模型配置与真实单并发
 
+原有 Qwen 实机验证已经证明模型 ID \`Qwen3.8-Flash-Next\`，vLLM 的 **8002** 端口可用，工具调用、流式和 8K/32K/64K 输入均成功；400K 尚未压测。不要重复大负载。使用已知 LAN 上游地址（**仅保存在本机配置，不上传仓库**）。
 
-### Optional single-slot OpenAI proxy (host-only preflight)
+本地主模型不是硬单并发，vLLM continuous batching 会并行处理短请求。要将 DSH **所有角色**（主 Session、评估、Worker）指向仓库的 \`scripts/run-local-model-proxy.mjs\` 所提供的 \`127.0.0.1\` 单槽入口；在未批准更改正式 provider 的情况下只在隔离 profile 中测试。
 
-远程已新增 `src/local-first/openai-queue-proxy.ts` 和 `scripts/run-local-model-proxy.mjs`，提供独立、默认不启动的 127.0.0.1 代理。在**隔离测试环境**中设置强随机本地密钥、真实 Qwen 上游地址（必须以 `/v1` 结尾）后运行：
+估算性能以现有短样本约 **60–80 decode tok/s**、约 **4.2K uncached prefill tok/s** 为参考；预填充缓存命中速率不能当作稳定冷请求吞吐。分别计算排队等待与解码超时，不自动因为队列忙改用付费模型。
 
-```bash
-export LOCAL_MODEL_PROXY_CLIENT_KEY='仅在本机安全注入的32位以上随机密钥'
-export LOCAL_MODEL_PROXY_UPSTREAM='http://REPLACE_WITH_PRIVATE_LLM_HOST:8002/v1'
-export LOCAL_MODEL_PROXY_PORT=8123
-node --experimental-strip-types scripts/run-local-model-proxy.mjs
-```
+检查代理测试配置、隔离端口、密钥注入和正常停止。实际探针、压力和任何密钥不能打印到公开报告。
 
-在另一个终端让 `LOCAL_LLM_BASE_URL=http://127.0.0.1:8123/v1`、`LOCAL_LLM_API_KEY` 等于本机代理密钥后运行 `scripts/probe-local-llm.mjs --tools`；可用两个不同的独立客户端观察并发是否严格为 1。**不要在命令行记录或上传密钥**；上面的 export 是字段说明，不是要求把秘密写进脚本或 PR。代理不会自动变更 DSH 的 provider，它也不提供云端回退；真实 Provider 指向代理必须由操作者审核后在本机配置。确认端点正确之前，不把代理开放到 LAN 或公网。
+### A5. DSH 原生微信预配对就绪检查
 
-## 3. 微信环境探查（不发真实消息前先确认授权）
+对**远程已提交的原生 iLink Source/QR 组件**执行离线检查：
 
-使用用户**自己操作的**官方扫码登录完成腾讯 `@tencent-weixin/openclaw-weixin` 接入，检查当前安装包精确版本；确认 `openclaw-weixin` 渠道的 inbound `before_dispatch` 实际使用的事件字段 `event.channel/event.senderId/event.messageId/event.body/event.content/event.timestamp` 与上下文字段 `ctx.channelId/ctx.accountId/ctx.senderId`；这些字段已通过 OpenClaw 2026.11.1 静态类型检查确认，下一步是 **运行时**实测，字段缺失只报告**字段名、类型和是否存在**，不打印原文、账号 ID、二维码 token、聊天内容。
+1. 运行时是否完全不导入 \`openclaw\`、Gateway 或旧 bridge。
+2. 扫码流程是否可以在本机安全展示 QR：\`wait\`、\`scaned\`、\`confirmed\`、\`expired\`、\`need_verifycode\`、\`scaned_but_redirect\` 等状态可由 mock 验证。
+3. 登录前**没有读取或复用**旧 OpenClaw 账号、token、credentials 或 Chat 内容；扫码后只在新 DSH staging profile 的安全凭据文件/安全存储中保存 token，权限为用户独占。
+4. 确保 \`context_token\`、\`get_updates_buf\` 游标和每条 Trigger ID 的持久性策略明确，且断电/重启不会导致无界重复工作或发送。
+5. 确保仅私聊、允许名单、关闭危险操作和云端外发，默认不开启真实轮询。
+6. 检查原有 Clawbot 可能处于旧绑定状态时的错误处理：**只报告状态，不绕过验证或擅自解绑**。
 
-先在隔离测试环境安装本仓库的 `integrations/openclaw-weixin-dsh` 插件，并用 `openclaw plugins inspect dsh-weixin-bridge --runtime --json` 核对注册的 hook；**不要在未完成出站适配与权限审核前把它作为主微信入口上线**。
+如果新的原生 Source 代码尚未完成，仅做 API/SDK/依赖静态核验、测试和配置预案，明确报告剩余事项给远程 ChatGPT。**不要预先请求二维码或假装准备完成。**
 
-桥接当前只注册签名入站 HTTP `/v1/weixin/inbound`，绑定 `127.0.0.1`；涉及 `DSH_WEIXIN_BRIDGE_SECRET`、`DSH_WEIXIN_BRIDGE_PORT`、`DSH_WEIXIN_BRIDGE_URL`、`DSH_WEIXIN_BRIDGE_SEND_URL` 的设置都使用本地安全存储。OpenClaw → DSH 端已模拟验证；DSH → OpenClaw 的 **默认关闭** HTTP 出站接收器现已提交到 `integrations/openclaw-weixin-dsh/outbound.mjs`；会通过 Gateway 进程内 Tencent channel adapter 发送而非直接请求腾讯私有 iLink API。其 `DSH_WEIXIN_BRIDGE_OUTBOUND_ENABLED=1` 只能在获得用户明确授权、真实 Gateway 与白名单测试就绪后打开。实现已覆盖模拟身份允许名单、HMAC、持久投递记录、未知发送结果阻止自动重复发送；**真实两端联调仍未通过**。
+## 阶段 A 完成后的强制停止点
 
-对接本地前，探查 `openclaw message send --help`、官方插件 outbound 适配器和 Gateway 已有 RPC；提供版本/类型签名与候选调用方式给远程 ChatGPT，由远程侧实现后再做真实发送验收。禁止尝试未经确认的私有 iLink 协议写接口或模拟第三方身份。
+提交**第一次报告** \`REPORT-pre-qr-native-weixin.md\`（保存在独立工作区，不写入公开仓库），包括：
 
-### 本轮已解决的差异，下一次仅回归
+- 版本/目录和测试命令的脱敏摘要及 \`PASS/FAIL/BLOCKED/NOT RUN\` 表；
+- DSH 原生 Source、扫码模块、隔离 Profile、Qwen 单槽代理及本地项目沙箱的就绪程度；
+- 旧 OpenClaw 是否完全不再被调用；
+- 是否确实具备安全的“现在开始二维码登录”条件；
+- 遗留的代码/集成缺口（交远程 ChatGPT 修复）、可复现信息与回滚方式。
 
-- macOS `/var` 与 `/private/var` realpath 差异已由远程修复测试夹具，不修改项目路径安全逻辑。
-- OpenClaw 入站插件先前错误读取 `event.channelId ?? ctx.channel`；现在先检查 `event.channel`，再使用 `ctx.channelId` 兼容降级。
-- SDK 静态验证不代表真实微信聊天可以投递回复。腾讯插件 `sendText` 还依赖 **`contextToken`**，不能直接构造假 iLink 消息；出站桥接必须复用 Gateway 进程内的正式 Channel adapter 或可信 Gateway RPC。
-- 目前 Gateway 未启动也没有得到授权，**不要重装或覆盖残留的 OpenClaw 配置，更不要替用户扫码**。需要用户决定复用原 Gateway 还是启用隔离的新 Gateway，才能继续实机联调。
+仅当 **QR 流程 + 原生 DSH Source + 隔离凭据保存**实际准备好，且这些验证通过时，向用户输出：
 
-### Outbound prototype: 实机验收范围（必须先授权）
+> **第一阶段准备已完成，尚未连接微信。请你确认是否现在开始使用微信扫码，把原 Clawbot 对话入口绑定到这个新的 DSH Superagent 测试实例？**
+>
+> 我会在本机安全显示二维码，你需要亲自扫码并在微信里确认。扫码结果有可能是新机器人/需要解除旧绑定，不能保证沿用旧身份；若遇到冲突我会先停止并征求你的决定。
+>
+> 在你答复前，我不会生成真实二维码、读取旧凭据或启用微信消息接收。
 
-新的出站接口是 `/plugins/dsh-weixin-bridge/outbound`，绑定到**同一 OpenClaw Gateway 进程**。使用现有 `api.runtime.channel.outbound.loadAdapter('openclaw-weixin')` / Tencent `sendText`，`contextToken` 保持由腾讯插件本身检索。不要替换成另一个 CLI 进程中的内存 Map，也不要手动复制或持久化 context token。
+如果还有 P1 实现阻塞，就只说“准备的哪些部分通过、哪些被远程代码阻塞”，不要提前要求扫码。
 
-真实 Gateway 起来后，仅在测试微信号与私聊双方均授权的隔离环境中，逐项验证：inbound hook 有效、DSH 允许名单、原生回复、超过 3500 codepoints 的分块、同 ID 重试不重发、Gateway 重启后的持久记录、Native send 结果未知时暂停并人工处理。**不能因为 CI mock 成功就开启生产端口。**
+## 阶段 B — 仅收到用户明确扫码同意后开始
 
-## 4. 本地项目环境（仅清查和沙箱验证）
+1. 启动**仅 DSH 原生** iLink 二维码登录，生成临时 QR，以本机终端/内网页面安全展示给用户；不使用第三方外部 QR 图片服务。用户自行扫码确认，遇到手机验证码由用户输入，local Agent 不替用户确认。
+2. 校验官方返回 \`confirmed\`、bot token、bot ID、HTTPS API base；将 token 存入 DSH staging 安全存储，不在 CLI 输出、GitHub、日志或聊天中回显。
+3. 只对用户批准的私人微信测试会话做收消息 → Trigger → Policy → Ticket → Worker（本地单并发 Qwen）→ Outbox → iLink 原生回复的闭环测试。确认 \`context_token\` 的正确关联。
+4. 回归相同消息 ID 去重、非允许名单拒绝、跨项目路径拒绝、长轮询游标恢复、重启与失联、无自动付费回退、异常发送不盲目重发。
+5. 如果扫码后绑定得到的是新机器人而不是原 Clawbot，不要假称“接管成功”；报告差异并再次询问用户是否接受切换或需要旧端解绑。绝不尝试绕过微信服务端限制。
+6. 交付第二份 \`REPORT-post-qr-native-weixin.md\`：成功项、失败项、匿名化 bot 状态、未验证功能、实际本机变更和回滚步骤。**不得自动启用生产工作区或合并 PR**。
 
-列出操作者指定的 1–2 个**测试项目**，确认本地 Git/非 Git 目录、是否存在远端、是否含子模块、符号链接、敏感文件、运行测试的命令与权限。不要遍历所有家庭目录或私密文件；提交报告时使用项目代号和相对路径。支持项目分离，测试目录应可丢弃；原始项目只读，绝不运行自动部署或自动合并。对工作区执行许可由操作者显式确认。
+## 安全和回滚底线
 
-当前 `LocalProjectRegistry` 是路径验证和互斥原语，还未与 DSH Ticket/Executor 工作区生命周期联接；没有这一层的测试结果**不能**当作非 Git 自动执行已验收。
+- 真实扫码与授权始终由用户控制；本地 Agent 在第一阶段停止点等待答复。
+- 不操作旧 OpenClaw 残留，不破坏其他 Gateway，也不启动 OpenClaw；不要同时让旧、新客户端长轮询同一 bot token。
+- 不修改业务模型量化/推理参数；不进行未批准的 400K 压力测试；不启用任何云端付费或外部敏感数据上传。
+- 不向真实私有项目写入，不执行部署/删除/强推，未经审批不合并分支。
+- 凭据不得复制到 repo、报告、公共日志或临时外网 QR 服务；出错时停止轮询、禁用 Source、停代理、恢复 DSH staging profile，并只保留脱敏诊断。
 
-## 5. 出错处理与回滚
-
-- 每个安装或配置更改先记录原值与版本，备份 DSH SQLite、OpenClaw 配置和相关非敏感状态；密钥备份仅在本机安全位置。
-- 任一鉴权失败、重复消息、模型错误路由、意外外网数据传输、执行越权，立即停止桥接插件与自动任务，保留脱敏诊断。
-- 不能确认回滚路径时暂停写操作；不在生产主机重置 Git、清空数据库、强制重启共享任务或删除进程数据。
-- 恢复只读状态的方法：禁用 `dsh-weixin-bridge` 和 `dsh-superagent-openclaw-bridge` 插件，取消测试监听；保留原 GitHub/Feishu Source 和现有工作区。
-
-## 6. 每轮给远程 ChatGPT 的报告格式
-
-1. 环境版本、准确命令、退出码和脱敏日志；
-2. 完成的测试及结果：`PASS`/`FAIL`/`BLOCKED`/`NOT RUN`，不得把模拟测试写成真实微信成功；
-3. 微信 Hook 存在的字段名、发送目标格式、出站 API/CLI 的精确签名（隐藏身份和凭据）；
-4. LLM endpoint 的已验证参数、能力与数据，区分声明与实测；
-5. 本地两个测试项目的抽象类型和沙箱适配问题；
-6. 所有阻塞的最小复现、建议远程修改的文件、风险/回滚命令；
-7. 用户必须亲手完成或批准的动作（扫码、付费、敏感数据许可、生产改动）。
-
-**交付原则：本地 Agent 不承担远程 ChatGPT 能完成的代码开发。遇到未实现功能，先交回可复现事实，等待远程分支更新；不要另起炉灶。**
+**交付原则：先完整做完你能做的准备；第一次汇报后明确请求用户二维码配对；用户配对成功才开展第二阶段。远程可做的开发仍由远程 ChatGPT 负责。**
