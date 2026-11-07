@@ -1,6 +1,6 @@
 # 009 Local-first WeChat Superagent — integration plan
 
-> Status: **design and prerequisite probes only**. This document does not claim the Weixin bridge, local-workspace Source, or model router is implemented by this PR. The original superagent is a research prototype, not production-ready. Keep changes additive and test each version boundary.
+> Status: **incremental prototype**. The fork now contains offline-tested signed Weixin ingress, an optional disabled-by-default DSH Source, a companion OpenClaw `before_dispatch` ingress hook, local routing/queue/path-safety primitives and an explicitly GitHub-disabled startup path. **Two-way WeChat delivery, real OpenClaw E2E, local project execution and wiring the model queue into DSH calls are not complete**. The original superagent is a research prototype, not production-ready. Keep changes additive and test each version boundary.
 
 ## Goals and invariants
 
@@ -94,9 +94,9 @@ Nominal 400K context must be tested with the real deployment, not inferred from 
 
 ## Phased work and acceptance
 
-**P0 (this PR):** architecture decision record, sample local-only LiteLLM config, read-only `scripts/probe-local-llm.mjs` with a Node test. These are real deliverables; channel and runtime integration are not yet complete.
+**P0 (completed on this branch):** architecture decision record, sample local-only LiteLLM config, read-only `scripts/probe-local-llm.mjs` with a Node test. These are real deliverables; channel and runtime integration are not yet complete.
 
-**P1 — transport:** decide strict OpenClaw plugin versus DSH-direct iLink; implement and test authenticated Source/Channel bridge, replay, ordering, identity/allowlist, reply correlation, reconnect, credential rotation, media and interactive authorization. Do not expose an unguarded ingress publicly.
+**P1 — transport (partial on branch):** Strict OpenClaw plugin chosen as the working direction. Signed ingress and DSH SourceKind prototype exist with simulated tests; **outbound OpenClaw send receiver, native identity contract verification, replay durability across the OpenClaw link, media, account login, reconnect and interactive approvals are not yet integrated or E2E-tested**. Do not expose an unguarded ingress publicly.
 
 **P2 — project abstraction:** multi-project registry, isolated execution, GitHub-optional Ticket creation, local non-Git results, approvals and exact target selection. Tests: path traversal, symlinks, simultaneous edits, crash/replay.
 
