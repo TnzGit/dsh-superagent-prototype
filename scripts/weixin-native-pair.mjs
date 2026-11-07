@@ -35,7 +35,9 @@ export async function getCode(fetcher=fetch) {
 export async function checkCode(id,host=DEFAULT_BASE,verifyCode,fetcher=fetch) {
   const url=secureBase(host)+STATUS_ROUTE+'?qrcode='+encodeURIComponent(id)
     +(verifyCode?'&verify_code='+encodeURIComponent(verifyCode):'')
-  const result=await json(url,{method:'GET',headers:headers()},fetcher)
+  const h=headers()
+  // QR status polling uses only app headers, not authenticated bot/request headers.
+  const result=await json(url,{method:'GET',headers:{'iLink-App-Id':h['iLink-App-Id'],'iLink-App-ClientVersion':h['iLink-App-ClientVersion']}},fetcher)
   if(!scanStates.includes(result.status))throw Error('Unsupported Weixin QR status')
   return result
 }
