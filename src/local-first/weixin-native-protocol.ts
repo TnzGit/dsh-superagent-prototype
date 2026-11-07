@@ -8,8 +8,10 @@ export const DEFAULT_BASE = 'https://ilinkai.weixin.qq.com'
 export const WEIXIN_CLIENT_VERSION = '2.4.10'
 export interface WeixinCredentials { token: string; baseUrl: string; botId?: string }
 export interface UpdatePage { msgs?: unknown[]; get_updates_buf?: string; longpolling_timeout_ms?: number; ret?: number; errcode?: number; errmsg?: string }
+/** Error code from an iLink response; plain field works with Node's TypeScript strip-only loader. */
 export class WeixinProtocolError extends Error {
-  constructor(message: string, readonly code?: number) { super(message); this.name = 'WeixinProtocolError' }
+  readonly code?: number
+  constructor(message: string, code?: number) { super(message); this.name = 'WeixinProtocolError'; this.code = code }
 }
 /** Reject anything except HTTPS; login-returned URLs still require validation. */
 export function secureBase(input: string): string {
