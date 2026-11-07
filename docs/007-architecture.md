@@ -298,6 +298,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/limits.ts` | The limits of the values a person sets, which the settings schemas check and the panel's fields offer |
 | `src/kv.ts` | `KV`: every family of `kv` records with its key, its value's type and its owner, and the `Key` and `Family` types the Store and `SourceContext.state` take |
 | `src/navigation.ts` | Opens a DeepSeek Harness Session from the panel once the host's catalog lists it |
+| `src/local-first/openai-queue-proxy.ts` | Loopback OpenAI-compatible proxy that holds one queue slot through each upstream response stream, with bearer auth and bounded body/queue |
 | `src/local-first/model-queue.ts` | Bounded per-endpoint model queue, fairness, cancellations, waiting budgets and the process-level queue registry; not yet installed as the DSH LLM call intercept |
 | `src/local-first/model-routing.ts` | Fail-closed candidate selection by priority, capabilities, health, privacy and paid-provider approval; provider integration is pending |
 | `src/local-first/project-registry.ts` | Registered local project IDs, canonical path checks, forbidden paths and per-project write serialization; not a substitute for OS sandboxing or worker integration |
