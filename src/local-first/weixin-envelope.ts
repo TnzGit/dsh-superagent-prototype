@@ -4,6 +4,7 @@ import type { Trigger } from '../core/index.ts'
 export interface WeixinEvent {
   accountId: string; peerId: string; messageId: string; receivedAt: string; text: string; conversationId?: string
 }
+/** Rejected bridge request without a valid fresh message authentication code. */
 export class BridgeAuthError extends Error {
   constructor(message = 'Invalid bridge authentication') { super(message); this.name = 'BridgeAuthError' }
 }
