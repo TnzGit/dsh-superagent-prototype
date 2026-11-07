@@ -302,9 +302,6 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/local-first/model-queue.ts` | Bounded per-endpoint model queue, fairness, cancellations, waiting budgets and the process-level queue registry; not yet installed as the DSH LLM call intercept |
 | `src/local-first/model-routing.ts` | Fail-closed candidate selection by priority, capabilities, health, privacy and paid-provider approval; provider integration is pending |
 | `src/local-first/project-registry.ts` | Registered local project IDs, canonical path checks, forbidden paths and per-project write serialization; not a substitute for OS sandboxing or worker integration |
-| `src/local-first/weixin-envelope.ts` | Signed bridge message envelope, strict validation and canonical DSH Trigger mapping |
-| `src/local-first/weixin-http.ts` | Loopback HMAC bridge ingress with allowlist, retryable ingest errors and bounded payloads |
-| `src/sources/openclaw-bridge.ts` | Disabled-by-default DSH SourceKind adapter receiving bridged Weixin messages and defining a signed outbound contract; OpenClaw reverse delivery not yet wired |
 | `src/core/model.ts` | The domain types, among them the typed Ticket and `MandateBasis`, with `threadKey`, `ticketOutcome`, `reached`, `followupOwners`, `settled`, `waitsForPerson`, `liveTicket`, `runningAssignment`, `latestAssignment` and `latestReport` |
 | `src/core/ports.ts` | The ports: `Repositories`, `Policy`, `SourceScope`, `Assessor`, `Executor`, `Outbox`, and the domain events |
 | `src/core/engine.ts` | The Engine, the core's entry point, and the role interfaces `EngineForSources`, `EngineForMainSession`, `EngineForPeople`, `EngineForSettings` and `EngineForExecutor` |
