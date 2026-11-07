@@ -6,7 +6,7 @@ permissions:
   contents: read
 # Cancel stale branch runs, including older tests that deadlocked before queue-state timeouts existed.
 concurrency:
-  group: local-first-${{ github.head_ref || github.ref_name }}
+  group: local-first-native-${{ github.head_ref || github.ref_name }}
   cancel-in-progress: true
 jobs:
   local-first-core:
