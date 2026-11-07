@@ -8,7 +8,9 @@ interface Entry<T> {
   signal?: AbortSignal; cleanup?: () => void; state: 'pending' | 'running' | 'done'
 }
 const PRIORITIES: Priority[] = ['interactive','normal','background']
+/** The endpoint cannot admit another waiting request. */
 export class QueueBusyError extends Error { constructor(message: string) { super(message); this.name = 'QueueBusyError' } }
+/** A queued request exceeded its configured waiting budget. */
 export class QueueWaitTimeoutError extends Error { constructor() { super('Waited too long for a model slot'); this.name = 'QueueWaitTimeoutError' } }
 const cancelled = (): Error => new DOMException('Model request cancelled', 'AbortError')
 
