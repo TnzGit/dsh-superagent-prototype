@@ -4,7 +4,7 @@ import { actorId, asTrigger, parseEvent, verifyBody, BridgeAuthError, type Weixi
 import type { Trigger } from '../core/index.ts'
 const MAX_BODY = 128 * 1024
 export interface BridgeOptions {
-  secret: string; allowPeers: readonly string[]
+  secret: string; allowPeers: readonly string[] | (() => readonly string[])
   ingest: (trigger: Trigger) => Promise<unknown> | unknown
   onFailure?: (reason: string) => void
 }
@@ -33,7 +33,7 @@ export function createBridgeServer(options: BridgeOptions) {
       verifyBody(options.secret, request.headers['x-dsh-timestamp'] as string | undefined,
         request.headers['x-dsh-signature'] as string | undefined, raw)
       event = parseEvent(JSON.parse(raw.toString('utf8')))
-      if (!options.allowPeers.includes(actorId(event.accountId, event.peerId))) { reply(response, 403, 'forbidden'); return }
+      if (!(typeof options.allowPeers === 'function' ? options.allowPeers() : options.allowPeers).includes(actorId(event.accountId, event.peerId))) { reply(response, 403, 'forbidden'); return }
     } catch (error) {
       const auth = error instanceof BridgeAuthError
       const message = error instanceof Error ? error.message : 'unknown'
