@@ -4,20 +4,20 @@
 
 ## Owner intent and precedence
 
-The operator stopped using OpenClaw. The DSH Superagent should be the sole agent behind the WeChat/Clawbot conversation previously used with OpenClaw. Do **not** reinstall OpenClaw, require an OpenClaw Gateway, run the Tencent OpenClaw plugin, use \`before_dispatch\`, or bridge through OpenClaw HTTP/WS methods. The old bot may need new QR authorization/rebinding; reuse of the same visible bot identity or stale credentials is **not guaranteed**. Do not import the old OpenClaw profile/token without explicit authorization.
+The operator stopped using OpenClaw. The DSH Superagent should be the sole agent behind the WeChat/Clawbot conversation previously used with OpenClaw. Do **not** reinstall OpenClaw, require an OpenClaw Gateway, run the Tencent OpenClaw plugin, use `before_dispatch`, or bridge through OpenClaw HTTP/WS methods. The old bot may need new QR authorization/rebinding; reuse of the same visible bot identity or stale credentials is **not guaranteed**. Do not import the old OpenClaw profile/token without explicit authorization.
 
-This decision **supersedes the selected transport** in 009. Any existing \`integrations/openclaw-weixin-dsh/*\`, \`src/sources/openclaw-bridge.ts\` and \`src/local-first/weixin-http.ts\` files are obsolete exploratory prototypes, **not** part of the selected architecture. Keep them disabled; remove them from package entry points before declaring the new channel complete. Their passing CI tests do not prove native Weixin support.
+This decision **supersedes the selected transport** in 009. Any existing `integrations/openclaw-weixin-dsh/*`, `src/sources/openclaw-bridge.ts` and `src/local-first/weixin-http.ts` files are obsolete exploratory prototypes, **not** part of the selected architecture. Keep them disabled; remove them from package entry points before declaring the new channel complete. Their passing CI tests do not prove native Weixin support.
 
 ## Reuse before building
 
 - [samanhappy/dsh-superagent](https://github.com/samanhappy/dsh-superagent), MIT + NOTICE: already implements a DSH Weixin Source, QR login in the DSH panel, authenticated iLink long polling, Trigger mapping, context tokens and outbound replies. Review its LICENSE and NOTICE; attribute copied/adapted code rather than silently copying.
-- [Tencent/openclaw-weixin](https://github.com/Tencent/openclaw-weixin), MIT: **protocol documentation/source reference only**. Its OpenClaw plugin entry point is incompatible with the requirement to avoid OpenClaw runtime. Read \`docs/protocol_zh_CN.md\` / \`docs/protocol.md\`, which describe QR challenge and \`context_token\`, login redirects, cursor \`get_updates_buf\`, and reply semantics.
+- [Tencent/openclaw-weixin](https://github.com/Tencent/openclaw-weixin), MIT: **protocol documentation/source reference only**. Its OpenClaw plugin entry point is incompatible with the requirement to avoid OpenClaw runtime. Read `docs/protocol_zh_CN.md` / `docs/protocol.md`, which describe QR challenge and `context_token`, login redirects, cursor `get_updates_buf`, and reply semantics.
 - [lubaiUwU/DSH-WeChatClawBot](https://github.com/lubaiUwU/DSH-WeChatClawBot), independent DSH without OpenClaw, is another option to inspect but must not be installed indiscriminately.
 - The iLink bot API can evolve or be restricted. Stop on token invalidation, unusual login challenges, bind conflicts or suspected platform policy restriction. No unauthorized workaround; login is operator-controlled.
 
 ## Selected design
 
-\`\`\`text
+```text
 Operator scans QR once (only after staging report + explicit approval)
                        |
  WeChat / Tencent iLink API (HTTPS JSON, authenticated bot token)
@@ -36,14 +36,14 @@ Operator scans QR once (only after staging report + explicit approval)
 
 DSH provider -> local OpenAI queue proxy (concurrency 1)
                   -> existing Qwen3.8-Flash-Next vLLM
-\`\`\`
+```
 
 Requirements:
 - Run inside DSH host; no OpenClaw process, NPM plugin, dependency, Gateway or state directory.
 - Source is disabled by default; no network, QR issuance, polling, or bot state mutation before operator explicitly enables test mode.
-- Pairing credentials are written only after user's confirmation into locally secured storage (owner read/write only), never GitHub, logs, prompts, QR webpage with external QR renderers or permanent shell history; take redirected \`baseurl\` from login result and verify HTTPS.
+- Pairing credentials are written only after user's confirmation into locally secured storage (owner read/write only), never GitHub, logs, prompts, QR webpage with external QR renderers or permanent shell history; take redirected `baseurl` from login result and verify HTTPS.
 - Durable poll cursor must advance **after** each Trigger is persisted; replay must deduplicate by stable message ID.
-- Preserve conversation \`context_token\` for correct replies, including restart/replay, and avoid retrying an ambiguous send automatically until reconciled. Enforce sender allowlist and explicit approval for destructive commands, writes outside staging, sensitive data egress, new model payments, or production deployment.
+- Preserve conversation `context_token` for correct replies, including restart/replay, and avoid retrying an ambiguous send automatically until reconciled. Enforce sender allowlist and explicit approval for destructive commands, writes outside staging, sensitive data egress, new model payments, or production deployment.
 - Only one active polling process per bot account. Test behavior of previous Clawbot binding (rebinding may require a scan and may not preserve old identity). Do not run old OpenClaw and new DSH channel concurrently.
 - Start with private-chat text; media, images, voice, group messages and attachments should be represented as unsupported/not-ready unless proven.
 - Operational readiness includes actual SDK compatibility, restart recovery, health, revoked credential handling, test inbound/outbound and cloud-disabled model path. A green mock CI is not a live channel acceptance.
