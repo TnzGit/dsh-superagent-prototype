@@ -1,6 +1,6 @@
 # 009 Local-first WeChat Superagent — integration plan
 
-> Status: **design and prerequisite probes only**. This document does not claim the WhatsApp/Weixin bridge, local-workspace Source, or model router is implemented by this PR. The original superagent is a research prototype, not production-ready. Keep changes additive and test each version boundary.
+> Status: **design and prerequisite probes only**. This document does not claim the Weixin bridge, local-workspace Source, or model router is implemented by this PR. The original superagent is a research prototype, not production-ready. Keep changes additive and test each version boundary.
 
 ## Goals and invariants
 
