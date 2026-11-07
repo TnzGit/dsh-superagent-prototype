@@ -13,10 +13,14 @@ export interface SetupHost {
   restart(): void
 }
 
-const setupFields = (settings: Settings) =>
-  JSON.stringify(Object.entries(SETUP_FIELDS).map(([id, keys]) => [id === 'github' ? settings.sources.github?.enabled !== false : null,
-    ...keys.map(key => settings.sources[id]?.config[key] ?? '')]))
-export const setupChanged = (before: Settings, after: Settings): boolean => setupFields(before) !== setupFields(after)
+const accountFields = (settings: Settings) =>
+  JSON.stringify(Object.entries(SETUP_FIELDS).map(([id, keys]) => keys.map(key => settings.sources[id]?.config[key] ?? '')))
+/** Account CLI/repository changes require management-panel authority, not a Source toggle. */
+export const setupAccountFieldsChanged = (before: Settings, after: Settings): boolean =>
+  accountFields(before) !== accountFields(after)
+/** A GitHub Source toggle also needs a restart, but does not itself change stored account credentials. */
+export const setupChanged = (before: Settings, after: Settings): boolean =>
+  setupAccountFieldsChanged(before, after) || (before.sources.github?.enabled !== false) !== (after.sources.github?.enabled !== false)
 
 /**
  * Resolves the target repository, GitHub account, and optional Feishu bot by probing CLIs, then writes and applies the isolated git and shim environment used by worker processes.
