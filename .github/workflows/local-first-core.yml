@@ -19,8 +19,10 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Unit and simulated HTTP bridge tests (no external credentials)
-        run: node --experimental-strip-types --test tests/local-*.node-test.mjs scripts/probe-local-llm.node-test.mjs
+      - name: Pure scheduling, path, Weixin and OpenClaw tests (no credentials)
+        run: node --experimental-strip-types --test tests/local-model-queue.node-test.mjs tests/local-projects.node-test.mjs tests/local-weixin-bridge.node-test.mjs tests/local-openclaw-plugin.node-test.mjs scripts/probe-local-llm.node-test.mjs
+      - name: OpenAI queue proxy integration tests (bounded execution)
+        run: timeout -k 5s 45s node --experimental-strip-types --test tests/local-openai-queue-proxy.node-test.mjs
 
   dsh-typecheck-and-build:
     runs-on: ubuntu-latest
