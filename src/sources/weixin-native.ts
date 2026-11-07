@@ -13,8 +13,8 @@ import { pause } from './poll.ts'
 import { messageToTrigger, receivePage, sendText, WEIXIN_SOURCE, secureBase, type WeixinCredentials } from '../local-first/weixin-native-protocol.ts'
 
 const ConfigSchema=z.object({
-  allowedPeers:z.array(z.string().trim().min(1).max(256)).default([])
-    .refine(values=>new Set(values).size===values.length,'Duplicate Weixin peer'),
+  allowedPeers:z.array(z.object({id:z.string().trim().min(1).max(256)}).strict()).default([])
+    .refine(values=>new Set(values.map(v=>v.id)).size===values.length,'Duplicate Weixin peer'),
 }).strict()
 type Config=z.infer<typeof ConfigSchema>
 const IDENTITY=z.object({id:z.string().trim().min(1).max(256),name:z.string().trim().max(100).optional()}).strict()
@@ -33,7 +33,7 @@ export function readNativeCredentials(file=process.env.DSH_WEIXIN_NATIVE_CREDENT
 }
 /** Strict source allowlist is enforced before a Trigger can enter DSH evaluation. */
 export function canReceive(config:Config, peer:string): boolean {
-  return config.allowedPeers.includes(peer)
+  return config.allowedPeers.some(row=>row.id===peer)
 }
 /** The operator has to configure source-level and DSH policy allowlists independently. */
 export const nativeWeixinKind: SourceKind<Config>={
@@ -44,7 +44,7 @@ export const nativeWeixinKind: SourceKind<Config>={
   schema:ConfigSchema,
   health:[WEIXIN_SOURCE],
   fields:[{key:'allowedPeers',type:'rows',label:{zh:'允许收件人（微信 peer ID）',en:'Allowed Weixin peers'},
-    columns:[{key:'value',type:'text',label:{zh:'Peer ID',en:'Peer ID'}}]}],
+    columns:[{key:'id',type:'text',label:{zh:'Peer ID',en:'Peer ID'}}]}],
   scope:({meta},config)=>canReceive(config,typeof meta.peer==='string'?meta.peer:'')
     ?{listened:true,observed:false,row:'direct'}:{listened:false,reason:'weixin_peer_not_allowed'},
   channel:{
