@@ -96,7 +96,7 @@ The deployment advertises max_model_len 400,000; 8K, 32K and 64K were tested wit
 
 **P0 (completed on this branch):** architecture decision record, sample local-only LiteLLM config, read-only `scripts/probe-local-llm.mjs` with a Node test. These are real deliverables; channel and runtime integration are not yet complete.
 
-**P1 — transport (partial on branch):** Strict OpenClaw plugin chosen as the working direction. Signed ingress and DSH SourceKind prototype exist with simulated tests; **outbound OpenClaw send receiver, native identity contract verification, replay durability across the OpenClaw link, media, account login, reconnect and interactive approvals are not yet integrated or E2E-tested**. Do not expose an unguarded ingress publicly.
+**P1 — transport (partial on branch):** Strict OpenClaw plugin chosen as the working direction. Signed ingress and DSH SourceKind prototype exist with simulated tests; **a signed outbound HTTP receiver now exists behind `DSH_WEIXIN_BRIDGE_OUTBOUND_ENABLED=1`**, using OpenClaw `api.runtime.channel.outbound.loadAdapter('openclaw-weixin')` to reuse Tencent's native adapter (including its `contextToken` resolution), a durable keyed receipt and observed-peer registry; this has only mock validation. Host plugin SDK/route permissions, Gateway availability, media, account login, reconnect and interactive approvals remain **unverified or unsupported**. Ambiguous sends are marked unknown and require manual reconciliation; do not automatically replay them. Do not expose an unguarded ingress publicly.
 
 **P2 — project abstraction:** multi-project registry, isolated execution, GitHub-optional Ticket creation, local non-Git results, approvals and exact target selection. Tests: path traversal, symlinks, simultaneous edits, crash/replay.
 
@@ -114,6 +114,13 @@ node --test scripts/probe-local-llm.node-test.mjs
 
 The probe checks `/models`, one small completion, and optionally one tool-call request. It cannot prove 400K context, prolonged stability, throughput, KV cache behavior, or production readiness. Use `LOCAL_LLM_API_KEY` environment variable if authentication is required; never put real credentials in issues, PRs, chat, or tracked YAML.
 
+## Experimental native outbound bridge security model
+
+- OpenClaw plugin registers the `/plugins/dsh-weixin-bridge/outbound` route only when `DSH_WEIXIN_BRIDGE_OUTBOUND_ENABLED=1`. It is **off by default**, `auth: 'plugin'`, requires HMAC of the exact HTTP body, timestamps within five minutes and a loopback TCP source (use an SSH tunnel for split hosts).
+- The Gateway stores a hash of an account/peer only after DSH accepts an inbound event. Outbound targets must match an admitted peer. Request IDs, payload hashes and a delivery state are written to the host-provided persistent keyed store before native sending and after success.
+- A duplicate confirmed ID returns success without re-sending. If the previous native send may have happened but completion was not proven, the state remains `sending`/`unknown`, and a retry returns HTTP 409 **without re-sending**. A human/operator must reconcile it. This is **not exactly-once delivery**, and receipt-retention and Gateway restart must be validated before production use.
+- Actual physical sending is delegated to `api.runtime.channel.outbound.loadAdapter('openclaw-weixin').sendText` with `api.config`, `accountId`, and `to`; this follows Tencent's context-token handling and avoids a new direct iLink transport. Route trust, actor identity and the native send path still need real Gateway validation. Text is split into at most 3500 Unicode codepoints per chunk, with partial-batch ambiguity reported instead of replayed.
+
 ## 2026-11-08 environment validation (desensitized)
 
 The operator's local-Agent report is **not checked into the public fork**, since it contains local filesystem and LAN topology. Salient verified facts, without local addresses:
@@ -122,7 +129,7 @@ The operator's local-Agent report is **not checked into the public fork**, since
 - Tool calling and streaming worked. The 3bpw AutoRound + MTP model passed 8K/32K/64K context smoke tests; 400K was not tested.
 - With small requests, vLLM's continuous batching accepted more than one request concurrently; **the queue proxy remains mandatory** if strictly one active inference is required across DSH roles.
 - Reported decode measurements were short-output observations (~60–80 tok/s). Do not interpret them as a statistically stable large-generation benchmark.
-- OpenClaw `2026.11.1` exposes `event.channel` and `ctx.channelId` in the `before_dispatch` contract. The Tencent plugin `2.4.10` relies on conversation `contextToken` for outbound Weixin delivery. The real Gateway was not running, so no two-way WeChat validation occurred.
+- OpenClaw `2026.11.1` exposes `event.channel` and `ctx.channelId` in the `before_dispatch` contract (the fork's original reversed field lookup was fixed). Tencent plugin `2.4.10` uses a conversation `contextToken` for outbound Weixin delivery; the optional OpenClaw-side receiver delegates to its **native adapter in the same Gateway process** instead of reimplementing Tencent iLink. The real Gateway was not running, so no two-way WeChat validation occurred.
 - The existing OpenClaw runtime must be selected and authenticated before activating the bridge. An OpenClaw CLI absence is **not** permission to replace or overwrite the user's existing application/profile.
 
 ## Rollback and report requirements
