@@ -30,7 +30,7 @@ export function createPlugin({ env=process.env, fetcher=fetch, clock=()=>Date.no
           namespace:'dsh-weixin-outbound-receipts-v1',maxEntries:50000,defaultTtlMs:90*24*3600000
         })
         const handler=createOutboundHandler({
-          secret:env.DSH_WEIXIN_BRIDGE_SECRET,store:receipts,peerStore,clock,
+          secret:env.DSH_WEIXIN_BRIDGE_SECRET,store:receipts,peerStore,now:clock,
           sendText:async({accountId,peerId,text})=>{
             const adapter=await api.runtime.channel.outbound.loadAdapter(CHANNEL)
             if(!adapter?.sendText) throw Error('Tencent Weixin channel outbound is unavailable')
