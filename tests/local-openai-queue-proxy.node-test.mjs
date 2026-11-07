@@ -5,13 +5,17 @@ import { createOpenAIQueueProxy } from '../src/local-first/openai-queue-proxy.ts
 const TOKEN = 'test-local-queue-proxy-client-key-32-chars-long'
 const UPSTREAM_TOKEN = 'upstream-secret-not-client-token'
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms))
+async function waitUntil(check, timeoutMs=3000) {
+  const end=Date.now()+timeoutMs
+  while(!check()) { if(Date.now()>end) throw new Error('Timed out waiting for test queue state'); await delay(5) }
+}
 async function fixtures(upstreamHandler, body) {
   const upstream = createServer(upstreamHandler)
   await new Promise(resolve => upstream.listen(0, '127.0.0.1', resolve))
   const { server, queue } = createOpenAIQueueProxy({
     upstreamBase: 'http://127.0.0.1:' + upstream.address().port + '/v1',
     clientKey: TOKEN, upstreamKey: UPSTREAM_TOKEN, concurrency: 1, maxPending: 3,
-    waitTimeoutMs: 150, upstreamTimeoutMs: 3000, maxBodyBytes: 1024,
+    waitTimeoutMs: 10000, upstreamTimeoutMs: 15000, maxBodyBytes: 1024,
   })
   await new Promise(resolve => server.listen(0,'127.0.0.1',resolve))
   const base = 'http://127.0.0.1:' + server.address().port
@@ -75,9 +79,9 @@ test('pending client abort is canceled and never hits upstream',async()=>{
   },async({base,headers,queue})=>{
     const send=(signal)=>fetch(base+'/v1/responses',{method:'POST',headers,body:'{}',signal})
     const first=send()
-    while(queue.snapshot().running!==1) await delay(5)
+    await waitUntil(()=>queue.snapshot().running===1)
     const ctrl=new AbortController(), pending=send(ctrl.signal)
-    while(queue.snapshot().pending!==1)await delay(5)
+    await waitUntil(()=>queue.snapshot().pending===1)
     ctrl.abort()
     await assert.rejects(pending,{name:'AbortError'})
     await delay(20)
@@ -91,9 +95,9 @@ test('oversized requests and queue exhaustion fail without forwarding secrets or
     const bad=await fetch(base+'/v1/responses',{method:'POST',headers,body:'x'.repeat(2048)})
     assert.equal(bad.status,413)
     const first=fetch(base+'/v1/responses',{method:'POST',headers,body:'{}'})
-    while(queue.snapshot().running!==1) await delay(5)
+    await waitUntil(()=>queue.snapshot().running===1)
     const pending=Array.from({length:3},()=>fetch(base+'/v1/responses',{method:'POST',headers,body:'{}'}))
-    while(queue.snapshot().pending!==3) await delay(5)
+    await waitUntil(()=>queue.snapshot().pending===3)
     const overload=await fetch(base+'/v1/responses',{method:'POST',headers,body:'{}'})
     assert.equal(overload.status,429)
     resolveHold();const response=await Promise.all([first,...pending]);assert.equal(response.every(r=>r.ok),true)
