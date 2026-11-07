@@ -18,7 +18,7 @@ jobs:
         with:
           node-version: '22'
       - name: Pure scheduling, path, Weixin and OpenClaw tests (no credentials)
-        run: node --experimental-strip-types --test tests/local-model-queue.node-test.mjs tests/local-projects.node-test.mjs scripts/probe-local-llm.node-test.mjs
+        run: node --experimental-strip-types --test tests/local-model-queue.node-test.mjs tests/local-projects.node-test.mjs tests/local-weixin-native.node-test.mjs tests/local-weixin-qr.node-test.mjs scripts/probe-local-llm.node-test.mjs
       - name: OpenAI queue proxy integration tests (bounded execution)
         run: timeout -k 5s 45s node --experimental-strip-types --test tests/local-openai-queue-proxy.node-test.mjs
 
@@ -31,7 +31,7 @@ jobs:
         with:
           node-version: '25'
       - name: Verify local-first tests against macOS path canonicalization and Node 25
-        run: node --experimental-strip-types --test tests/local-model-queue.node-test.mjs tests/local-projects.node-test.mjs scripts/probe-local-llm.node-test.mjs
+        run: node --experimental-strip-types --test tests/local-model-queue.node-test.mjs tests/local-projects.node-test.mjs tests/local-weixin-native.node-test.mjs tests/local-weixin-qr.node-test.mjs scripts/probe-local-llm.node-test.mjs
       - name: Verify model queue proxy across macOS streams
         run: node --experimental-strip-types --test tests/local-openai-queue-proxy.node-test.mjs
 
