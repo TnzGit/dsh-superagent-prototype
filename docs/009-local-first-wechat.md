@@ -1,10 +1,12 @@
-# 009 Local-first WeChat Superagent — integration plan
+# 009 Local-first WeChat Superagent — historical integration plan
+
+> **Architecture superseded (2026-11-08).** The operator has retired OpenClaw and explicitly selected **DSH-native Weixin over iLink with QR-gated pairing**. The decision and current handoff are in [010 Direct Weixin channel](010-direct-weixin-channel.md) and `LOCAL_AGENT_HANDOFF.md`. This document retains earlier OpenClaw bridge explorations **as historical reference only**. Do not install OpenClaw, configure its plugins, run the Gateway, or start those prototype modules when implementing the chosen system.
 
 > Status: **incremental prototype**. The fork now contains offline-tested signed Weixin ingress, an optional disabled-by-default DSH Source, a companion OpenClaw `before_dispatch` ingress hook, local routing/queue/path-safety primitives and an explicitly GitHub-disabled startup path. **Two-way WeChat delivery, real OpenClaw E2E, local project execution and wiring the model queue into DSH calls are not complete**. The original superagent is a research prototype, not production-ready. Keep changes additive and test each version boundary.
 
 ## Goals and invariants
 
-- WeChat direct chat is the principal operator entry point, using Tencent's `openclaw-weixin` channel when the full OpenClaw plugin is required.
+- WeChat direct chat is the principal operator entry point. **Final selected transport: DSH-native iLink**, not the OpenClaw plugin described in the historical options below.
 - Projects may be plain local directories, Git repositories without remotes, or GitHub repositories. GitHub is an optional remote, never a prerequisite for a Ticket.
 - One durable DSH Ticket and one execution owner per accepted request. DSH owns authorization, task state, workers, replay and delivery. Do **not** let OpenClaw and DSH independently plan or execute the same job.
 - Local-first inference with a *single concurrent* primary Qwen3.8-Flash-Next endpoint. Nominal 400K context, ~3,000 prompt tokens/s and ~200 output tokens/s are operator-reported capacities, **not** validated service guarantees.
