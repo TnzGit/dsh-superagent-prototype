@@ -1,4 +1,5 @@
-import test from 'node:test'
+import { test as nodeTest } from 'node:test'
+const test=(name,fn)=>nodeTest(name,{timeout:12000},fn)
 import assert from 'node:assert/strict'
 import { createServer } from 'node:http'
 import { createOpenAIQueueProxy } from '../src/local-first/openai-queue-proxy.ts'
@@ -21,7 +22,11 @@ async function fixtures(upstreamHandler, body) {
   const base = 'http://127.0.0.1:' + server.address().port
   const headers = {Authorization:'Bearer '+TOKEN,'Content-Type':'application/json'}
   try { await body({base,headers,queue}) }
-  finally { await new Promise(resolve => server.close(resolve)); await new Promise(resolve => upstream.close(resolve)) }
+  finally {
+    // An assertion failure must not leave keep-alive client sockets holding CI open indefinitely.
+    server.closeAllConnections(); upstream.closeAllConnections()
+    await Promise.all([new Promise(resolve => server.close(resolve)), new Promise(resolve => upstream.close(resolve))])
+  }
 }
 test('one concurrent inference across all requests with opaque upstream credentials',async()=>{
   let concurrent=0, peak=0, calls=0
