@@ -1,11 +1,12 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, symlinkSync, rmSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { LocalProjectRegistry } from '../src/local-first/project-registry.ts'
 const fixture = async fn => {
-  const base=mkdtempSync(join(tmpdir(),'superagent-project-'))
+  // Canonicalize macOS /var -> /private/var while retaining the registry's symlink-safe semantics.
+  const base=realpathSync(mkdtempSync(join(tmpdir(),'superagent-project-')))
   const root=join(base,'allowed'),project=join(root,'alpha'),outside=join(base,'outside')
   mkdirSync(project,{recursive:true});mkdirSync(outside)
   try{return await fn({root,project,outside})}finally{rmSync(base,{recursive:true,force:true})}
