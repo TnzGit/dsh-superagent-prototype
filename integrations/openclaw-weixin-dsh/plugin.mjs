@@ -17,7 +17,9 @@ export function createPlugin({ env=process.env, fetcher=fetch, clock=()=>Date.no
     id:'dsh-weixin-bridge',name:'DSH Weixin bridge',
     register(api) {
       api.on('before_dispatch',async(event,ctx)=>{
-        if((event.channelId ?? ctx.channel)!==CHANNEL) return undefined
+        // OpenClaw 2026.11.1: the channel name is event.channel, not event.channelId.
+        // ctx.channelId identifies the channel on this hook; older host shapes are fallback only.
+        if((event.channel ?? ctx.channelId ?? event.channelId ?? ctx.channel)!==CHANNEL) return undefined
         if(event.isGroup===true || ctx.isGroup===true) return {handled:true,text:'仅允许微信私聊发起任务。'}
         const accountId=event.accountId ?? ctx.accountId
         const peerId=event.senderId ?? ctx.senderId
