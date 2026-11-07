@@ -14,7 +14,9 @@ export class WeixinProtocolError extends Error {
 /** Reject anything except HTTPS; login-returned URLs still require validation. */
 export function secureBase(input: string): string {
   const url = new URL(input)
-  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.port) throw Error('Weixin base must be credential-free HTTPS')
+  if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash || url.port ||
+    !(url.hostname === 'ilinkai.weixin.qq.com' || url.hostname.endsWith('.weixin.qq.com')))
+    throw Error('Weixin base must be an approved Tencent HTTPS host')
   return url.origin + url.pathname.replace(/\/+$/, '')
 }
 function clientVersion(version: string): number {
@@ -61,7 +63,7 @@ export function messageToTrigger(input:unknown): Trigger | undefined {
   if(!input||typeof input!=='object'||Array.isArray(input))return
   const m=input as Record<string,unknown>
   const peer=typeof m.from_user_id==='string'?m.from_user_id:''
-  if(!peer||stringOf(m.message_type)==='2'||stringOf(m.message_state)==='1')return
+  if(!peer||stringOf(m.message_type)==='2'||stringOf(m.message_state)==='1'||m.group_id)return
   const items=Array.isArray(m.item_list)?m.item_list:[]
   const validItems=items.filter((x):x is Record<string,unknown>=>!!x&&typeof x==='object'&&!Array.isArray(x))
   const id=stringOf(m.message_id)??stringOf(validItems.find(x=>stringOf(x.msg_id))?.msg_id)
@@ -74,7 +76,7 @@ export function messageToTrigger(input:unknown): Trigger | undefined {
     ?? '[未支持的微信消息]')
   if(text.length>64000)return
   const at=Number(m.create_time_ms)
-  const iso=Number.isFinite(at)&&at>0?new Date(at).toISOString():new Date().toISOString()
+  const iso=Number.isFinite(at)&&at>0&&at<=8.64e15?new Date(at).toISOString():new Date().toISOString()
   const thread=WEIXIN_SOURCE+':'+peer
   return {id:key(WEIXIN_SOURCE,id),source:WEIXIN_SOURCE,
     threads:[{source:WEIXIN_SOURCE,id:thread}],actor:{source:WEIXIN_SOURCE,id:peer},
