@@ -35,3 +35,14 @@ test('missing identity, group traffic and failed ingress are claimed without run
     senderId:'user-1',messageId:'1',body:'hello'})
   assert.equal(result.handled,true);assert.match(result.text,/重试/)
 })
+
+test('malformed timestamp is handled locally without a forwarded request or accidental model dispatch',async()=>{
+  let forwarded=0
+  const p=createPlugin({env:{DSH_WEIXIN_BRIDGE_SECRET:secret,
+    DSH_WEIXIN_BRIDGE_URL:'http://127.0.0.1:1234/v1/weixin/inbound'},
+    fetcher:async()=>{forwarded++; throw Error('Must not forward')}})
+  const result=await dispatch(p,{channelId:'openclaw-weixin',accountId:'account-1',
+    senderId:'user-1',messageId:'invalid-date',body:'hi',timestamp:'definitely-not-a-date'})
+  assert.equal(result.handled,true)
+  assert.equal(forwarded,0)
+})
