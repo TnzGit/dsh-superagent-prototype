@@ -56,6 +56,20 @@ node scripts/probe-local-llm.mjs --tools
 
 记录输出：真实模型 ID、服务实现与版本、上下文上限（实测与声明分开）、tool calling 成功/失败、单并发观测、p50/p95、token/s、估算内存，任何限制均如实注明。
 
+
+### Optional single-slot OpenAI proxy (host-only preflight)
+
+远程已新增 `src/local-first/openai-queue-proxy.ts` 和 `scripts/run-local-model-proxy.mjs`，提供独立、默认不启动的 127.0.0.1 代理。在**隔离测试环境**中设置强随机本地密钥、真实 Qwen 上游地址（必须以 `/v1` 结尾）后运行：
+
+```bash
+export LOCAL_MODEL_PROXY_CLIENT_KEY='仅在本机安全注入的32位以上随机密钥'
+export LOCAL_MODEL_PROXY_UPSTREAM='http://127.0.0.1:8000/v1'
+export LOCAL_MODEL_PROXY_PORT=8123
+node --experimental-strip-types scripts/run-local-model-proxy.mjs
+```
+
+在另一个终端让 `LOCAL_LLM_BASE_URL=http://127.0.0.1:8123/v1`、`LOCAL_LLM_API_KEY` 等于本机代理密钥后运行 `scripts/probe-local-llm.mjs --tools`；可用两个不同的独立客户端观察并发是否严格为 1。**不要在命令行记录或上传密钥**；上面的 export 是字段说明，不是要求把秘密写进脚本或 PR。代理不会自动变更 DSH 的 provider，它也不提供云端回退；真实 Provider 指向代理必须由操作者审核后在本机配置。确认端点正确之前，不把代理开放到 LAN 或公网。
+
 ## 3. 微信环境探查（不发真实消息前先确认授权）
 
 使用用户**自己操作的**官方扫码登录完成腾讯 `@tencent-weixin/openclaw-weixin` 接入，检查当前安装包精确版本；确认 `openclaw-weixin` 渠道的 inbound `before_dispatch` 事件在真实 Gateway 中是否提供 `channelId/accountId/senderId/messageId/content/timestamp`，字段缺失只报告**字段名、类型和是否存在**，不打印原文、账号 ID、二维码 token、聊天内容。
