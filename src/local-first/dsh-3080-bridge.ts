@@ -21,6 +21,8 @@ export interface DshSessionListItem {
   running:boolean
   blank:boolean
   formatStatus?:'current'|'migration-required'
+  parentSessionId?:string
+  origin?:'subagent'
   cwd?:string
   projections?:{values?:RecordObject;kind?:string}
 }
@@ -131,6 +133,7 @@ export class Dsh3080Bridge {
     const current=(await this.listSessions()).find(x=>x.sessionId===sessionId)
     if(!current)reasons.push('session_not_in_host')
     if(current?.running)reasons.push('session_busy')
+    if(current?.origin==='subagent'||current?.parentSessionId)reasons.push('subagent_session_not_supported')
     if(current?.formatStatus!=='current')reasons.push('session_format_unverified_or_migration_required')
     if(current?.cwd && current.cwd!==project.path)reasons.push('workspace_path_mismatch')
     const values=current?.projections?.values
@@ -145,7 +148,8 @@ export class Dsh3080Bridge {
     if(!this.enabled)reasons.push('bridge_not_explicitly_enabled')
     if(!this.allowedSessionIds.has(sessionId))reasons.push('session_not_operator_approved')
     if(!this.queueProxyVerified)reasons.push('queue_proxy_not_verified_on_3080')
-    if(this.verifyRoute && !(await this.verifyRoute()))reasons.push('queue_proxy_route_check_failed')
+    if(!this.verifyRoute)reasons.push('queue_proxy_route_attestation_missing')
+    else if(!(await this.verifyRoute()))reasons.push('queue_proxy_route_check_failed')
     // Both the specific original Workspace and its Session identity remain unmodified.
     return {workspaceId:project.workspaceId,sessionId,projectId:project.projectId,allowed:reasons.length===0,
       reasons,provider,model:modelId,permission:preset,
