@@ -31,6 +31,7 @@ export interface OwnerRpcOptions {
   origin?:string
   grants?:OwnerRpcGrants
 }
+/** Exact loopback-only official DSH RPC owner with separately scoped one-shot writes. */
 export class DshOwnerRpc {
   private readonly origin:string
   private readonly fetcher:typeof fetch
