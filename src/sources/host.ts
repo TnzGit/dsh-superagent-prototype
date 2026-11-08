@@ -21,6 +21,8 @@ export function health(state: Health['state'], code: HealthCode, values: Record<
   return { state, detail: fill(HEALTH_TEXT[code], values), code, ...Object.keys(values).length ? { values } : {} }
 }
 export interface SourceHost {
+  /** Optional one-shot original DSH 3080 relay: true consumes Trigger before the ordinary Engine. */
+  routeNativeWeixin?(trigger: Trigger): boolean | Promise<boolean>
   readonly sources: SourceRegistry
   /** Returns the context for one Source kind; its `report` writes only the health entries declared by the kind. */
   context(kind: { kind: string; health: readonly string[] }): SourceContext
