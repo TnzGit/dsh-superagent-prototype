@@ -1,30 +1,36 @@
-# LOCAL_AGENT_TASK — CURRENT: GATE1-3080-PROVIDER
+# LOCAL_AGENT_TASK — CURRENT: C4 OFFLINE 3080 CONTINUATION READINESS
 
-**First read:** `LOCAL_AGENT_PROTOCOL.md`; then **execute all phases and STOP conditions** in `LOCAL_AGENT_GATE1_PROVIDER_RUNBOOK.md`.  
-**Repository:** `TnzGit/dsh-superagent-prototype`; **feature branch:** `feat/local-first-wechat-foundation`.
+**Read first:** `LOCAL_AGENT_PROTOCOL.md`. **Source of truth:** current feature branch `feat/local-first-wechat-foundation` in `TnzGit/dsh-superagent-prototype`. Previous Gate① and Gate①.5 work is complete; do NOT rerun historical provider setup just because an older task/runbook still exists.
 
-## Operator authorization: GATE ① ONLY
+## Current operator authorization
 
-The operator explicitly replied **“同意”** on 2026-11-08 to the request for Gate ①: a **test-only** `llm-local-proxy` provider pointing from the original DSH 3080 to the local one-slot Qwen proxy `127.0.0.1:8123`, plus a **strictly conditional** `session/selectModel` with proven original global-model-default rollback.
+**Offline source review and mock regression tests only.** The operator has NOT approved Gate①.6 Phase B (the live low/high reasoningEfforts relocation), selecting/creating a disposable test Workspace/Session, `session/selectModel`, any 3080 `session/prompt`, a restart, live 8123 inference, or any Weixin relay switch. Preserve existing 3080/3083/8123 processes; original 3080 `0.0.0.0:3080`, `allowUnauthenticated:true`, trustedHosts and existing anonymous LAN access. No OpenClaw.
 
-This approval **supersedes the previous HOLD only within Gate ①'s narrow scope**. It is permission for the documented minimal original-host provider configuration change, **not** a permit to choose or modify any arbitrary historical Session, or alter the original host's global default permanently.
+## Remote code already added
 
-### Essential constraints
+- `src/local-first/dsh-3080-model-gate.ts`: injected-port-only, disabled-by-default disposable-Session model switch + async default save and revision-CAS restoration. **This is not wired to the running 3083 or the 3080 transport.**
+- `src/local-first/dsh-3080-new-workspace.ts`: injected-port-only, disabled-by-default native Workspace+fresh Session creation with a private one-shot grant, stage ledger and post-create membership validation. **No live directory or original DSH Session has been created.**
+- Node mock suites: `tests/local-dsh-3080-model-gate.node-test.mjs`, `tests/local-dsh-3080-new-workspace.node-test.mjs`. Both are now exercised by Linux and macOS GitHub CI; `docs/007-architecture.md` records these modules.
+- First combined code acceptance SHA `fda9b3446ee2f3a9b9fa7c499f527187a3296acf` got all 3 GitHub Actions jobs green in run 168. Recheck HEAD and status before reporting newer code as green.
 
-- **Never change 3080's `0.0.0.0:3080` listener, `allowUnauthenticated: true`, original trustedHosts, or any anonymous LAN client's access.** This is an operator-required deployment feature.
-- Preserve original 27 Workspaces / 841 Sessions, all histories and files. Do not change existing `cmp170hx` route, existing providers, old Session models, or default `cmp170hx/Qwen3.8-Flash-Next/xhigh` (verify effective value before/after).
-- **No restart/reload of any service**, even for provider activation; Gate ② remains separately unapproved. No `session/prompt` or real Weixin reply; Gate ③ remains separately unapproved. Never enable live 3083 relay or OpenClaw.
-- Before changes, identify the exact installed DSH 0.2.2-alpha.2 provider settings schema and create an owner-only private backup with a demonstrated rollback procedure; never guess config path/schema or publish private data.
-- **SelectModel is conditional, not unconditional:** do **not** run it unless provider is live-visible, the official API and **independent** durable global-default restore are verified, and a specific disposable Workspace+Session is already explicitly designated by the operator. No Session ID was designated in the remote chat; the 62 screened candidates are not automatically approved for mutation. A safely configured provider with `SELECTMODEL_DEFERRED_NO_DESIGNATED_SESSION` is an acceptable completed Gate ① phase.
-- If provider is configured but cannot be activated without Gate ② restart, **STOP and report `PROVIDER_CONFIGURED_PENDING_GATE2`**; no restart now.
-- On drift or unexpected changes, safely undo only the allowed provider change from the private backup, verify restoration, and STOP, or escalate `MANUAL_RECOVERY_REQUIRED` if not verifiable.
+## Host Agent offline validation (no live mutation)
 
-## Required execution and reporting
+1. In a separate clean worktree from the current remote feature HEAD, run `pnpm install --frozen-lockfile`, `pnpm check`, and:
+   ```sh
+   node --experimental-strip-types --test \
+     tests/local-dsh-3080-model-gate.node-test.mjs \
+     tests/local-dsh-3080-new-workspace.node-test.mjs \
+     tests/local-dsh-3080-bridge.node-test.mjs \
+     tests/local-dsh-relay-coordinator.node-test.mjs
+   ```
+2. Compare the injected-port contracts to locally installed DSH 0.2.2-alpha.2's official SessionController, WorkspaceController and SettingsController types **without making API mutation calls**. The future live implementation MUST NOT invent RPC argument shapes. In particular, `workspace/create` adopts an existing directory; `session/create` accepts `workspaceId`; `settings/replace` has `expectedRevision` and must not be called without a current revision.
+3. Read-only verify 3080 global default and modelCatalog, existing anonymous LAN access, the 3080/3083/8123 listener/PID invariants. Record only aggregate Workspace/Session counts, not private IDs or history.
+4. Identify any mismatch or risk that prevents a future **separately approved** smoke test. If code must be changed, report the issue; remote ChatGPT will fix product source and tests. **Do not edit source locally.**
 
-1. Follow `LOCAL_AGENT_GATE1_PROVIDER_RUNBOOK.md` **in full**; do not substitute the stale C0/C1/C2/C3 task files.
-2. Publish one **redacted**, no-private-ID/no-secret report as `agent-reports/REPORT-gate1-3080-provider.md`, with a meaningful normal non-force push on the feature branch. Upload no local config, logs or Session identities. Report the exact provider status, whether selectModel was actually attempted, original global-default before/after status, and the LAN-invariant status.
-3. **STOP**. The next Gate is NOT automatically approved even if provider becomes visible. The user should only get one short sentence:
+## Report to GitHub, NOT through the operator
 
-`GATE1 完成：Provider=<VISIBLE/PENDING/ROLLED_BACK/BLOCKED>，selectModel=<DONE_AND_DEFAULT_RESTORED/DEFERRED>，3080 LAN=PASS；报告 agent-reports/REPORT-gate1-3080-provider.md（SHA <sha>）；未重启、未投递 Prompt。`
+Publish a sanitized final report to `agent-reports/REPORT-c4-offline-native-workspace-model-gate.md` using the dedicated report worktree and a normal non-force push. Include tested SHA, actual `pnpm check` and standalone test counts and exit codes, official API contract findings, read-only listener/default evidence, mock-vs-real distinction, any blocker, and `REAL 3080 SESSION E2E NOT RUN` / `REAL WEIXIN RETURN NOT RUN`. No raw paths, Session IDs, credentials or private logs.
 
-If blocked from GitHub push, state that explicitly in one sentence; do not claim report upload success.
+The local Agent's final chat output must be **one brief status line with the verified GitHub report URL and SHA only**. Never paste or attach the report or ask the operator to forward it. Remote ChatGPT retrieves it directly from GitHub when the chat resumes.
+
+**STOP** after this report. Phase B, original 3080 live Session switch/create, real Prompt and any service restart remain separately UNAPPROVED.
