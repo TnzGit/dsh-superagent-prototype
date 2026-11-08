@@ -1,29 +1,30 @@
-# LOCAL_AGENT_TASK — HOLD: GitHub Support review required
+# LOCAL_AGENT_TASK — CURRENT: GATE1-3080-PROVIDER
 
-**Read before any future assignment:** `LOCAL_AGENT_PROTOCOL.md`.  
-**Current state:** **HOLD — no Mac Agent operations are authorized now.**  
-**Development branch:** `feat/local-first-wechat-foundation`.
+**First read:** `LOCAL_AGENT_PROTOCOL.md`; then **execute all phases and STOP conditions** in `LOCAL_AGENT_GATE1_PROVIDER_RUNBOOK.md`.  
+**Repository:** `TnzGit/dsh-superagent-prototype`; **feature branch:** `feat/local-first-wechat-foundation`.
 
-## Accepted CI diagnosis
+## Operator authorization: GATE ① ONLY
 
-- Mac Agent single operator-authorized `workflow_dispatch` against feature SHA `4d8b3d33d6d230ac11fad9ec4a5a76a23564ba5a` was **REJECTED** (HTTP **422** `Actions has been disabled for this repository`). No retry.
-- GitHub Actions workflow is `active`, and authenticated local `GET actions/permissions` returned `enabled:true, allowed_actions:all`. Despite normal owner-credential pushes and prior successful Actions runs, no new workflow was created after `2026-11-07T19:11:02Z`.
-- The existing CI workflow was previously added **alone** to `main` as specifically authorized, commit `89607996d3645ba766a84e59a8a94c700c353f3a`, identical blob `303eddf97a0b83e250b93b28e4bee70a453c13fc`. This did not restore Actions execution.
-- The redacted authoritative reports reside in `agent-reports/REPORT-ci-trigger-diagnostic.md` and `agent-reports/REPORT-ci-manual-dispatch.md`.
-- GitHub Docs explicitly state that a repository/account may be in a separate **GitHub-controlled Actions disabled state**, for which toggling ordinary Actions settings will not restore access; GitHub Support must review. This is a **strong lead, not a confirmed root cause**.
+The operator explicitly replied **“同意”** on 2026-11-08 to the request for Gate ①: a **test-only** `llm-local-proxy` provider pointing from the original DSH 3080 to the local one-slot Qwen proxy `127.0.0.1:8123`, plus a **strictly conditional** `session/selectModel` with proven original global-model-default rollback.
 
-## What to do next
+This approval **supersedes the previous HOLD only within Gate ①'s narrow scope**. It is permission for the documented minimal original-host provider configuration change, **not** a permit to choose or modify any arbitrary historical Session, or alter the original host's global default permanently.
 
-A ready-to-review **unsent** GitHub Support case draft is available at **`GITHUB_ACTIONS_SUPPORT_CASE.md`**. Only the operator, using their GitHub account, should submit it via https://support.github.com/ if they choose to contact Support. Remote ChatGPT cannot claim ticket submission. If GitHub requests diagnostic information, preserve credentials and private data; share it only within the private ticket.
+### Essential constraints
 
-No further commits, dispatches, GitHub Actions settings toggles, feature-code changes, CI retries or test runs by the local Agent until remote ChatGPT updates this task with fresh, narrowly scoped approval. **The prior approval authorized one manual dispatch, now consumed.**
+- **Never change 3080's `0.0.0.0:3080` listener, `allowUnauthenticated: true`, original trustedHosts, or any anonymous LAN client's access.** This is an operator-required deployment feature.
+- Preserve original 27 Workspaces / 841 Sessions, all histories and files. Do not change existing `cmp170hx` route, existing providers, old Session models, or default `cmp170hx/Qwen3.8-Flash-Next/xhigh` (verify effective value before/after).
+- **No restart/reload of any service**, even for provider activation; Gate ② remains separately unapproved. No `session/prompt` or real Weixin reply; Gate ③ remains separately unapproved. Never enable live 3083 relay or OpenClaw.
+- Before changes, identify the exact installed DSH 0.2.2-alpha.2 provider settings schema and create an owner-only private backup with a demonstrated rollback procedure; never guess config path/schema or publish private data.
+- **SelectModel is conditional, not unconditional:** do **not** run it unless provider is live-visible, the official API and **independent** durable global-default restore are verified, and a specific disposable Workspace+Session is already explicitly designated by the operator. No Session ID was designated in the remote chat; the 62 screened candidates are not automatically approved for mutation. A safely configured provider with `SELECTMODEL_DEFERRED_NO_DESIGNATED_SESSION` is an acceptable completed Gate ① phase.
+- If provider is configured but cannot be activated without Gate ② restart, **STOP and report `PROVIDER_CONFIGURED_PENDING_GATE2`**; no restart now.
+- On drift or unexpected changes, safely undo only the allowed provider change from the private backup, verify restoration, and STOP, or escalate `MANUAL_RECOVERY_REQUIRED` if not verifiable.
 
-## Preserved acceptance and live host constraints
+## Required execution and reporting
 
-C3S **LOCAL BUILD PASS** on `d6e04a4`: `pnpm check` exit 0, Vitest 1206/1206, build PASS; mock Node 58/58 PASS. This is separate from **GITHUB CI NOT COVERED / DISPATCH_REJECTED**.
+1. Follow `LOCAL_AGENT_GATE1_PROVIDER_RUNBOOK.md` **in full**; do not substitute the stale C0/C1/C2/C3 task files.
+2. Publish one **redacted**, no-private-ID/no-secret report as `agent-reports/REPORT-gate1-3080-provider.md`, with a meaningful normal non-force push on the feature branch. Upload no local config, logs or Session identities. Report the exact provider status, whether selectModel was actually attempted, original global-default before/after status, and the LAN-invariant status.
+3. **STOP**. The next Gate is NOT automatically approved even if provider becomes visible. The user should only get one short sentence:
 
-Keep original DSH 3080 `0.0.0.0:3080`, `allowUnauthenticated: true`, original trustedHosts, and existing anonymous LAN clients **unchanged**. Preserve 27 Workspaces / 841 Sessions, and running 3083 / 8123. No OpenClaw, QR rescan, cloud model routing, provider/default model change, live Session prompt or service restart.
+`GATE1 完成：Provider=<VISIBLE/PENDING/ROLLED_BACK/BLOCKED>，selectModel=<DONE_AND_DEFAULT_RESTORED/DEFERRED>，3080 LAN=PASS；报告 agent-reports/REPORT-gate1-3080-provider.md（SHA <sha>）；未重启、未投递 Prompt。`
 
-Three future, independent, **still-unapproved** live operations remain: (1) test-only provider+selectModel and global-default rollback, (2) controlled restart, (3) one user-selected real original Session prompt.
-
-**STOP. No Mac Agent reply is needed while HOLD.**
+If blocked from GitHub push, state that explicitly in one sentence; do not claim report upload success.
