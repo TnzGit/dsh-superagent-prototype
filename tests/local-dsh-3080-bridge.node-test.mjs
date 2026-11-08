@@ -175,6 +175,19 @@ test('only explicitly approved Sessions can use bounded state/wait/page history 
     address:{kind:'session',sessionId:'disposable-test-session'},throughSeq:123,maxMessages:128
   })
 })
+test('original Session must have no live queued work before capturing prompt cursor',async()=>{
+  const fake=createFake()
+  const guarded=bridge({fetcher:async(url,init)=>{
+    const request=JSON.parse(init.body)
+    if(request.method==='session/state')
+      return new Response(JSON.stringify({type:'server-response',rpcId:request.rpcId,
+        result:{ok:true,value:{cursor:123,active:true,running:false,queue:[{kind:'pending'}],pendingInput:[]}}}),
+        {status:200})
+    return fake.fetcher(url,init)
+  }})
+  await assert.rejects(guarded.sessionCursor('disposable-test-session'),{code:'session_not_idle'})
+  assert.equal(fake.calls.filter(c=>c.method==='session/prompt').length,0)
+})
 test('bad RPC response, mismatched ID and RPC errors fail closed',async()=>{
   const scenarios=[
     ({rpcId})=>({type:'server-response',rpcId:'wrong',result:{ok:true,value:{items:[]}}}),
