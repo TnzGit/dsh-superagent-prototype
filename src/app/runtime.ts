@@ -23,6 +23,8 @@ import type { SetupProblem } from '../setup.ts'
 import { DshExecutor, sourceTrigger, triggerMessage, workerSessionId } from '../executor/dsh.ts'
 import { readLocalProjects } from '../local-first/project-workspaces.ts'
 import { readDshCatalog } from '../local-first/existing-dsh-projects.ts'
+import { readNativeRelayApproval } from '../local-first/dsh-relay-routing.ts'
+import { NativeRelayCoordinator } from '../local-first/dsh-relay-coordinator.ts'
 import { ticketCard } from './cards.ts'
 import { MasterAssessor } from './assessment.ts'
 import { KV } from '../kv.ts'
@@ -70,6 +72,7 @@ export class Runtime extends Service implements SourceHost {
   readonly executor: DshExecutor
   readonly assessor: MasterAssessor
   readonly outbox: Outbox
+  private nativeRelay?: NativeRelayCoordinator
   readonly engine: Engine
   readonly passes: Passes
   readonly ready: Promise<void>
@@ -139,6 +142,22 @@ export class Runtime extends Service implements SourceHost {
         settings: () => store.settings(), paused: () => this.paused(), threadContext: trigger => sources.threadContext(trigger),
         deliver: (id, text) => sessions.prompt(masterId, id, text, 'steer'), candidateCard: candidate => candidateCard(links, candidate) })
       const outbox = this.outbox = new Outbox({ store, effects, sources, commands, paused: () => this.paused() })
+      // Absent a private, 0600 operator grant, this service is never installed and
+      // all native Weixin messages continue through the unchanged Engine.
+      const relayApproval = readNativeRelayApproval()
+      if (relayApproval) {
+        if (!existingDshProjects.length) throw Error('A private 3080 Workspace catalog is required for native relay')
+        this.nativeRelay = new NativeRelayCoordinator({
+          store, effects, outbox, projects: existingDshProjects, approval: relayApproval,
+          authorized: trigger => {
+            const current = store.settings()
+            const scope = sources.scope({ source: trigger.source, meta: trigger.meta })
+            return !current.paused && !!trigger.human && trigger.addressed === 'direct' &&
+              !!allowedSender(current, trigger.actor) && scope.listened &&
+              !!trigger.channel && sources.channelAllowed(trigger.channel)
+          }
+        })
+      }
       const { assessor, executor } = this
       const policy = () => settingsPolicy(store.settings(), sources)
       const engine = this.engine = new Engine({ repo: store, scope: sources, policy, assessor, executor,
@@ -198,6 +217,8 @@ export class Runtime extends Service implements SourceHost {
     return ticketEnvironment({ deployment, sources, settings: this.store.settings(), ticket, ...trigger ? { trigger } : {} })
   }
   checkSetup(): void { this.setup.check() }
+  /** Optional one-shot 3080 route; absent grant means ordinary Weixin chat unchanged. */
+  routeNativeWeixin(trigger: Trigger): boolean { return this.nativeRelay?.receive(trigger) ?? false }
   receive(trigger: Trigger): ReceiveResult { return this.passes.receive(trigger) }
   idle(): Promise<void> { return this.passes.idle() }
   pump(): Promise<void> { return this.passes.pump() }
