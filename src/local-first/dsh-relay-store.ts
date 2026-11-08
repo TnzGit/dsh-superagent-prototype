@@ -161,7 +161,7 @@ export class DshRelayStore {
       const row=this.get(receipt.requestId)
       if(!row||row.triggerId!==receipt.triggerId||row.workspaceId!==receipt.workspaceId||
         row.sessionId!==receipt.sessionId||row.afterSeq!==receipt.afterSeq)
-        throw Error('No original durable relay receipt for the requested reply')
+        throw Error('No matching original durable relay receipt for the requested reply')
       if(row.status==='completed')return{status:'already-enqueued',outboxId:row.outboxId}
       if(row.status==='reply-expired')return{status:'expired'}
       const original=this.host.triggers.get(receipt.triggerId)
