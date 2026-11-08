@@ -1,4 +1,8 @@
-# LOCAL_AGENT_STAGE_C3 — native Weixin ↔ original DSH 3080, disabled-by-default OFFLINE acceptance
+# LOCAL_AGENT_STAGE_C3 — 已完成的旧任务书（请使用 Stage C3R）
+
+> **2026-11-08 C3 已完成，结果非全绿**：实测 SHA 153bb3c，`pnpm check` 被新 EffectKind 本地化缺项阻断、九个 Node 离线文件 57/58（另一项只为错误消息与测试正则不一致）。两项已由远程提交修复；**下一次验证请只使用 `LOCAL_AGENT_STAGE_C3R.md`**。保留原始 C3 worktree 及所有线上实例，3080 LAN 无鉴权访问必须维持原状。
+
+## 下文是旧版 C3 任务书，仅供追溯
 
 > B / C0 / C1 / C2 already completed. The C2 local baseline was `d98da43`:
 > `pnpm check` 1205/1205, five Node test files 35/35 PASS; 27 original Workspaces,
