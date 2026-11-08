@@ -303,6 +303,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/sources/weixin-native.ts` | Disabled-by-default native Weixin SourceKind, operator-owned credential file, allowlists, durable long poll cursor and context-token replies |
 | `src/local-first/model-queue.ts` | Bounded per-endpoint model queue, fairness, cancellations, waiting budgets and the process-level queue registry; not yet installed as the DSH LLM call intercept |
 | `src/local-first/model-routing.ts` | Fail-closed candidate selection by priority, capabilities, health, privacy and paid-provider approval; provider integration is pending |
+| `src/local-first/dsh-3080-bridge.ts` | Disabled-by-default, loopback-only DSH Session RPC adapter: read-only preflight and human-approved prompt with strict provider, permission and queue-route checks; no live Weixin wiring yet |
 | `src/local-first/existing-dsh-projects.ts` | Private imported DSH Workspace/Session catalog with deterministic aliases, exact-match and confirmed-thread selection, and ambiguous/new-project fail-closed behavior |
 | `src/local-first/project-workspaces.ts` | Host-only registered project configuration, explicit Ticket selectors, transactional isolated Git clone/non-Git snapshot preparation, safety checks and workspace verification |
 | `src/local-first/project-registry.ts` | Registered local project IDs, canonical path checks, forbidden paths and per-project write serialization; not a substitute for OS sandboxing or worker integration |
