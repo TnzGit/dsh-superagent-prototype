@@ -7,7 +7,7 @@ const [project]=parseDshCatalog({version:1,origin:'dsh-host',hostId:'mac-dsh-308
     sessionIds:['disposable-test-session','historical-session']}]})
 const s={sessionId:'disposable-test-session',running:false,blank:false,formatStatus:'current',
   cwd:project.path,projections:{kind:'cached',values:{
-    modelSelection:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'},
+    modelSelection:{next:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'},lastUsed:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'}},
     permissions:{currentValue:'workspace-write'}}}}
 const createFake=(session=s)=>{
   const calls=[]
@@ -78,11 +78,11 @@ test('no explicit human approval, disabled bridge or unapproved target never sen
 })
 test('preflight rejects cloud provider, busy/migrating Session, overly broad permissions and wrong workspace',async()=>{
   const cases=[
-    [{projections:{values:{modelSelection:{provider:'workbuddy-ai',model:'hy4-preview-f'},
+    [{projections:{values:{modelSelection:{next:{provider:'workbuddy-ai',model:'hy4-preview-f'},lastUsed:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'}},
       permissions:{currentValue:'workspace-write'}}}},'session_model_not_approved_local_qwen'],
     [{running:true},'session_busy'],
     [{formatStatus:'migration-required'},'session_format_unverified_or_migration_required'],
-    [{projections:{values:{modelSelection:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'},
+    [{projections:{values:{modelSelection:{next:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'},lastUsed:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'}},
       permissions:{currentValue:'danger-full-access'}}}},'session_permission_not_workspace_write'],
     [{cwd:'/Users/example/somewhere-else'},'workspace_path_mismatch'],
     [{sessionId:'different-session'},'session_not_in_host'],
@@ -94,6 +94,32 @@ test('preflight rejects cloud provider, busy/migrating Session, overly broad per
     assert.equal(result.allowed,false)
     assert.ok(fake.calls.every(c=>c.method==='session/list'))
   }
+})
+test('lastUsed is only historical: cloud next must be rejected even with a safe local lastUsed',async()=>{
+  const sample={...s,projections:{kind:'cached',values:{
+    modelSelection:{lastUsed:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'},
+      next:{provider:'workbuddy-ai',model:'hy4-preview-f'}},
+    permissions:{currentValue:'workspace-write'}}}}
+  const fake=createFake(sample)
+  const check=await bridge({fetcher:fake.fetcher}).inspect(project,'disposable-test-session')
+  assert.ok(check.reasons.includes('session_model_not_approved_local_qwen'))
+  assert.equal(check.allowed,false)
+})
+test('a dedicated proxy provider can be explicitly allowlisted but never substitutes for route verification',async()=>{
+  const proxy={...s,projections:{kind:'sequenced',values:{
+    modelSelection:{lastUsed:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'},
+      next:{provider:'llm-local-proxy',model:'Qwen3.8-Flash-Next'}},
+    permissions:{currentValue:'workspace-write'}}}}
+  const fake=createFake(proxy)
+  const approved=bridge({fetcher:fake.fetcher,
+    approvedModel:{provider:'llm-local-proxy',model:'Qwen3.8-Flash-Next'},
+    verifyRoute:async()=>true})
+  assert.equal((await approved.inspect(project,'disposable-test-session')).allowed,true)
+  const notApproved=bridge({fetcher:fake.fetcher})
+  assert.equal((await notApproved.inspect(project,'disposable-test-session')).allowed,false)
+  const noRoute=bridge({fetcher:fake.fetcher,verifyRoute:async()=>false,
+    approvedModel:{provider:'llm-local-proxy',model:'Qwen3.8-Flash-Next'}})
+  assert.equal((await noRoute.inspect(project,'disposable-test-session')).allowed,false)
 })
 test('even approved local model refuses send if 3080 bypasses one-slot queue',async()=>{
   const fake=createFake()
