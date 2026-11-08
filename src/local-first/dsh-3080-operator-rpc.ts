@@ -15,10 +15,10 @@ type Method='session/list'|'session/projections'|'session/state'|'session/modelC
 const WRITE_METHODS=new Set<Method>(['settings/replace','session/selectModel','workspace/create','session/create'])
 /** Explicit mutation admission; two independent grants are not inferred from one another. */
 export interface OwnerRpcGrants {
-  /** True only inside one operator-approved disposable Session switch. */
-  sessionModelWrites?:boolean
-  /** True only inside one operator-approved, one-shot new Workspace workflow. */
-  newWorkspaceWrites?:boolean
+  /** Exact fresh disposable Session identity; never an arbitrary historical Session. */
+  sessionModelWrites?: {sessionId:string}
+  /** Exact safe new Workspace directory, independently designated by operator. */
+  newWorkspaceWrites?: {path:string}
 }
 /** Fail-closed endpoint/correlation or operator-grant error without private Host payloads. */
 export class DshOwnerRpcBlocked extends Error {
@@ -35,6 +35,11 @@ export class DshOwnerRpc {
   private readonly origin:string
   private readonly fetcher:typeof fetch
   private readonly grants:OwnerRpcGrants
+  private selectedOnce=false
+  private restoredOnce=false
+  private registeredOnce=false
+  private sessionCreatedOnce=false
+  private createdWorkspaceId?:string
   constructor(options:OwnerRpcOptions={}){
     this.origin=normalizeBridgeOrigin(options.origin??DSH_3080_ORIGIN)
     this.fetcher=options.fetcher??fetch
@@ -46,7 +51,7 @@ export class DshOwnerRpc {
   private async invoke(method:Method,args:Dict):Promise<unknown> {
     if(WRITE_METHODS.has(method)){
       const modelMutation=method==='settings/replace'||method==='session/selectModel'
-      if(modelMutation?this.grants.sessionModelWrites!==true:this.grants.newWorkspaceWrites!==true)
+      if(modelMutation?!this.grants.sessionModelWrites:!this.grants.newWorkspaceWrites)
         return fail('write_not_granted','Original DSH mutation has no explicit independent host grant')
     }
     const rpcId=randomUUID()
@@ -89,6 +94,10 @@ export class DshOwnerRpc {
   async replaceDefault(section:Record<string,unknown>,expectedRevision:number):Promise<unknown>{
     if(!object(section)||!Number.isSafeInteger(expectedRevision)||expectedRevision<0)
       return fail('invalid_settings_revision','Cannot replace default without a full section and safe CAS revision')
+    if(!this.grants.sessionModelWrites)return fail('write_not_granted','No approved Session restoration grant')
+    if(!this.selectedOnce||this.restoredOnce)
+      return fail('restore_out_of_order','The one-shot restore requires exactly one earlier model selection')
+    this.restoredOnce=true
     return this.invoke('settings/replace',{ns:'agent-default-model',section,expectedRevision})
   }
   async selectModel(sessionId:string,selection:GateModel):Promise<unknown>{
@@ -96,14 +105,32 @@ export class DshOwnerRpc {
       selection.model!=='Qwen3.8-Flash-Next'||
       (selection.reasoningEffort!==undefined&&!['low','high'].includes(selection.reasoningEffort)))
       return fail('invalid_model_route','Only the operator-approved test Qwen route may be selected')
+    if(!this.grants.sessionModelWrites)return fail('write_not_granted','No approved Session selection grant')
+    if(sessionId!==this.grants.sessionModelWrites.sessionId||this.selectedOnce)
+      return fail('session_not_granted_or_replayed','Only one model-selection attempt on the exact disposable Session is allowed')
+    // Mark BEFORE any network I/O. An ambiguous HTTP reply must not be retried.
+    this.selectedOnce=true
     return this.invoke('session/selectModel',{request:{sessionId,...selection}})
   }
   async registerNewWorkspace(path:string):Promise<unknown>{
     if(!nonempty(path)||!path.startsWith('/'))return fail('invalid_workspace_path','Absolute new Workspace path required')
-    return this.invoke('workspace/create',{request:{path}})
+    if(!this.grants.newWorkspaceWrites)return fail('write_not_granted','No approved new Workspace grant')
+    if(path!==this.grants.newWorkspaceWrites.path||this.registeredOnce)
+      return fail('workspace_not_granted_or_replayed','Only one registration attempt for the exact new path is allowed')
+    this.registeredOnce=true
+    const result=await this.invoke('workspace/create',{request:{path}})
+    if(object(result)&&result.created===true&&object(result.workspace)&&
+      nonempty(result.workspace.workspaceId)&&result.workspace.path===path)
+      this.createdWorkspaceId=result.workspace.workspaceId
+    return result
   }
   async createNewSession(workspaceId:string):Promise<unknown>{
     if(!nonempty(workspaceId))return fail('invalid_workspace_id','Workspace ID required')
+    if(!this.grants.newWorkspaceWrites)return fail('write_not_granted','No approved new Workspace grant')
+    if(!this.registeredOnce||this.sessionCreatedOnce||
+      workspaceId!==this.createdWorkspaceId)
+      return fail('session_create_not_granted_or_replayed','Can create one Session only inside the newly registered Workspace')
+    this.sessionCreatedOnce=true
     return this.invoke('session/create',{request:{workspaceId}})
   }
 }
