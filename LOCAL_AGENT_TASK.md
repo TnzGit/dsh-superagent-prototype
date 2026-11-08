@@ -1,36 +1,29 @@
-# LOCAL_AGENT_TASK — CURRENT: C4 OFFLINE 3080 CONTINUATION READINESS
+# LOCAL_AGENT_TASK — CURRENT: C5 OPERATOR-APPROVED REAL 3080 WEIXIN E2E
 
-**Read first:** `LOCAL_AGENT_PROTOCOL.md`. **Source of truth:** current feature branch `feat/local-first-wechat-foundation` in `TnzGit/dsh-superagent-prototype`. Previous Gate① and Gate①.5 work is complete; do NOT rerun historical provider setup just because an older task/runbook still exists.
+**Mandatory first reads:** `LOCAL_AGENT_PROTOCOL.md` and `LOCAL_AGENT_GATE3_LIVE_E2E_RUNBOOK.md`. **Repo:** `TnzGit/dsh-superagent-prototype`; **branch:** `feat/local-first-wechat-foundation`. Do not execute any older C4 or Gate① runbook as the active task.
 
-## Current operator authorization
+## User has ALREADY approved all bounded C5 test gates
 
-**Offline source review and mock regression tests only.** The operator has NOT approved Gate①.6 Phase B (the live low/high reasoningEfforts relocation), selecting/creating a disposable test Workspace/Session, `session/selectModel`, any 3080 `session/prompt`, a restart, live 8123 inference, or any Weixin relay switch. Preserve existing 3080/3083/8123 processes; original 3080 `0.0.0.0:3080`, `allowUnauthenticated:true`, trustedHosts and existing anonymous LAN access. No OpenClaw.
+The operator explicitly said **"我全都批准"** on 2026-11-08 immediately after remote ChatGPT listed Gate①.6 Phase B, one newly disposable original 3080 Workspace/Session, a scoped Session model switch with shared-default restoration, one real 8123 inference and original DSH Session prompt, and one native Weixin reply. The operator also approved a controlled restart if strictly needed. **Proceed without asking for duplicate consent for these exact actions**, under the constraints in the linked C5 runbook.
 
-## Remote code already added
+**This is ONE disposable end-to-end trial only, not unrestricted historical access.** Preserve all existing original 3080 Workspaces/Sessions/history, listener `0.0.0.0:3080`, `allowUnauthenticated:true`, exact trustedHosts and anonymous LAN access; preserve existing `cmp170hx` provider and global `cmp170hx/Qwen3.8-Flash-Next/xhigh`. Do not restart an active original 3080 host, select an old Session, migrate, copy or overwrite history, run cloud models, re-scan Weixin QR, introduce OpenClaw, or force-push/merge.
 
-- `src/local-first/dsh-3080-model-gate.ts`: injected-port-only, disabled-by-default disposable-Session model switch + async default save and revision-CAS restoration. **This is not wired to the running 3083 or the 3080 transport.**
-- `src/local-first/dsh-3080-new-workspace.ts`: injected-port-only, disabled-by-default native Workspace+fresh Session creation with a private one-shot grant, stage ledger and post-create membership validation. **No live directory or original DSH Session has been created.**
-- Node mock suites: `tests/local-dsh-3080-model-gate.node-test.mjs`, `tests/local-dsh-3080-new-workspace.node-test.mjs`. Both are now exercised by Linux and macOS GitHub CI; `docs/007-architecture.md` records these modules.
-- First combined code acceptance SHA `fda9b3446ee2f3a9b9fa7c499f527187a3296acf` got all 3 GitHub Actions jobs green in run 168. Recheck HEAD and status before reporting newer code as green.
+## Active execution
 
-## Host Agent offline validation (no live mutation)
+Run every stage of `LOCAL_AGENT_GATE3_LIVE_E2E_RUNBOOK.md` in order, using the new remotely implemented classes:
 
-1. In a separate clean worktree from the current remote feature HEAD, run `pnpm install --frozen-lockfile`, `pnpm check`, and:
-   ```sh
-   node --experimental-strip-types --test \
-     tests/local-dsh-3080-model-gate.node-test.mjs \
-     tests/local-dsh-3080-new-workspace.node-test.mjs \
-     tests/local-dsh-3080-bridge.node-test.mjs \
-     tests/local-dsh-relay-coordinator.node-test.mjs
-   ```
-2. Compare the injected-port contracts to locally installed DSH 0.2.2-alpha.2's official SessionController, WorkspaceController and SettingsController types **without making API mutation calls**. The future live implementation MUST NOT invent RPC argument shapes. In particular, `workspace/create` adopts an existing directory; `session/create` accepts `workspaceId`; `settings/replace` has `expectedRevision` and must not be called without a current revision.
-3. Read-only verify 3080 global default and modelCatalog, existing anonymous LAN access, the 3080/3083/8123 listener/PID invariants. Record only aggregate Workspace/Session counts, not private IDs or history.
-4. Identify any mismatch or risk that prevents a future **separately approved** smoke test. If code must be changed, report the issue; remote ChatGPT will fix product source and tests. **Do not edit source locally.**
+- `src/local-first/dsh-3080-operator-rpc.ts`: real official 3080 RPC transport, exact one-shot Session/Workspace grants.
+- `src/local-first/dsh-3080-operator-provision.ts`: private filesystem ledger and official Workspace/Session registration.
+- `src/local-first/dsh-3080-new-workspace.ts`: one fresh original Workspace and one fresh original Session; **never any old Session**.
+- `src/local-first/dsh-3080-model-gate.ts`: one official `session/selectModel`, observe asynchronous default save, `settings/replace` with `expectedRevision`, readback.
+- `src/local-first/dsh-3080-bridge.ts`, `dsh-relay-coordinator.ts`, `dsh-relay-store.ts`, `dsh-3080-output.ts`: one user-originated native Weixin Trigger through original Session and 8123, exact RPC output correlation, single reply.
 
-## Report to GitHub, NOT through the operator
+First run `pnpm check` and all new standalone Node tests in a separate clean worktree and confirm the *same-HEAD* GitHub CI is green. Then take private baselines/backups and proceed to the live actions in the approved order, stopping only at the runbook's **technical safety gates**. No additional operator approval is required. The user sending exactly ONE new Weixin test message may be needed to supply an authentic inbound trigger; do not fabricate that message or interpret this as needing fresh permission.
 
-Publish a sanitized final report to `agent-reports/REPORT-c4-offline-native-workspace-model-gate.md` using the dedicated report worktree and a normal non-force push. Include tested SHA, actual `pnpm check` and standalone test counts and exit codes, official API contract findings, read-only listener/default evidence, mock-vs-real distinction, any blocker, and `REAL 3080 SESSION E2E NOT RUN` / `REAL WEIXIN RETURN NOT RUN`. No raw paths, Session IDs, credentials or private logs.
+## Mandatory GitHub-only report (NEVER operator-forwarded)
 
-The local Agent's final chat output must be **one brief status line with the verified GitHub report URL and SHA only**. Never paste or attach the report or ask the operator to forward it. Remote ChatGPT retrieves it directly from GitHub when the chat resumes.
+Publish one sanitized report to `agent-reports/REPORT-c5-real-dsh-3080-weixin-e2e.md` using a report-only clean worktree and a normal non-force push. The report must say which exact stages passed/blocked, GitHub CI SHA, whether original 3080 real Session inference occurred, 8123 route attestation, one-shot Weixin outbound result, host invariants and rollback. Never include private real Workspace/Session IDs, paths, credentials, raw logs or message peer/context tokens.
 
-**STOP** after this report. Phase B, original 3080 live Session switch/create, real Prompt and any service restart remain separately UNAPPROVED.
+Final local Agent message to the operator: **one short status line with the GitHub report URL, pushed SHA, and PASS/BLOCKED**. Do not paste the report or ask the user to forward/upload it. Remote ChatGPT fetches everything directly from GitHub when the conversation resumes.
+
+**STOP** after the report, regardless of whether completed or blocked. Do not automatically repeat a real prompt, create another Workspace, add additional providers, change the global model default or execute a second Weixin trial.
