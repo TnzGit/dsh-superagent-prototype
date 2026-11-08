@@ -54,9 +54,16 @@ test('read-only preflight uses real DSH session/list protocol and does not mutat
   assert.deepEqual(fake.calls[0].payload.args,{_request:{}})
 })
 test('operator-approved disposable Session queues exactly one text prompt with stable replay ID',async()=>{
-  const fake=createFake(),b=bridge({fetcher:fake.fetcher}),req={project,sessionId:'disposable-test-session',
-    sourceMessageId:'weixin-trigger-123',text:'do one approved test in this workspace',operatorApproved:true}
+  const fake=createFake(),b=bridge({fetcher:fake.fetcher}),persisted=[],req={project,sessionId:'disposable-test-session',
+    sourceMessageId:'weixin-trigger-123',text:'do one approved test in this workspace',operatorApproved:true,
+    persistBeforeSend:async receipt=>{persisted.push(receipt)}}
   const result=await b.submit(req)
+  assert.equal(result.afterSeq,123)
+  assert.equal(persisted.length,1)
+  assert.deepEqual(persisted[0],{triggerId:req.sourceMessageId,workspaceId:project.workspaceId,
+    sessionId:req.sessionId,requestId:result.requestId,afterSeq:123})
+  assert.ok(fake.calls.findIndex(x=>x.method==='session/state')<
+    fake.calls.findIndex(x=>x.method==='session/prompt'))
   assert.equal(result.accepted,true)
   assert.equal(result.requestId,continuationRequestId(req.sessionId,req.sourceMessageId))
   const prompt=fake.calls.find(c=>c.method==='session/prompt')
@@ -68,6 +75,15 @@ test('operator-approved disposable Session queues exactly one text prompt with s
   assert.equal(fake.calls.filter(c=>c.method==='session/prompt').length,2)
   const ids=fake.calls.filter(c=>c.method==='session/prompt').map(c=>c.payload.args._request.requestId)
   assert.equal(ids[0],ids[1], 'a retry after ambiguous outcome must reuse its durable requestId')
+})
+test('persistence callback is mandatory and must succeed before any session/prompt',async()=>{
+  const fake=createFake(),b=bridge({fetcher:fake.fetcher})
+  const req={project,sessionId:'disposable-test-session',sourceMessageId:'original-trigger',
+    text:'approved test',operatorApproved:true}
+  await assert.rejects(b.submit(req),{code:'receipt_persistence_required'})
+  assert.ok(!fake.calls.some(c=>c.method==='session/prompt'))
+  await assert.rejects(b.submit({...req,persistBeforeSend:async()=>{throw Error('sqlite unavailable')}}),/sqlite unavailable/)
+  assert.ok(!fake.calls.some(c=>c.method==='session/prompt'))
 })
 test('no explicit human approval, disabled bridge or unapproved target never sends a prompt',async()=>{
   const fake=createFake()
