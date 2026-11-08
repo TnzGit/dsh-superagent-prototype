@@ -58,7 +58,13 @@ export class NativeRelayCoordinator {
     return store.atomic(()=>{
       if(store.triggers.get(trigger.id))return true
       // Do not route a message into both the ordinary Engine evaluation and 3080.
-      if(!this.ledger.claimApproval(approval.approvalId,trigger.id))return false
+      if(!this.ledger.claimApproval(approval.approvalId,trigger.id)){
+        // Identical follow-on messages do not reuse the one-shot approval and
+        // must not accidentally become a second ordinary Engine Worker task.
+        store.triggers.save(trigger)
+        store.triggers.saveDisposition(trigger.id,{fanout:[],at:new Date().toISOString()})
+        return true
+      }
       store.triggers.save(trigger)
       store.triggers.saveDisposition(trigger.id,{fanout:[],at:new Date().toISOString()})
       if(chosen.operation==='bind'){
@@ -94,6 +100,9 @@ export class NativeRelayCoordinator {
     let receipt=existing
     if(!receipt) {
       if(!selection||selection.operation!=='prompt')return
+      // The HTTP send can be delayed by restart/effect queue; do not submit
+      // after the ORIGINAL Weixin reply context has become stale.
+      if(!weixinContextFresh(trigger,Date.now()))return
       // No new prompts after the one-shot authorization expires, even if queued.
       if(Date.now()>=Date.parse(approval.expiresAt))return
       if(!routeAttested(approval.routeAttestationFile,selection.sessionId))
@@ -119,6 +128,12 @@ export class NativeRelayCoordinator {
       receipt=this.ledger.byTrigger(triggerId)
     }
     if(!receipt)return
+    // Never poll for days and accidentally attach an old Weixin context.
+    // Expired results are review-only and must use a fresh human request.
+    if(Date.now()-Date.parse(receipt.createdAt)>15*60*1000){
+      this.ledger.reviewRequired(receipt.requestId)
+      return
+    }
     const result=await trackDshContinuation(this.bridge,receipt)
     if(result.status==='pending')throw new Later('Original DSH Session result not yet committed')
     if(result.status!=='completed'){
