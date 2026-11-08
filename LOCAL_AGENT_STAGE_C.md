@@ -1,4 +1,29 @@
-# LOCAL_AGENT_STAGE_C — 本地项目 Worker 真正闭环验证
+# LOCAL_AGENT_STAGE_C — 先保留并接入 Mac 上 DSH 3080 的已有项目
+
+> 最新指令优先级：**现有 3080 DSH Workspace/Session 的保留与复用，优先于独立项目副本 Worker 的 Stage C 回归。** 已经完成微信阶段 B，不再需要重新扫码。
+
+## C0 — 必须先做、不会影响运行中的实例
+
+用户 Mac 上已有 DSH 实例监听 127.0.0.1:3080，存有有价值的 Workspace、Session 与正在进行的工作；微信 DSH staging 实例在 127.0.0.1:3083，本地 Qwen 队列代理在 127.0.0.1:8123。**三个服务都保持现状；本轮先绝不停止、重启、覆盖、迁移或改变 3080 的任何持久化数据和 Session**。
+
+1. 阅读 docs/012-existing-dsh-host-3080.md，理解 DSH 原生 WorkspaceRegistry / SessionController；确认 Workspace 的 path/title/workspaceId/sessionIds，不能把一个目录当作完整会话。
+2. 在 3080 的现有、已授权本地 DSH 客户端中，使用其**官方只读 Workspace / Session API**盘点项目：Workspace ID、标题、规范化目录、关联 Session ID、存活状态、最近更新时间。优先通过原有客户端/宿主控制器，不能猜测 HTTP RPC 路径、盗用 Cookie、读取进程内存或自行创建管理员接口。
+3. 精确核实 3080 的 DSH 版本、profile 和 API 能力；它与 staging 3083 的运行时版本可能不同。检查 session.prompt/create/fork/history 等**方法签名、鉴权和权限策略**，但此时只读，不向任何既有 Session 发消息。
+4. 私有目录中保存一份权限 0600 的只读工作区目录 JSON（按 docs/012 的格式，精确来源于 3080 的官方返回）；**不发送完整路径、Session ID、Token、对话内容给 GitHub 或公共报告**。
+5. 在项目开发分支的独立工作区运行：
+
+    node --experimental-strip-types --test tests/local-existing-dsh-projects.node-test.mjs
+    node --experimental-strip-types scripts/check-existing-dsh-catalog.mjs /PRIVATE/DSH-CATALOG.json
+
+6. 检查选择策略：明确 `/project <id>`；唯一精确引用的《项目标题》；只有用户**先确认绑定**后才允许“继续之前项目”。重名、多 Session、模糊指代都应请求确认，不能仅凭最近访问自动选择。`/new-project <id>` 是新建提案，不代表已获准创建。
+7. 确认现有 3080 原项目可安全**原地续做**的方案：通过已授权的原实例会话接口投递，而非将 Session 文件复制到 3083 或启动全新 Worker 冒充已恢复。检查它是否有可复用的已有 Session；一个 Workspace 有多个 Session 时必须分辨。
+8. 完成前置报告 `REPORT-existing-dsh-3080-inventory.md`，明确哪些事实已确认，哪些是 BLOCKED。向用户简要汇报并请求仅必要的下一步授权（例如一次只读 API 登录、或未来的单条测试 Session 授权）；**不要提前升级、重启任一服务**。
+
+该报告交远程 ChatGPT，由远程继续编写通过鉴权的跨实例 Session 接力适配器与测试。远程能完成的代码与 CI 不由本地 Agent 重做。
+
+## 后续 Stage C — 仅在 3080 保护检查完成、用户授权后执行
+
+以下为原始一次性 Git/non-Git **隔离副本 Worker** 回归；它不能保留 3080 的老 Session 上下文，也不能代替跨实例接力。仅作为**新项目或明确要求隔离执行的任务**的补充。任何需要重启 staging 3083 的操作都必须先由用户授权，并备份当前 SQLite/Profile；3080 始终保持运行。
 
 > 阶段 B 已经成功：微信原生配对、旧会话身份沿用、入站/白名单、Qwen 单槽代理、Outbox 微信直发。**不再要求扫码。** 当前 staging DSH 和代理继续运行，本轮禁止擅自停机。
 
