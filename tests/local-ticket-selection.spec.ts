@@ -48,7 +48,7 @@ describe('DshExecutor local project selection at accepted Ticket boundary',()=>{
       triggers:{get:()=>({text})}}, effects:{handle:()=>{}},
       machine:{stateDir:'/tmp/isolated-staging'},existingDshProjects,localOnly:()=>true} as never)
       .prepare(ticket(text),outcome).execution
-    const explicit=create('/project '+existingDshProjects[0]!.projectId+'\\n继续这个旧项目')
+    const explicit=create('/project '+existingDshProjects[0]!.projectId+'\n继续这个旧项目')
     expect(explicit?.projectId).toBeUndefined()
     expect(explicit?.localProjectError).toMatch(/authenticated delegation|3080 Session/)
     const named=create('继续《My Existing Project》项目')
