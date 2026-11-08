@@ -12,6 +12,7 @@ const MAX_TEXT = 16_000
 const ALLOWED_MODEL = {provider:'cmp170hx',model:'Qwen3.8-Flash-Next'} as const
 type RecordObject = Record<string,unknown>
 const record = (v:unknown):v is RecordObject=>!!v&&typeof v==='object'&&!Array.isArray(v)
+/** Fail-closed bridge error with a stable machine-readable reason; never contains Session history. */
 export class DshBridgeBlocked extends Error {
   readonly code:string
   constructor(code:string,detail:string) {super(detail);this.name='DshBridgeBlocked';this.code=code}
@@ -51,6 +52,8 @@ export interface DshBridgeOptions {
   allowedSessionIds?:readonly string[]
   /** True ONLY after the operator has verified this host's provider routes via the 8123 queue proxy. */
   queueProxyVerified?:boolean
+  /** The only operator-approved local-only route; defaults to existing cmp170hx, never accepts arbitrary cloud routes. */
+  approvedModel?:{provider:'cmp170hx'|'llm-local-proxy';model:'Qwen3.8-Flash-Next'}
   /** Extra host-specific verification, such as a provenance attestation from an approved profile audit. */
   verifyRoute?:()=>Promise<boolean>
 }
@@ -77,6 +80,7 @@ export class Dsh3080Bridge {
   private readonly allowedSessionIds:ReadonlySet<string>
   private readonly queueProxyVerified:boolean
   private readonly verifyRoute?:()=>Promise<boolean>
+  private readonly approvedModel:{provider:'cmp170hx'|'llm-local-proxy';model:'Qwen3.8-Flash-Next'}
   constructor(options:DshBridgeOptions={}) {
     this.origin=normalizeBridgeOrigin(options.origin??DSH_3080_ORIGIN)
     this.fetcher=options.fetcher??fetch
@@ -84,6 +88,7 @@ export class Dsh3080Bridge {
     this.allowedSessionIds=new Set(options.allowedSessionIds??[])
     this.queueProxyVerified=options.queueProxyVerified===true
     this.verifyRoute=options.verifyRoute
+    this.approvedModel=options.approvedModel??ALLOWED_MODEL
   }
   private async call<T>(method:'session/list'|'session/prompt',request:RecordObject):Promise<T> {
     const rpcId=randomUUID()
@@ -137,12 +142,15 @@ export class Dsh3080Bridge {
     if(current?.formatStatus!=='current')reasons.push('session_format_unverified_or_migration_required')
     if(current?.cwd && current.cwd!==project.path)reasons.push('workspace_path_mismatch')
     const values=current?.projections?.values
-    const model=record(values?.modelSelection)?values.modelSelection:undefined
+    // DSH Projection.modelSelection is {lastUsed, next}; only 'next' controls the next LLM step.
+    // lastUsed is historical and MUST NOT be used to authorize new model traffic.
+    const selection=record(values?.modelSelection)?values.modelSelection:undefined
+    const model=record(selection?.next)?selection.next:undefined
     const permissions=record(values?.permissions)?values.permissions:undefined
     const provider=typeof model?.provider==='string'?model.provider:undefined
     const modelId=typeof model?.model==='string'?model.model:undefined
     const preset=typeof permissions?.currentValue==='string'?permissions.currentValue:undefined
-    if(provider!==ALLOWED_MODEL.provider||modelId!==ALLOWED_MODEL.model)
+    if(provider!==this.approvedModel.provider||modelId!==this.approvedModel.model)
       reasons.push('session_model_not_approved_local_qwen')
     if(preset!=='workspace-write') reasons.push('session_permission_not_workspace_write')
     if(!this.enabled)reasons.push('bridge_not_explicitly_enabled')
