@@ -43,6 +43,12 @@ The 3 pending operational gates remain independent:
 
 Offline mocks and report pushes never grant any of these.
 
+## Current one-shot operator grant: C5 (2026-11-08)
+
+The operator explicitly approved **all enumerated C5 stages** in chat. This is an active, **bounded one-shot grant** whose scope is defined by `LOCAL_AGENT_TASK.md` and `LOCAL_AGENT_GATE3_LIVE_E2E_RUNBOOK.md`: minimal metadata-only test Provider fix, one entirely NEW disposable original-3080 Workspace/Session, one guarded model switch + revision-CAS default restore, one real original DSH prompt caused by a genuine Weixin message, one native reply, and a controlled staging restart if necessary. The general prohibition on unapproved live mutations is **superseded only for these exact C5 operations**, not historical Sessions, arbitrary profile/settings changes or unlimited tests. Do not ask the user to reapprove these same actions.
+
+The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
+
 ## Report format and completion message
 
 Each GitHub report includes: task name and tested SHA, commands and exit codes, actual test totals, pass/fail/blocked, CI run SHA (if any), safeguards and what was **NOT RUN**, next blocker, rollback if applicable. Distinguish `MOCK PASS`, `LOCAL BUILD PASS`, `GITHUB CI GREEN / NOT COVERED / FAIL`, `REAL 3080 SESSION E2E NOT RUN`, `REAL WEIXIN RETURN NOT RUN`.
