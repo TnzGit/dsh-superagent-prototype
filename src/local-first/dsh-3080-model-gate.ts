@@ -63,9 +63,11 @@ export interface ModelGateApproval {
   allowedReasoningEffort?: 'low' | 'high'
 }
 export class DshModelGateBlocked extends Error {
-  constructor(readonly code: string, detail: string) {
+  readonly code: string
+  constructor(code: string, detail: string) {
     super(detail)
     this.name = 'DshModelGateBlocked'
+    this.code = code
   }
 }
 const block = (code: string, detail: string): never => { throw new DshModelGateBlocked(code, detail) }
