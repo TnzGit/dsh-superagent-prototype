@@ -79,7 +79,10 @@ export function correlateDshCompletion(receipt:DshContinuationReceipt,wait:DshWa
     return fail('ambiguous','history_page_does_not_cover_original_request')
   let seen=false,completed=false,text='',assistantSeq=-1
   for(const event of events){
+    if(completed&&(event.type==='assistant/message'||event.type==='turn/start'||event.type==='turn/end'))
+      return fail('ambiguous','another_turn_after_our_completion')
     if(event.type==='user/message'){
+      if(event.surfaceOp!=='append')return fail('ambiguous','non_append_user_surface_event')
       // A user message may have its source directly as event.data.source (normal DSH
       // wire shape). Treat any concurrent human input as an ambiguous response.
       const source=event.data.source
