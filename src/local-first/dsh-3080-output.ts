@@ -128,6 +128,33 @@ export function correlateDshCompletion(receipt:DshContinuationReceipt,wait:DshWa
     return fail('blocked','assistant_text_exceeds_channel_budget')
   return{status:'completed',requestId:receipt.requestId,cursor:page.cursor,text,assistantSeq}
 }
+/** Poll an explicitly allowlisted original Session and inspect bounded history at
+ * the exact wait cursor. Read-only: returns a result for a future Outbox owner;
+ * it never sends or claims another Session's messages.
+ */
+export async function trackDshContinuation(
+  reader:{waitForSession(sessionId:string,afterSeq:number):Promise<unknown>;
+    pageSession(sessionId:string,throughSeq:number):Promise<unknown>},
+  receipt:DshContinuationReceipt,
+):Promise<DshContinuationResult> {
+  const rawWait=await reader.waitForSession(receipt.sessionId,receipt.afterSeq)
+  if(!obj(rawWait)||!obj(rawWait.state)||!seq(rawWait.state.cursor)||
+    !obj(rawWait.output)||!Array.isArray(rawWait.output.records)||
+    typeof rawWait.output.truncated!=='boolean'||
+    !['idle','timeout','input-required'].includes(String(rawWait.reason)))
+    return{status:'ambiguous',requestId:receipt.requestId,reason:'invalid_dsh_session_wait'}
+  const wait=rawWait as unknown as DshWaitResult
+  if(wait.reason==='timeout')
+    return{status:'pending',requestId:receipt.requestId,reason:'session_wait_timed_out'}
+  if(wait.reason==='input-required')
+    return{status:'blocked',requestId:receipt.requestId,reason:'target_session_requires_human_input'}
+  const rawPage=await reader.pageSession(receipt.sessionId,wait.state.cursor)
+  if(!obj(rawPage)||!Array.isArray(rawPage.records)||typeof rawPage.hasMore!=='boolean'||
+    !seq(rawPage.cursor))
+    return{status:'ambiguous',requestId:receipt.requestId,reason:'invalid_dsh_session_page'}
+  return correlateDshCompletion(receipt,wait,rawPage as unknown as DshEventPage)
+}
+
 /** Construct one idempotent Weixin Outbox reply only after correlation and
  * from the actual original stored Trigger. Does NOT enqueue/send it.
  * The existing Source's context token, peer and message ID remain unchanged.
