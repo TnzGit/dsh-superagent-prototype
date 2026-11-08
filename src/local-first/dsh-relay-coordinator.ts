@@ -9,7 +9,7 @@ import type {Effects} from '../app/effects.ts'
 import {Later} from '../app/later.ts'
 import type {Outbox} from '../app/outbox.ts'
 import type {ExistingDshProject} from './existing-dsh-projects.ts'
-import {Dsh3080Bridge} from './dsh-3080-bridge.ts'
+import {Dsh3080Bridge,DshBridgeBlocked} from './dsh-3080-bridge.ts'
 import {trackDshContinuation} from './dsh-3080-output.ts'
 import {DshRelayStore,weixinContextFresh,MAX_RELAY_CONTEXT_AGE_MS} from './dsh-relay-store.ts'
 import {chooseApprovedNativeRelay,routeAttested,type NativeRelayApproval} from './dsh-relay-routing.ts'
@@ -93,18 +93,25 @@ export class NativeRelayCoordinator {
     const trigger=store.triggers.get(triggerId)
     if(!trigger)throw Error('Original Weixin Trigger disappeared from 3083 SQLite')
     if(!this.host.authorized(trigger))throw Error('Native Weixin peer/Policy authorization revoked')
-    const selection=chooseApprovedNativeRelay(trigger,approval,projects,this.ledger)
     const existing=this.ledger.byTrigger(triggerId)
-    if(!existing&&!selection)return
+    if(this.ledger.notSubmittedByTrigger(triggerId))return
+    const selection=chooseApprovedNativeRelay(trigger,approval,projects,this.ledger)
     if(existing&&['completed','reply-expired','review-required'].includes(existing.status))return
     let receipt=existing
     if(!receipt) {
-      if(!selection||selection.operation!=='prompt')return
-      // The HTTP send can be delayed by restart/effect queue; do not submit
-      // after the ORIGINAL Weixin reply context has become stale.
-      if(!weixinContextFresh(trigger,Date.now()))return
-      // No new prompts after the one-shot authorization expires, even if queued.
-      if(Date.now()>=Date.parse(approval.expiresAt))return
+      // When a consumed grant retires without a prompt receipt, persist why.
+      if(!weixinContextFresh(trigger,Date.now())){
+        this.ledger.markNotSubmitted(triggerId,approval.approvalId,'context-expired')
+        return
+      }
+      if(Date.now()>=Date.parse(approval.expiresAt)){
+        this.ledger.markNotSubmitted(triggerId,approval.approvalId,'approval-expired')
+        return
+      }
+      if(!selection||selection.operation!=='prompt'){
+        this.ledger.markNotSubmitted(triggerId,approval.approvalId,'selection-unavailable')
+        return
+      }
       if(!routeAttested(approval.routeAttestationFile,selection.sessionId))
         throw new Later('Awaiting explicit, fresh one-slot 8123 route attestation')
       try{
@@ -122,8 +129,15 @@ export class NativeRelayCoordinator {
       }catch(error){
         const durable=this.ledger.byTrigger(triggerId)
         if(durable)this.ledger.uncertain(durable.requestId)
-        // No retry if the network may have already delivered the prompt.
-        if(!durable)throw error
+        // Once reserved, HTTP may have delivered the prompt: NEVER retry.
+        // A bridge rejection without any pre-prompt receipt proves no send.
+        if(!durable){
+          if(error instanceof DshBridgeBlocked){
+            this.ledger.markNotSubmitted(triggerId,approval.approvalId,'preflight-rejected')
+            return
+          }
+          throw error
+        }
       }
       receipt=this.ledger.byTrigger(triggerId)
     }

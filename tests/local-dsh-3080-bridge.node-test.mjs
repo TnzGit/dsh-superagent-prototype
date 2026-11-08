@@ -19,7 +19,8 @@ const createFake=(session=s)=>{
     assert.equal(init.redirect,'error')
     assert.equal(init.headers.origin,'http://127.0.0.1:3080')
     assert.ok('args' in payload)
-    assert.ok('_request' in payload.args)
+    assert.deepEqual(Object.keys(payload.args),[method==='session/list'?'_request':'request'],
+      'gateway-verified per-method argument descriptor')
     const result=method==='session/list'?{items:[session]}
       :method==='session/projections'?{kind:'sequenced',asOfSeq:120,values:session.projections?.values??{}}
       :method==='session/prompt'?{accepted:true}
@@ -65,15 +66,18 @@ test('operator-approved disposable Session queues exactly one text prompt with s
   assert.ok(fake.calls.findIndex(x=>x.method==='session/state')<
     fake.calls.findIndex(x=>x.method==='session/prompt'))
   assert.equal(result.accepted,true)
+  assert.ok(fake.calls.findIndex(c=>c.method==='session/page')<
+    fake.calls.findIndex(c=>c.method==='session/prompt'),
+    'page read-only preflight must happen before prompt')
   assert.equal(result.requestId,continuationRequestId(req.sessionId,req.sourceMessageId))
   const prompt=fake.calls.find(c=>c.method==='session/prompt')
   assert.ok(prompt)
-  assert.deepEqual(prompt.payload.args._request,{
+  assert.deepEqual(prompt.payload.args.request,{
     requestId:result.requestId,sessionId:req.sessionId,mode:'queue',content:[{type:'text',text:req.text}]
   })
   await b.submit(req)
   assert.equal(fake.calls.filter(c=>c.method==='session/prompt').length,2)
-  const ids=fake.calls.filter(c=>c.method==='session/prompt').map(c=>c.payload.args._request.requestId)
+  const ids=fake.calls.filter(c=>c.method==='session/prompt').map(c=>c.payload.args.request.requestId)
   assert.equal(ids[0],ids[1], 'a retry after ambiguous outcome must reuse its durable requestId')
 })
 test('persistence callback is mandatory and must succeed before any session/prompt',async()=>{
@@ -168,10 +172,10 @@ test('only explicitly approved Sessions can use bounded state/wait/page history 
   await b.waitForSession('disposable-test-session',120)
   await b.pageSession('disposable-test-session',123)
   assert.deepEqual(fake.calls.map(x=>x.method),['session/state','session/wait','session/page'])
-  assert.deepEqual(fake.calls[1].payload.args._request,{
+  assert.deepEqual(fake.calls[1].payload.args.request,{
     sessionId:'disposable-test-session',afterSeq:120,timeoutMs:8000,maxMessages:64
   })
-  assert.deepEqual(fake.calls[2].payload.args._request,{
+  assert.deepEqual(fake.calls[2].payload.args.request,{
     address:{kind:'session',sessionId:'disposable-test-session'},throughSeq:123,maxMessages:128
   })
 })
@@ -199,4 +203,21 @@ test('bad RPC response, mismatched ID and RPC errors fail closed',async()=>{
     const b=bridge({fetcher})
     await assert.rejects(b.listSessions(),error=>error instanceof DshBridgeBlocked)
   }
+})
+
+test('unknown session/page response blocks submission before durable receipt',async()=>{
+  const fake=createFake()
+  const fetcher=async(url,init)=>{
+    const packet=JSON.parse(init.body)
+    if(packet.method==='session/page')
+      return new Response(JSON.stringify({type:'server-response',rpcId:packet.rpcId,
+        result:{ok:true,value:{kind:'unknown'}}}),{status:200})
+    return fake.fetcher(url,init)
+  }
+  let reserved=false
+  await assert.rejects(bridge({fetcher}).submit({project,sessionId:'disposable-test-session',
+    sourceMessageId:'preflight-page-test',text:'approved test',operatorApproved:true,
+    persistBeforeSend:async()=>{reserved=true}}),{code:'page_preflight_unverified'})
+  assert.equal(reserved,false)
+  assert.ok(!fake.calls.some(c=>c.method==='session/prompt'))
 })

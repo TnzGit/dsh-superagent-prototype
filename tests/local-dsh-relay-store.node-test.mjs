@@ -33,7 +33,7 @@ const completed=r=>({status:'completed',requestId:r.requestId,cursor:42,assistan
 test('new relay ledger is opt-in and creates only own staging SQLite tables',()=>{
   const {db}=fixture()
   const tables=db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(x=>x.name)
-  assert.deepEqual(tables,['dsh_relay_approval','dsh_relay_binding','dsh_relay_receipt'])
+  assert.deepEqual(tables,['dsh_relay_approval','dsh_relay_binding','dsh_relay_receipt','dsh_relay_terminal'])
   db.close()
 })
 test('one-shot operator approval cannot be replayed by another Weixin Trigger',()=>{
@@ -131,4 +131,26 @@ test('freshness guard is deliberately conservative and refuses missing timestamp
   assert.equal(weixinContextFresh({...a,at:'bad-date'},now),false)
   assert.equal(weixinContextFresh({...a,human:false},now),false)
   assert.equal(weixinContextFresh({...a,channel:{...a.channel,address:{...a.channel.address,contextToken:''}}},now),false)
+})
+
+test('consumed approval without a prompt leaves durable idempotent no-send evidence',()=>{
+  const {db,store,seen,host}=fixture(),a=trigger('no-send')
+  seen.set(a.id,a)
+  assert.equal(store.claimApproval('approval-no-send',a.id),true)
+  const row=store.markNotSubmitted(a.id,'approval-no-send','context-expired')
+  assert.equal(row.status,'not-submitted')
+  assert.equal(store.markNotSubmitted(a.id,'approval-no-send','preflight-rejected').reason,'context-expired')
+  assert.equal(new DshRelayStore(host).notSubmittedByTrigger(a.id)?.reason,'context-expired')
+  assert.equal(store.byTrigger(a.id),undefined)
+  assert.equal(JSON.stringify(row).includes('private-reply-token'),false)
+  assert.throws(()=>store.reserve(a,project,'session-1',20),/already terminated/)
+  db.close()
+})
+test('a reserved pre-prompt receipt cannot be marked as not-submitted',()=>{
+  const {db,store,seen}=fixture(),a=trigger('reserved')
+  seen.set(a.id,a)
+  store.claimApproval('approval-reserved',a.id)
+  store.reserve(a,project,'session-1',20)
+  assert.throws(()=>store.markNotSubmitted(a.id,'approval-reserved','preflight-rejected'),/pre-prompt receipt/)
+  db.close()
 })

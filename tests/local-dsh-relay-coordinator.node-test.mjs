@@ -53,7 +53,7 @@ function fixture(overrides={}){
       value={items:[{sessionId:'session-1',running:false,blank:false,
         cwd:project.path,formatStatus:'current'}]}
     }else if(method==='session/projections'){
-      value={kind:'sequenced',asOfSeq:20,values:{
+      value=overrides.invalidProjection?{kind:'cached'}:{kind:'sequenced',asOfSeq:20,values:{
         modelSelection:{next:{provider:'llm-local-proxy',model:'Qwen3.8-Flash-Next'}},
         permissions:{currentValue:'workspace-write'}}}
     }else if(method==='session/state'){
@@ -67,18 +67,20 @@ function fixture(overrides={}){
       const id=continuationRequestId('session-1',input.id)
       const e=(seq,type,data,append=false)=>({type:'event',event:{
         seq,type,time:now,data,...append?{surfaceOp:'append'}:{}}})
-      value={cursor:24,hasMore:false,records:[
-        e(21,'user/message',{role:'user',source:{kind:'user',rpcId:id},content:[]},true),
-        e(23,'assistant/message',{message:{content:[{type:'text',text:'测试通过'}]}},true),
-        e(24,'turn/end',{reason:{kind:'completed'},turn:1})
-      ]}
+      value=packet.payload.args.request.throughSeq===20
+        ?{cursor:20,hasMore:false,records:[]}
+        :{cursor:24,hasMore:false,records:[
+          e(21,'user/message',{role:'user',source:{kind:'user',rpcId:id},content:[]},true),
+          e(23,'assistant/message',{message:{content:[{type:'text',text:'测试通过'}]}},true),
+          e(24,'turn/end',{reason:{kind:'completed'},turn:1})
+        ]}
     }else throw Error('Unexpected DSH RPC '+method)
     return new Response(JSON.stringify({type:'server-response',rpcId:packet.rpcId,
       result:{ok:true,value}}),{status:200,headers:{'content-type':'application/json'}})
   }
   const coordinator=new NativeRelayCoordinator({store,effects,outbox,projects:[project],
     approval,authorized:()=>overrides.authorized!==false,fetcher})
-  return{coordinator,store,queued,outbound,calls,input,trigger:id=>triggers.get(id),
+  return{coordinator,approval,store,queued,outbound,calls,input,trigger:id=>triggers.get(id),
     process:async()=>handler(queued[0].payload),close:()=>{db.close();rmSync(dir,{recursive:true,force:true})}}
 }
 test('offline end-to-end: one approved Weixin Trigger is consumed once and returned by correlated Outbox',async()=>{
@@ -117,4 +119,26 @@ test('route attestation unavailable: no real or mock DSH prompt is dispatched',a
     assert.equal(f.calls.filter(c=>c.method==='session/prompt').length,0)
     assert.equal(f.coordinator.ledger.byTrigger(f.input.id),undefined)
   }finally{f.close()}
+})
+
+test('deterministic preflight rejection becomes terminal without prompt or reply',async()=>{
+  const x=fixture({invalidProjection:true})
+  try{
+    assert.equal(x.coordinator.receive(x.input),true)
+    await x.process()
+    assert.equal(x.coordinator.ledger.notSubmittedByTrigger(x.input.id)?.reason,'preflight-rejected')
+    await x.process()
+    assert.equal(x.calls.filter(c=>c.method==='session/prompt').length,0)
+    assert.equal(x.outbound.length,0)
+  }finally{x.close()}
+})
+test('expired grant leaves terminal evidence before receipt',async()=>{
+  const x=fixture()
+  try{
+    assert.equal(x.coordinator.receive(x.input),true)
+    x.approval.expiresAt=new Date(Date.now()-10).toISOString()
+    await x.process()
+    assert.equal(x.coordinator.ledger.notSubmittedByTrigger(x.input.id)?.reason,'approval-expired')
+    assert.equal(x.calls.filter(c=>c.method==='session/prompt').length,0)
+  }finally{x.close()}
 })

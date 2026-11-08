@@ -99,7 +99,9 @@ export class Dsh3080Bridge {
       headers:{'content-type':'application/json','accept':'application/json',
         // DSH 3080's Origin admission check is not proof of authentication.
         'origin':this.origin},
-      body:JSON.stringify({type:'client-request',rpcId,method,payload:{args:{_request:request}}}),
+      // Installed gateway descriptors: only session/list accepts _request.
+      body:JSON.stringify({type:'client-request',rpcId,method,
+        payload:{args:method==='session/list'?{_request:request}:{request}}}),
       signal:AbortSignal.timeout(15_000),
     })
     if(!response.ok) return fail('rpc_http_failure','DSH 3080 returned HTTP '+response.status)
@@ -223,6 +225,12 @@ export class Dsh3080Bridge {
     if(!input.persistBeforeSend) return fail('receipt_persistence_required',
       'Persist the original Weixin Trigger/Session/cursor correlation before sending')
     const afterSeq=await this.sessionCursor(input.sessionId)
+    // Verify bounded read-only history BEFORE sending a real prompt. The C5.1
+    // installed session/page contract is still unknown: fail closed until proven.
+    const page=await this.pageSession(input.sessionId,afterSeq)
+    if(!record(page)||page.cursor!==afterSeq||typeof page.hasMore!=='boolean'||
+      page.hasMore||!Array.isArray(page.records)||page.records.length>2000)
+      return fail('page_preflight_unverified','Original DSH history page contract is unverified')
     await input.persistBeforeSend({triggerId:input.sourceMessageId,workspaceId:input.project.workspaceId,
       sessionId:input.sessionId,requestId,afterSeq})
     const ack=await this.call<{accepted?:unknown}>('session/prompt',{

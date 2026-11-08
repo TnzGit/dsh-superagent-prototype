@@ -10,6 +10,11 @@ import {continuationReceipt,continuationWeixinReply,type DshContinuationReceipt,
 
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex')
 export type RelayStatus='prepared'|'admitted'|'uncertain'|'completed'|'reply-expired'|'review-required'
+/** No pre-prompt receipt/cursor exists when a consumed grant was not submitted. */
+export type NoSubmitReason='context-expired'|'approval-expired'|'selection-unavailable'|'preflight-rejected'
+export interface NoSubmitRecord {
+  triggerId:string;approvalId:string;status:'not-submitted';reason:NoSubmitReason;createdAt:string
+}
 export interface RelayRecord extends DshContinuationReceipt {
   status:RelayStatus
   textHash:string
@@ -50,7 +55,8 @@ export class DshRelayStore {
       'CREATE TABLE IF NOT EXISTS dsh_relay_binding (thread TEXT PRIMARY KEY,value TEXT NOT NULL);'+
       'CREATE TABLE IF NOT EXISTS dsh_relay_receipt (request_id TEXT PRIMARY KEY,'+
       'trigger_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL);'+
-      'CREATE TABLE IF NOT EXISTS dsh_relay_approval (approval_id TEXT PRIMARY KEY,trigger_id TEXT NOT NULL UNIQUE);'
+      'CREATE TABLE IF NOT EXISTS dsh_relay_approval (approval_id TEXT PRIMARY KEY,trigger_id TEXT NOT NULL UNIQUE);'+
+      'CREATE TABLE IF NOT EXISTS dsh_relay_terminal (trigger_id TEXT PRIMARY KEY,value TEXT NOT NULL);'
     )
   }
   /** Bind the precise original Session only after a persisted, human-confirmed Weixin Trigger. */
@@ -99,6 +105,30 @@ export class DshRelayStore {
       .run(approvalId,triggerId).changes
     return Number(changed)===1
   }
+  /** Store a sanitized no-send result; separate from receipts which require a cursor. */
+  notSubmittedByTrigger(triggerId:string):NoSubmitRecord|undefined {
+    const row=this.host.db.prepare('SELECT value FROM dsh_relay_terminal WHERE trigger_id=?').get(triggerId)
+    return row?JSON.parse(String(row.value)) as NoSubmitRecord:undefined
+  }
+  markNotSubmitted(triggerId:string,approvalId:string,reason:NoSubmitReason):NoSubmitRecord {
+    return this.host.atomic(()=>{
+      const claim=this.host.db.prepare('SELECT trigger_id FROM dsh_relay_approval WHERE approval_id=?').get(approvalId)
+      if(!claim||claim.trigger_id!==triggerId||!this.host.triggers.get(triggerId))
+        throw Error('No matching durable one-shot approval and Trigger')
+      if(this.byTrigger(triggerId))
+        throw Error('Cannot mark not-submitted after a pre-prompt receipt was reserved')
+      const old=this.notSubmittedByTrigger(triggerId)
+      if(old){
+        if(old.approvalId!==approvalId)throw Error('Conflicting relay terminal approval')
+        return old
+      }
+      const row:NoSubmitRecord={triggerId,approvalId,status:'not-submitted',reason,
+        createdAt:new Date().toISOString()}
+      this.host.db.prepare('INSERT INTO dsh_relay_terminal(trigger_id,value) VALUES(?,?)')
+        .run(triggerId,JSON.stringify(row))
+      return row
+    })
+  }
   /** Require staff review after an unrelated user message or other non-retryable ambiguity. */
   reviewRequired(requestId:string):RelayRecord {
     return this.update(requestId,row=>row.status==='completed'||row.status==='reply-expired'
@@ -127,6 +157,8 @@ export class DshRelayStore {
         throw Error('Relay Trigger does not match the original persisted Source message')
       if(this.byTrigger(trigger.id))
         throw Error('Relay receipt exists; reconcile original request before retry')
+      if(this.notSubmittedByTrigger(trigger.id))
+        throw Error('Relay already terminated without submission; never resurrect approval')
       const receipt=continuationReceipt({triggerId:trigger.id,workspaceId:project.workspaceId,sessionId,afterSeq})
       const now=new Date().toISOString()
       const row:RelayRecord={...receipt,status:'prepared',textHash:hash(trigger.text),createdAt:now,updatedAt:now}
