@@ -90,7 +90,7 @@ export class Dsh3080Bridge {
     this.verifyRoute=options.verifyRoute
     this.approvedModel=options.approvedModel??ALLOWED_MODEL
   }
-  private async call<T>(method:'session/list'|'session/prompt'|'session/state'|'session/wait'|'session/page',request:RecordObject):Promise<T> {
+  private async call<T>(method:'session/list'|'session/projections'|'session/prompt'|'session/state'|'session/wait'|'session/page',request:RecordObject):Promise<T> {
     const rpcId=randomUUID()
     const endpoint=this.origin+'/api/'+method
     const response=await this.fetcher(endpoint,{
@@ -170,7 +170,17 @@ export class Dsh3080Bridge {
     if(current?.origin==='subagent'||current?.parentSessionId)reasons.push('subagent_session_not_supported')
     if(current?.formatStatus!=='current')reasons.push('session_format_unverified_or_migration_required')
     if(current?.cwd && current.cwd!==project.path)reasons.push('workspace_path_mismatch')
-    const values=current?.projections?.values
+    // session/list can return a stale CACHED projection. Never authorize model/permissions
+    // from its hints; session/projections reads a current exact (sequenced) baseline
+    // without activating or migrating the existing Agent.
+    let values:RecordObject|undefined
+    if(current?.formatStatus==='current'){
+      const exact=await this.call<unknown>('session/projections',{sessionId})
+      if(record(exact)&&exact.kind==='sequenced'&&
+        typeof exact.asOfSeq==='number'&&Number.isSafeInteger(exact.asOfSeq)&&
+        record(exact.values))values=exact.values
+      else reasons.push('exact_session_projection_unavailable')
+    }
     // DSH Projection.modelSelection is {lastUsed, next}; only 'next' controls the next LLM step.
     // lastUsed is historical and MUST NOT be used to authorize new model traffic.
     const selection=record(values?.modelSelection)?values.modelSelection:undefined
