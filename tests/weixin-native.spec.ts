@@ -15,6 +15,19 @@ describe('native Weixin Source (no OpenClaw runtime)', () => {
     expect(nativeWeixinKind.channel?.allowed?.({ peer: 'intruder' }, allowed)).toBe(false)
     expect(nativeWeixinKind.policy?.schema.parse({ allowed: [{ id: 'peer-alice' }] })).toMatchObject({ allowed: [{ id: 'peer-alice' }] })
   })
+  it('never attempts an expired relay reply (no token refresh or network call)', async () => {
+    const old = {
+      id: 'relay-id', text: 'done', kind: 'reply' as const,
+      channel: { source: 'weixin', thread: 'weixin:peer-alice', address: {
+        peer: 'peer-alice', messageId: 'm1', contextToken: 'old-private-token',
+        expiresAt: new Date(Date.now() - 1000).toISOString(),
+      } },
+    }
+    await expect(nativeWeixinKind.channel!.send({ commands: undefined as never }, old)).resolves.toBe('gone')
+    await expect(nativeWeixinKind.channel!.send({ commands: undefined as never }, {
+      ...old, channel: { ...old.channel, address: { ...old.channel.address, expiresAt: 'invalid-date' } },
+    })).resolves.toBe('gone')
+  })
   it('reads owner-only credentials from a separate file, refuses weak modes', () => {
     const dir = mkdtempSync(join(tmpdir(), 'dsh-native-weixin-'))
     const file = join(dir, 'cred.json')
