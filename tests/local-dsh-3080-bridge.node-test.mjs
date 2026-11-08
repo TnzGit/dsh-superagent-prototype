@@ -21,7 +21,11 @@ const createFake=(session=s)=>{
     assert.ok('args' in payload)
     assert.ok('_request' in payload.args)
     const result=method==='session/list'?{items:[session]}
-      :method==='session/prompt'?{accepted:true}:null
+      :method==='session/prompt'?{accepted:true}
+      :method==='session/state'?{cursor:123,active:false,running:false,queue:[],pendingInput:[]}
+      :method==='session/wait'?{reason:'timeout',state:{cursor:123,active:false,running:false,pendingInput:[]},
+        output:{records:[],truncated:false}}
+      :method==='session/page'?{cursor:123,hasMore:false,records:[]}:null
     return new Response(JSON.stringify({type:'server-response',rpcId,result:{ok:true,value:result}}),
       {status:200,headers:{'content-type':'application/json'}})
   }
@@ -135,6 +139,24 @@ test('explicit queue route attestation failure blocks any send',async()=>{
   const fake=createFake(),b=bridge({fetcher:fake.fetcher,verifyRoute:async()=>false})
   assert.equal((await b.inspect(project,'disposable-test-session')).allowed,false)
   assert.equal(fake.calls.length,1)
+})
+test('only explicitly approved Sessions can use bounded state/wait/page history APIs',async()=>{
+  const fake=createFake()
+  const blocked=new Dsh3080Bridge({fetcher:fake.fetcher})
+  await assert.rejects(blocked.sessionCursor('disposable-test-session'),{code:'session_not_operator_approved'})
+  await assert.rejects(blocked.pageSession('disposable-test-session',123),{code:'session_not_operator_approved'})
+  assert.equal(fake.calls.length,0)
+  const b=bridge({fetcher:fake.fetcher})
+  assert.equal(await b.sessionCursor('disposable-test-session'),123)
+  await b.waitForSession('disposable-test-session',120)
+  await b.pageSession('disposable-test-session',123)
+  assert.deepEqual(fake.calls.map(x=>x.method),['session/state','session/wait','session/page'])
+  assert.deepEqual(fake.calls[1].payload.args._request,{
+    sessionId:'disposable-test-session',afterSeq:120,timeoutMs:8000,maxMessages:64
+  })
+  assert.deepEqual(fake.calls[2].payload.args._request,{
+    address:{kind:'session',sessionId:'disposable-test-session'},throughSeq:123,maxMessages:128
+  })
 })
 test('bad RPC response, mismatched ID and RPC errors fail closed',async()=>{
   const scenarios=[
