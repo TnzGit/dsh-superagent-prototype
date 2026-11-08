@@ -26,7 +26,7 @@ const setup=async(options={})=>{
     return new Response(JSON.stringify({type:'server-response',rpcId:cursor,
       result:{ok:true,value}}),{status:200})
   }
-  const rpc=new DshOwnerRpc({fetcher,grants:{newWorkspaceWrites:options.granted!==false}})
+  const rpc=new DshOwnerRpc({fetcher,grants:options.granted===false?{}:{newWorkspaceWrites:{path:join(parent,'test-sandbox')}}})
   const port=originalDshProvisionPort({rpc,privateLedgerRoot,
     readWorkspace:async id=>{assert.equal(id,view.workspaceId);return {...view,sessionIds:[...view.sessionIds]}}})
   const approval={operatorApproved:true,approvalId:'operator-human-confirmed-01',parent,slug:'test-sandbox'}
