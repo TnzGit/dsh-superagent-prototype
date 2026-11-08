@@ -203,10 +203,13 @@ export class Dsh3080Bridge {
       originalSessionVerified:!!current&&project.sessionIds.includes(sessionId)}
   }
   /** Human-approved one-shot admission only. 'accepted' means in the Session inbox, NOT completed or replied.
-   * A network timeout after request dispatch is ambiguous; retry ONLY with the same sourceMessageId.
+   * The caller must durably persist the correlation receipt BEFORE the HTTP prompt.
+   * A network timeout after dispatch is ambiguous; retry ONLY with the same original sourceMessageId.
    */
   async submit(input:{project:ExistingDshProject;sessionId:string;sourceMessageId:string;
-    text:string;operatorApproved:boolean}):Promise<{accepted:true;requestId:string;sessionId:string}> {
+    text:string;operatorApproved:boolean;
+    persistBeforeSend?:(receipt:{triggerId:string;workspaceId:string;sessionId:string;requestId:string;afterSeq:number})=>Promise<void>
+  }):Promise<{accepted:true;requestId:string;sessionId:string;afterSeq:number}> {
     if(!input.operatorApproved)return fail('operator_approval_required','User approval is required before any historical Session prompt')
     if(!input.sourceMessageId||input.sourceMessageId.length>256)
       return fail('invalid_source_id','Invalid source message ID')
@@ -215,9 +218,14 @@ export class Dsh3080Bridge {
     const check=await this.inspect(input.project,input.sessionId)
     if(!check.allowed)return fail('preflight_blocked','DSH 3080 continuation blocked: '+check.reasons.join(','))
     const requestId=continuationRequestId(input.sessionId,input.sourceMessageId)
+    if(!input.persistBeforeSend) return fail('receipt_persistence_required',
+      'Persist the original Weixin Trigger/Session/cursor correlation before sending')
+    const afterSeq=await this.sessionCursor(input.sessionId)
+    await input.persistBeforeSend({triggerId:input.sourceMessageId,workspaceId:input.project.workspaceId,
+      sessionId:input.sessionId,requestId,afterSeq})
     const ack=await this.call<{accepted?:unknown}>('session/prompt',{
       requestId,sessionId:input.sessionId,mode:'queue',content:[{type:'text',text:input.text}]})
     if(!record(ack)||ack.accepted!==true)return fail('bad_prompt_receipt','DSH did not acknowledge accepted prompt')
-    return {accepted:true,requestId,sessionId:input.sessionId}
+    return {accepted:true,requestId,sessionId:input.sessionId,afterSeq}
   }
 }
