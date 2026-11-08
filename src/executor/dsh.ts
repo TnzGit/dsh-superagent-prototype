@@ -6,6 +6,7 @@ import { mkdir, rmdir, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import type { LocalProjectRegistry } from '../local-first/project-registry.ts'
 import { createProjectSnapshot, projectFingerprint, projectIdFromRequest, verifyProjectSnapshot } from '../local-first/project-workspaces.ts'
+import { chooseExistingDshProject, type ExistingDshProject } from '../local-first/existing-dsh-projects.ts'
 import { key, latestAssignment, latestReport, liveTicket, runningAssignment, threadKey, waitsForPerson } from '../core/index.ts'
 import type { AssessmentOutcome, Assignment, EngineForExecutor, Execution, Executor, Mandate, PolicyEffect, Ticket, TicketInput, Trigger }
   from '../core/index.ts'
@@ -72,6 +73,8 @@ export interface ExecutorHost {
   readonly machine: Pick<Machine, 'stateDir'>
   /** Optional operator-owned local project registry; never populated from chat input. */
   readonly localProjects?: LocalProjectRegistry
+  /** Read-only inventory from a separate running DSH; never execute it by creating an unrelated Worker. */
+  readonly existingDshProjects?: readonly ExistingDshProject[]
   /** GitHub-disabled mode requires an explicit registered project ID for every implementation ticket. */
   localOnly?(): boolean
   readonly lifetime: AbortSignal
@@ -245,11 +248,29 @@ export class DshExecutor implements Executor {
     const settings = this.host.store.settings()
     const execution = ticketExecution(ticket, outcome, settings, this.host.machine.stateDir)
     const source = sourceTrigger(this.host, ticket)
-    const selected = projectIdFromRequest(source?.text ?? '')
+    const request = source?.text ?? ''
+    const selected = projectIdFromRequest(request)
+    // An already-running DSH Workspace and its Session history belong to THAT DSH host.
+    // Never pretend a new Superagent Ticket snapshot has resumed the existing Session.
+    const existing = chooseExistingDshProject(request, this.host.existingDshProjects ?? [])
+    const local = selected && this.host.localProjects?.list().find(p => p.id === selected)
+    if (!local && existing.kind === 'existing') {
+      return { ...ticket, execution: { ...execution, localProjectError:
+        'Existing DSH Workspace selected, but authenticated delegation to its original 3080 Session is not yet configured. ' +
+        'Do not start an unrelated Worker or modify that Workspace; complete the 3080 integration first.' } }
+    }
+    if (!local && existing.kind === 'new-request') {
+      return { ...ticket, execution: { ...execution, localProjectError:
+        'New project requested: first obtain operator approval for its root and create a genuine DSH Workspace on the owning host.' } }
+    }
+    if (!local && existing.kind === 'clarify' && !selected) {
+      return { ...ticket, execution: { ...execution, localProjectError:
+        'Project identity is ambiguous; ask the user to select an exact registered project ID.' } }
+    }
     if (!selected && !this.host.localOnly?.()) return { ...ticket, execution }
     if (!selected) return { ...ticket, execution: { ...execution,
       localProjectError: 'Select a registered local project on the first line: /project project-id' } }
-    const project = this.host.localProjects?.list().find(p => p.id === selected)
+    const project = local
     if (!project) return { ...ticket, execution: { ...execution,
       localProjectError: 'The selected local project ID is not registered or the registry is not configured' } }
     if (project.readOnly) return { ...ticket, execution: { ...execution,
