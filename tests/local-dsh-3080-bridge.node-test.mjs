@@ -27,8 +27,8 @@ const createFake=(session=s)=>{
   }
   return {fetcher,calls}
 }
-const bridge=(opts={})=>new Dsh3080Bridge({...opts,explicitlyEnabled:true,
-  allowedSessionIds:['disposable-test-session'],queueProxyVerified:true})
+const bridge=(opts={})=>new Dsh3080Bridge({explicitlyEnabled:true,
+  allowedSessionIds:['disposable-test-session'],queueProxyVerified:true,verifyRoute:async()=>true,...opts})
 test('bridge does not resolve LAN URLs or accept localhost aliases, credentials or alternate ports',()=>{
   assert.equal(normalizeBridgeOrigin('http://127.0.0.1:3080'),'http://127.0.0.1:3080')
   for (const url of ['http://localhost:3080','http://192.168.1.15:3080',
