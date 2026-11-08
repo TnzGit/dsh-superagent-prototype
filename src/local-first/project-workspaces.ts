@@ -54,7 +54,7 @@ const gitEnvironment = (): NodeJS.ProcessEnv => ({
   GIT_TERMINAL_PROMPT: '0', GIT_LFS_SKIP_SMUDGE: '1'
 })
 async function runGit(args: string[], cwd: string): Promise<string> {
-  const { stdout } = await git('git', args, { cwd, timeout: 120_000, maxBuffer: 5_000_000, env: gitEnvironment() })
+  const { stdout } = await git('git', args, { cwd, encoding:'utf8', timeout: 120_000, maxBuffer: 5_000_000, env: gitEnvironment() })
   return stdout
 }
 function excluded(relativeFile: string): boolean {
