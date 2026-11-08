@@ -8,7 +8,8 @@
 - Current development branch: `feat/local-first-wechat-foundation`.
 - Stable task entry point: `LOCAL_AGENT_TASK.md`. **Remote ChatGPT** updates this file for each new task.
 - Local Agent uploads the redacted final report to `agent-reports/<report-name>.md` **on that feature branch**, using the operator's own authenticated GitHub Git credentials.
-- Operator sends **one short sentence** with the new report path, pushed commit SHA, and completion state. Remote ChatGPT then fetches the report directly from GitHub. No repetitive copy/pasting or chat file uploads.
+- **GitHub is the sole full-report handoff channel.** After a normal push is verified, the local Agent gives a **single short completion notification** containing status, GitHub report path/URL and pushed commit SHA. **Do not include the report body, an attachment, raw logs, or instructions asking the operator to copy/paste/upload/forward the report to remote ChatGPT.** Remote ChatGPT reads the report directly from GitHub on its next turn; the operator is not responsible for transporting report content.
+- **Do not make the operator relay even the short notification as a mandatory workflow step.** ChatGPT in an ordinary chat cannot spontaneously notice a new commit without a subsequent chat turn or a separately configured scheduled monitoring task. A short completion notification is informational, not a request to carry data. If the operator wants push-triggered or scheduled automatic notices, first configure and explicitly approve the appropriate automation; until then, avoid promising zero-touch asynchronous delivery.
 - When a task is blocked by GitHub permissions, credentials or remote branch drift, do not claim upload success. Leave the local report and respond in one sentence with `BLOCKED` and the precise cause.
 
 ## Responsibility and authority
@@ -46,8 +47,8 @@ Offline mocks and report pushes never grant any of these.
 
 Each GitHub report includes: task name and tested SHA, commands and exit codes, actual test totals, pass/fail/blocked, CI run SHA (if any), safeguards and what was **NOT RUN**, next blocker, rollback if applicable. Distinguish `MOCK PASS`, `LOCAL BUILD PASS`, `GITHUB CI GREEN / NOT COVERED / FAIL`, `REAL 3080 SESSION E2E NOT RUN`, `REAL WEIXIN RETURN NOT RUN`.
 
-After pushing the report, keep the operator-facing response to **one sentence**, e.g.:
+After pushing the report, keep the operator-facing response to **one sentence with an actionable GitHub URL and commit SHA**, e.g.:
 
-`C3S-PUBLISH 完成：已推送脱敏报告 agent-reports/REPORT-existing-dsh-stageC3S-offline.md（提交 abc1234），CI 为 pending；运行服务未动。`
+`C3S-PUBLISH 完成：已推送脱敏报告 https://github.com/TnzGit/dsh-superagent-prototype/blob/feat/local-first-wechat-foundation/agent-reports/REPORT-existing-dsh-stageC3S-offline.md（提交 abc1234），CI 为 pending；运行服务未动。无需转发报告或上传附件。`
 
-Do not paste the report into chat. Do not claim a push or CI success before verified. STOP after the assigned task.
+Do not paste or attach the report into chat, generate a report for the operator to forward, or ask the operator to upload/share any local report. The user must not be the report courier. The one-sentence notification is not the report itself. Do not claim a push or CI success before verified. STOP after the assigned task.
