@@ -1,6 +1,6 @@
 # 011 — Registered local-project Ticket execution (isolated snapshots)
 
-> **Architecture update:** The operator has a separate DSH host on Mac port 3080 containing valuable existing Workspaces and Sessions. This snapshot Worker mode does **NOT** replace or resume those sessions. Prefer the authenticated original-host continuation design in [012](012-existing-dsh-host-3080.md) for existing DSH projects. This file documents the strictly opt-in staging/sandbox execution path for new projects or tasks that deliberately request a fresh, isolated workspace. Do not auto-migrate project directories or Session logs.
+> **Architecture update:** The operator has a separate DSH host on Mac port 3080 containing valuable existing Workspaces and Sessions. This snapshot Worker mode does **NOT** replace or resume those sessions. For existing DSH projects, prefer continuation on the original 3080 host; see the later `docs/012-existing-dsh-host-3080.md` architecture decision rather than substituting snapshot Workers. This file documents the strictly opt-in staging/sandbox execution path for new projects or tasks that deliberately request a fresh, isolated workspace. Do not auto-migrate project directories or Session logs.
 
 > 2026-11-08 Stage B showed real Weixin ↔ DSH ↔ Qwen chat/outbox success. **Ticket → Worker was not yet E2E accepted.** This document describes the first code path for Git/non-Git worker workspaces; it is **not** permission to auto-apply changes to the operator's original projects.
 
