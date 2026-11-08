@@ -50,6 +50,13 @@ export const nativeWeixinKind: SourceKind<Config>={
   channel:{
     allowed:(address,config)=>typeof address.peer==='string' && canReceive(config,address.peer),
     send:async(_ctx,message:OutboundMessage)=>{
+      // Only Stage C3 relay replies carry expiresAt. Never use a later unrelated
+      // Weixin Trigger's token after expiry; mark the old Outbox receipt gone.
+      const expiresAt=message.channel.address.expiresAt
+      if(expiresAt!==undefined){
+        const cut=Date.parse(expiresAt)
+        if(!Number.isFinite(cut)||Date.now()>=cut)return 'gone'
+      }
       const creds=readNativeCredentials()
       if(!creds)throw Error('Weixin credentials are not configured')
       const {peer,contextToken}=message.channel.address
