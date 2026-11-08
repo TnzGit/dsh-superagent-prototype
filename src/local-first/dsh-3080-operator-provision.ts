@@ -108,8 +108,8 @@ export function originalDshProvisionPort(options:ProvisionHostOptions):NativeWor
         typeof row.path!=='string'||!Array.isArray(row.sessionIds)||
         !row.sessionIds.every(x=>typeof x==='string'))
         bad('invalid workspace/create identity or membership')
-      return{created:r.created,workspace:{workspaceId:row.workspaceId,
-        path:row.path,sessionIds:row.sessionIds as string[]}}
+      return{created:r.created as boolean,workspace:{workspaceId:row.workspaceId as string,
+        path:row.path as string,sessionIds:row.sessionIds as string[]}}
     },
     async createSession(workspaceId){
       const value=await rpc.createNewSession(workspaceId)
