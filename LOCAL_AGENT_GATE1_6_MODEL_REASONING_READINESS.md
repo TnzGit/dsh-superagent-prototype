@@ -45,3 +45,7 @@
 `CONFIG_STAGED_PENDING_REVIEW` / `MANUAL_RECOVERY_REQUIRED`.
 
 Never claim **real Session E2E**, **real 8123 route inference** or **Weixin return E2E** from configuration visibility, local unit tests, or CI.
+
+## GitHub-only report handoff — mandatory for Phase A/B
+
+Follow `LOCAL_AGENT_PROTOCOL.md` as the standing handoff contract. Publish the complete **sanitized** report as a normal Git commit in `agent-reports/` on `feat/local-first-wechat-foundation`; verify the remote HEAD and the report URL. Final local-Agent chat output must be **one short status line only** with the GitHub URL, pushed SHA, CI status (if checked), and STOP verdict. **Never paste or attach the full report, and never ask the operator to carry, copy, upload or manually forward it to remote ChatGPT.** The remote ChatGPT fetches the report from GitHub when the conversation resumes. A zero-touch proactive notice requires a separate user-approved automation; do not claim otherwise. If the push fails, state `BLOCKED_PUSH` without claiming the report is published.
