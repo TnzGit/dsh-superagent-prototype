@@ -43,7 +43,9 @@ export function weixinContextFresh(trigger:Trigger,nowMs:number):boolean {
  * never automatically resubmitted into 3080.
  */
 export class DshRelayStore {
-  constructor(private readonly host:RelayStorageHost) {
+  private readonly host:RelayStorageHost
+  constructor(host:RelayStorageHost) {
+    this.host=host
     host.db.exec(
       'CREATE TABLE IF NOT EXISTS dsh_relay_binding (thread TEXT PRIMARY KEY,value TEXT NOT NULL);'+
       'CREATE TABLE IF NOT EXISTS dsh_relay_receipt (request_id TEXT PRIMARY KEY,'+
