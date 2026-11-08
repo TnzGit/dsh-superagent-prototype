@@ -14,7 +14,7 @@ Date: 2026-11-08/09 (Asia/Shanghai). Starting SHA: `5ec2888f024713e7ac13114f35db
 
 ## B. Private baseline and backups (Stage 0)
 
-Owner-only dir `~/.dsh-superagent-private/c5/` (0700): `patch.postgate1.bak` (post-Gate① profile, sha256 `14d90ecf…`, 45845 B), `settings_describe_before.json` (agent-default-model rev 15, user `cmp170hx/Qwen3.8-Flash-Next/xhigh`), `sqlite_pre_vacuum.sql` (VACUUM before/after), `staging3083-before-restart.json` (full `ps eww` env snapshot), `disposable.json`, `rollback-stage3.json`, `relay-approval.json`, `route-attestation.json` (all 0600, fsynced). PIDs/ports recorded: 3080 pid 1482 (`0.0.0.0`, allowUnauthenticated), 3083 pid 11594, 8123 pid 90215. All unchanged until the authorized 3083 restart.
+Owner-only dir `<owner-only-private-dir>/` (0700): `patch.postgate1.bak` (post-Gate① profile, sha256 `14d90ecf…`, 45845 B), `settings_describe_before.json` (agent-default-model rev 15, user `cmp170hx/Qwen3.8-Flash-Next/xhigh`), `sqlite_pre_vacuum.sql` (VACUUM before/after), `staging3083-before-restart.json` (full `ps eww` env snapshot), `disposable.json`, `rollback-stage3.json`, `relay-approval.json`, `route-attestation.json` (all 0600, fsynced). PIDs/ports recorded: 3080 pid 1482 (`0.0.0.0`, allowUnauthenticated), 3083 pid 11594, 8123 pid 90215. All unchanged until the authorized 3083 restart.
 
 ## C. Gate①.6 Phase B — metadata relocation (REAL CONFIG, hot-applied)
 
@@ -53,7 +53,7 @@ Two live messages were sent by the operator to the paired bot: `测试` (16:20:4
 ## H. Invariants after the run (READ-ONLY verified)
 
 - 3080: pid 1482 unchanged since before the run; listener `*:3080`; `allowUnauthenticated` + trustedHosts unchanged (profile patch touched only the `llm-pi-ai` provider block); anonymous LAN session-list works (HTTP 200 with same-origin header, probe `ownerAuthRisk` unchanged).
-- 8123: pid 90215 unchanged; upstream 192.168.10.206:8002 reachable (`/v1/models` HTTP 200), upstream `prompt_tokens_total` counter shows real inference happened elsewhere (operator traffic).
+- 8123: pid 90215 unchanged; upstream <private-upstream>:8002 reachable (`/v1/models` HTTP 200), upstream `prompt_tokens_total` counter shows real inference happened elsewhere (operator traffic).
 - 3083: rolled back — bundle symlink restored to the native-weixin checkout (`.bak-pre-c5` moved back), restarted with the ORIGINAL env (no `DSH_SUPERAGENT_DSH_*` vars), listener 127.0.0.1:3083 back on pid 7098; weixin cursor/account preserved (WAL intact; cursor advanced only by the two real operator messages). Relay SQLite tables persist but hold only the consumed approval row.
 - Read-only probe vs C2 baseline: Workspaces 27 (catalog) / 28 via official stream (+1 = disposable); Sessions 841→845 (+1 disposable +3 ordinary operator activity while the run proceeded — 3 other sessions actually used local Qwen in that period, not caused by this agent); running 1→2; migration-required 286 unchanged; `lastUsedLocalQwen` 551→554 / `nextSelectedLocalQwen` 552→555 (+1 = disposable session). `readyForLivePrompt:false` unchanged (owner-anonymous). No original Workspace/Session was migrated, overwritten, or prompted.
 
@@ -77,3 +77,7 @@ No changes to 3080 listener/auth/db/model-route (beyond C's provider metadata, h
 3. Explicit authorization to run one real prompt + one reply on the disposable Session after the fix.
 
 Logs (private): `staging3083.log`, `staging3083-restored.log`. No real peer IDs, tokens, paths, prompts, or credentials published here.
+
+## C5.1 later read-only correction (2026-11-09)
+
+The operator's later read-only audit confirmed that the five-step creation ledger persisted, but the standalone `disposable.json` had **not** been written before a frame-parse failure; the Stage B file inventory above was therefore overinclusive. No new original-Host mutation occurred during C5.1. C5.1 also confirmed that the original test Workspace/Session remains idle, its selected local model and the shared global default are unchanged, and the real `session/page` contract is still unknown. This sanitized update does not rewrite the historical public Git commit.

@@ -1,29 +1,33 @@
-# LOCAL_AGENT_TASK — CURRENT: C5 OPERATOR-APPROVED REAL 3080 WEIXIN E2E
+# LOCAL_AGENT_TASK — CURRENT: C5.2 OFFLINE ACCEPTANCE + READ-ONLY WIRE CONTRACT AUDIT
 
-**Mandatory first reads:** `LOCAL_AGENT_PROTOCOL.md` and `LOCAL_AGENT_GATE3_LIVE_E2E_RUNBOOK.md`. **Repo:** `TnzGit/dsh-superagent-prototype`; **branch:** `feat/local-first-wechat-foundation`. Do not execute any older C4 or Gate① runbook as the active task.
+**Mandatory first reads:** `LOCAL_AGENT_PROTOCOL.md`, this file, C5 report, and C5.1 audit summary. The original C5 runbook is historical, NOT permission to repeat it.
 
-## User has ALREADY approved all bounded C5 test gates
+Repository: `TnzGit/dsh-superagent-prototype`. Branch: `feat/local-first-wechat-foundation`.
 
-The operator explicitly said **"我全都批准"** on 2026-11-08 immediately after remote ChatGPT listed Gate①.6 Phase B, one newly disposable original 3080 Workspace/Session, a scoped Session model switch with shared-default restoration, one real 8123 inference and original DSH Session prompt, and one native Weixin reply. The operator also approved a controlled restart if strictly needed. **Proceed without asking for duplicate consent for these exact actions**, under the constraints in the linked C5 runbook.
+## C5 STOPPED; C5 one-shot message approval consumed
 
-**This is ONE disposable end-to-end trial only, not unrestricted historical access.** Preserve all existing original 3080 Workspaces/Sessions/history, listener `0.0.0.0:3080`, `allowUnauthenticated:true`, exact trustedHosts and anonymous LAN access; preserve existing `cmp170hx` provider and global `cmp170hx/Qwen3.8-Flash-Next/xhigh`. Do not restart an active original 3080 host, select an old Session, migrate, copy or overwrite history, run cloud models, re-scan Weixin QR, introduce OpenClaw, or force-push/merge.
+C5 stopped before the real original DSH prompt. C5.1 read-only audit confirmed the disposable original Workspace/Session still exists, is idle, has `next=llm-local-proxy/Qwen3.8-Flash-Next/high`, and the global default was restored to `cmp170hx/Qwen3.8-Flash-Next/xhigh`. Keep these unchanged.
 
-## Active execution
+**This C5.2 task authorizes OFFLINE TESTS and READ-ONLY HOST OBSERVATION ONLY.** NO live prompt, new Weixin message, Weixin approval/route grant, model/profile/default writes, Workspace/Session creation, Session selection, 3080/3083/8123 restart, product-code edits on Mac, history writes/copies, CI configuration changes, merge, or force-push. The old C5 authorization must NOT be reused; do not run `LOCAL_AGENT_GATE3_LIVE_E2E_RUNBOOK.md` stages again.
 
-Run every stage of `LOCAL_AGENT_GATE3_LIVE_E2E_RUNBOOK.md` in order, using the new remotely implemented classes:
+## Stage A — exact-HEAD offline acceptance
 
-- `src/local-first/dsh-3080-operator-rpc.ts`: real official 3080 RPC transport, exact one-shot Session/Workspace grants.
-- `src/local-first/dsh-3080-operator-provision.ts`: private filesystem ledger and official Workspace/Session registration.
-- `src/local-first/dsh-3080-new-workspace.ts`: one fresh original Workspace and one fresh original Session; **never any old Session**.
-- `src/local-first/dsh-3080-model-gate.ts`: one official `session/selectModel`, observe asynchronous default save, `settings/replace` with `expectedRevision`, readback.
-- `src/local-first/dsh-3080-bridge.ts`, `dsh-relay-coordinator.ts`, `dsh-relay-store.ts`, `dsh-3080-output.ts`: one user-originated native Weixin Trigger through original Session and 8123, exact RPC output correlation, single reply.
+1. Fetch current remote feature branch into a **fresh** worktree; preserve existing worktrees. Confirm tested HEAD SHA and matching GitHub CI (Linux + macOS + `pnpm check`) on exactly that SHA.
+2. Run `pnpm install --frozen-lockfile`, `pnpm check`, the relevant standalone Node suites (`local-dsh-3080-bridge`, `local-dsh-relay-store`, `local-dsh-relay-coordinator`, output and operator-RPC).
+3. Verify the method-specific request envelope, durable `not-submitted` terminal, repeat-protection, and read-only `session/page` preflight BEFORE `session/prompt`. If tests fail, STOP `BLOCKED_CODE`; do not locally repair source.
 
-First run `pnpm check` and all new standalone Node tests in a separate clean worktree and confirm the *same-HEAD* GitHub CI is green. Then take private baselines/backups and proceed to the live actions in the approved order, stopping only at the runbook's **technical safety gates**. No additional operator approval is required. The user sending exactly ONE new Weixin test message may be needed to supply an authentic inbound trigger; do not fabricate that message or interpret this as needing fresh permission.
+## Stage B — real installed DSH read-only RPC contracts (NO PROMPT)
 
-## Mandatory GitHub-only report (NEVER operator-forwarded)
+Using only the existing verified disposable Session, installed controller/descriptors and bounded read-only calls:
 
-Publish one sanitized report to `agent-reports/REPORT-c5-real-dsh-3080-weixin-e2e.md` using a report-only clean worktree and a normal non-force push. The report must say which exact stages passed/blocked, GitHub CI SHA, whether original 3080 real Session inference occurred, 8123 route attestation, one-shot Weixin outbound result, host invariants and rollback. Never include private real Workspace/Session IDs, paths, credentials, raw logs or message peer/context tokens.
+1. Record the exact sanitized `result.value` schema for `session/state` (whether it is wrapped in `kind:'sequenced'`, and actual location/type of cursor, running, queue, pendingInput). Do not assume mock structure is real.
+2. Confirm `session/wait` full request shape and response schema on an idle Session; no long-polling that risks other host activity.
+3. Resolve `session/page` from installed source/descriptor, not guessed HTTP shapes. Demonstrate exactly one bounded **read-only** success at a safe cursor and report required input fields, response field names, pagination/seq boundary semantics, and whether read-cut can be guaranteed. If unresolved, report `BLOCKED_PAGE_PROTOCOL_UNKNOWN`.
+4. Inspect `session/prompt` **statically only**: accepted argument names and result schema. Never call it, invoke inference, or test a real delivery.
+5. Read back host invariants: original LAN listener/anonymous access, unchanged historical Workspace/Session inventory, disposable membership, default model, three services and local-only route. No mutation.
 
-Final local Agent message to the operator: **one short status line with the GitHub report URL, pushed SHA, and PASS/BLOCKED**. Do not paste the report or ask the user to forward/upload it. Remote ChatGPT fetches everything directly from GitHub when the conversation resumes.
+Retain raw IDs, upstream IPs, local paths, tokens, private logs and any original chat content ONLY in the private owner-only evidence directory.
 
-**STOP** after the report, regardless of whether completed or blocked. Do not automatically repeat a real prompt, create another Workspace, add additional providers, change the global model default or execute a second Weixin trial.
+## Stage C — sanitized GitHub report and STOP
+
+Publish `agent-reports/REPORT-c5-2-offline-wire-audit.md` as the **only** staged GitHub file from a clean report-publishing worktree. Use normal non-force push; no product code edits. Report the exact SHA, CI conclusion, local test counts, validated schema facts, unknowns and no-write invariants. Final local message: short status, link and pushed SHA. DO NOT proceed to another E2E until remote code changes and a NEW independent one-shot human authorization.

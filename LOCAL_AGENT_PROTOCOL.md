@@ -43,9 +43,9 @@ The 3 pending operational gates remain independent:
 
 Offline mocks and report pushes never grant any of these.
 
-## Current one-shot operator grant: C5 (2026-11-08)
+## C5 one-shot approval status: CONSUMED / RUN STOPPED
 
-The operator explicitly approved **all enumerated C5 stages** in chat. This is an active, **bounded one-shot grant** whose scope is defined by `LOCAL_AGENT_TASK.md` and `LOCAL_AGENT_GATE3_LIVE_E2E_RUNBOOK.md`: minimal metadata-only test Provider fix, one entirely NEW disposable original-3080 Workspace/Session, one guarded model switch + revision-CAS default restore, one real original DSH prompt caused by a genuine Weixin message, one native reply, and a controlled staging restart if necessary. The general prohibition on unapproved live mutations is **superseded only for these exact C5 operations**, not historical Sessions, arbitrary profile/settings changes or unlimited tests. Do not ask the user to reapprove these same actions.
+The prior C5 one-shot Weixin approval was consumed by the 2026-11-08/09 attempt. It stopped before any real original DSH prompt. Creation of the disposable Workspace/Session and its model selection does **not** authorize replay or a second live attempt. The current `LOCAL_AGENT_TASK.md` authorizes only its stated offline tests and read-only host audits. A later real prompt/reply requires a NEW independent operator approval, fresh single-use grant, and complete live readiness after remote product fixes.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
