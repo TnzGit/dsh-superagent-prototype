@@ -1,4 +1,8 @@
-# LOCAL_AGENT_STAGE_C1 — 3080 continuity and model safety preflight (after C0)
+# LOCAL_AGENT_STAGE_C1 — 完成归档（请转用 Stage C2）
+
+> **2026-11-08：C1 已完成。** 本地 Agent 报告先前 C1 提交 c406fce 的 21/21 mock tests 通过，缺少的 DshBridgeBlocked JSDoc 已由远程提交修复。下一轮必须遵循 **LOCAL_AGENT_STAGE_C2.md**。不要重复 C0/C1 全量盘点，不要重新扫码或改动 3080/3083/8123。3080 必须继续提供局域网无鉴权 owner 访问。
+
+## 原始 C1 指令（历史记录）
 
 > **C0 COMPLETE. DO NOT REPEAT THE 27-workspace / 841-session inventory or scan Weixin QR.** The user has already approved pairing and the native Weixin test remains online. This handoff begins only after the remote C0 bugfix and strict local DSH RPC adapter code are fetched from `feat/local-first-wechat-foundation`. It is NOT permission to send a test prompt or restart an existing process.
 
