@@ -3,7 +3,7 @@ import { randomUUID, createHash } from 'node:crypto'
 import { execFile as execFileCallback } from 'node:child_process'
 import { promisify } from 'node:util'
 import { chmod, cp, lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
-import { lstatSync, readFileSync, realpathSync } from 'node:fs'
+import { existsSync, lstatSync, readFileSync, realpathSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { LocalProjectRegistry, type Project, type ProjectSpec } from './project-registry.ts'
 const git = promisify(execFileCallback)
@@ -78,8 +78,11 @@ async function validateTree(root: string, skipSecret: boolean): Promise<void> {
 }
 /** Ensure another project cannot contain our destination. */
 export function assertWorkspaceOutsideProject(project: Project, base: string): void {
-  const existingParent = realpathSync(dirname(base))
-  const target = resolve(existingParent, basename(base))
+  // Check before mkdir: an invalid path inside the original project must not create
+  // even an empty intermediate directory there.
+  let ancestor = dirname(base)
+  while (!existsSync(ancestor) && dirname(ancestor) !== ancestor) ancestor = dirname(ancestor)
+  const target = resolve(realpathSync(ancestor), relative(ancestor, base))
   if (contained(project.root, target) || contained(target, project.root))
     throw new Error('Project source and worker workspace must not overlap')
 }
@@ -100,7 +103,9 @@ export async function createProjectSnapshot(input: SnapshotRequest): Promise<voi
   if (!PROJECT.test(projectId) || project.readOnly) throw new Error('Project is not writable')
   if (projectFingerprint(project) !== input.fingerprint) throw new Error('Local project registry changed since Ticket creation')
   if (!isAbsolute(directory)) throw new Error('Ticket workspace must be absolute')
+  assertWorkspaceOutsideProject(project, directory)
   await mkdir(dirname(directory), { recursive: true, mode: 0o700 })
+  // Revalidate after creation in case an ancestor changed outside this process.
   assertWorkspaceOutsideProject(project, directory)
   const parent = realpathSync(dirname(directory))
   const candidate = resolve(parent, basename(directory))
