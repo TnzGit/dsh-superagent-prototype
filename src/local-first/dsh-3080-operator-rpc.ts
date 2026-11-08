@@ -20,6 +20,7 @@ export interface OwnerRpcGrants {
   /** True only inside one operator-approved, one-shot new Workspace workflow. */
   newWorkspaceWrites?:boolean
 }
+/** Fail-closed endpoint/correlation or operator-grant error without private Host payloads. */
 export class DshOwnerRpcBlocked extends Error {
   readonly code:string
   constructor(code:string,detail:string){super(detail);this.name='DshOwnerRpcBlocked';this.code=code}
