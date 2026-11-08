@@ -21,6 +21,7 @@ const createFake=(session=s)=>{
     assert.ok('args' in payload)
     assert.ok('_request' in payload.args)
     const result=method==='session/list'?{items:[session]}
+      :method==='session/projections'?{kind:'sequenced',asOfSeq:120,values:session.projections?.values??{}}
       :method==='session/prompt'?{accepted:true}
       :method==='session/state'?{cursor:123,active:false,running:false,queue:[],pendingInput:[]}
       :method==='session/wait'?{reason:'timeout',state:{cursor:123,active:false,running:false,pendingInput:[]},
@@ -48,8 +49,8 @@ test('read-only preflight uses real DSH session/list protocol and does not mutat
   assert.deepEqual(result.reasons,[])
   assert.equal(result.allowed,true)
   assert.equal(result.originalSessionVerified,true)
-  assert.equal(fake.calls.length,1)
-  assert.equal(fake.calls[0].method,'session/list')
+  assert.equal(fake.calls.length,2)
+  assert.deepEqual(fake.calls.map(c=>c.method),['session/list','session/projections'])
   assert.deepEqual(fake.calls[0].payload.args,{_request:{}})
 })
 test('operator-approved disposable Session queues exactly one text prompt with stable replay ID',async()=>{
@@ -96,7 +97,7 @@ test('preflight rejects cloud provider, busy/migrating Session, overly broad per
     const result=await b.inspect(project,'disposable-test-session')
     assert.ok(result.reasons.includes(reason),'expected '+reason+': '+JSON.stringify(result.reasons))
     assert.equal(result.allowed,false)
-    assert.ok(fake.calls.every(c=>c.method==='session/list'))
+    assert.ok(fake.calls.every(c=>['session/list','session/projections'].includes(c.method)))
   }
 })
 test('lastUsed is only historical: cloud next must be rejected even with a safe local lastUsed',async()=>{
@@ -133,12 +134,12 @@ test('even approved local model refuses send if 3080 bypasses one-slot queue',as
     sourceMessageId:'m1',text:'work',operatorApproved:true}),error=>
       error instanceof DshBridgeBlocked && error.code==='preflight_blocked' &&
       /queue_proxy_not_verified_on_3080/.test(error.message))
-  assert.ok(fake.calls.every(c=>c.method==='session/list'))
+  assert.ok(fake.calls.every(c=>['session/list','session/projections'].includes(c.method)))
 })
 test('explicit queue route attestation failure blocks any send',async()=>{
   const fake=createFake(),b=bridge({fetcher:fake.fetcher,verifyRoute:async()=>false})
   assert.equal((await b.inspect(project,'disposable-test-session')).allowed,false)
-  assert.equal(fake.calls.length,1)
+  assert.equal(fake.calls.length,2)
 })
 test('only explicitly approved Sessions can use bounded state/wait/page history APIs',async()=>{
   const fake=createFake()
