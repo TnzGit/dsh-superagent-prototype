@@ -1,7 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { execFileSync } from 'node:child_process'
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, symlinkSync, rmSync, chmodSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, symlinkSync, rmSync, chmodSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { LocalProjectRegistry } from '../src/local-first/project-registry.ts'
@@ -10,7 +10,7 @@ import { readLocalProjects, projectIdFromRequest, projectFingerprint, createProj
 const git=(cwd,...argv)=>execFileSync('git',argv,{cwd,encoding:'utf8',env:{
   ...process.env,GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',GIT_TERMINAL_PROMPT:'0'}}).trim()
 async function fixture(work){
-  const base=mkdtempSync(join(tmpdir(),'dsh-local-worker-'))
+  const base=realpathSync(mkdtempSync(join(tmpdir(),'dsh-local-worker-')))
   const projects=join(base,'projects'),workspaces=join(base,'work')
   mkdirSync(projects,{recursive:true});mkdirSync(workspaces,{recursive:true})
   try {await work({base,projects,workspaces})}
