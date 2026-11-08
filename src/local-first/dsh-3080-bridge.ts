@@ -127,9 +127,11 @@ export class Dsh3080Bridge {
    */
   async sessionCursor(sessionId:string):Promise<number> {
     this.requireReadableSession(sessionId)
-    const state=await this.call<{cursor?:unknown;running?:unknown;pendingInput?:unknown}>('session/state',{sessionId})
+    const state=await this.call<{cursor?:unknown;running?:unknown;queue?:unknown;pendingInput?:unknown}>('session/state',{sessionId})
     if(!record(state)||typeof state.cursor!=='number'||!Number.isSafeInteger(state.cursor)||
       state.cursor<0||state.running!==false||
+      // A cold Session's queue is null; an attached queue must be empty before admission.
+      !(state.queue===null||(Array.isArray(state.queue)&&state.queue.length===0))||
       !Array.isArray(state.pendingInput)||state.pendingInput.length!==0)
       return fail('session_not_idle','Session state cannot supply a safe idle baseline cursor')
     return state.cursor
