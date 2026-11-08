@@ -22,6 +22,7 @@ import { environmentOf, ticketEnvironment, type Variable } from './execution-env
 import type { SetupProblem } from '../setup.ts'
 import { DshExecutor, sourceTrigger, triggerMessage, workerSessionId } from '../executor/dsh.ts'
 import { readLocalProjects } from '../local-first/project-workspaces.ts'
+import { readDshCatalog } from '../local-first/existing-dsh-projects.ts'
 import { ticketCard } from './cards.ts'
 import { MasterAssessor } from './assessment.ts'
 import { KV } from '../kv.ts'
@@ -99,9 +100,11 @@ export class Runtime extends Service implements SourceHost {
       const store = opened = this.store = new Store(join(machine.stateDir, 'orchestrator.sqlite'), report)
       const setup = this.setup = new Setup({ context: ctx, machine, lifetime: this.lifetime, restart })
       const localProjects = readLocalProjects()
+      const existingDshProjects = readDshCatalog()
       const deployed = () => setup.configured()
         ? environmentOf({ deployment: setup.deployment, sources: this.sources, settings: store.settings(),
-          projectIds: localProjects?.list().map(p => p.id) }) : undefined
+          projectIds: localProjects?.list().map(p => p.id),
+          existingDshProjects: existingDshProjects.map(p => ({ id: p.projectId, title: p.title })) }) : undefined
       const feishu = () => setup.configured() && !!setup.deployment.feishu
       const prompts = this.prompts = new Prompts(store, () => machine.promptMaxChars.get(), deployed, feishu)
       const masterId = this.masterId = store.get(KV.runtime.masterId) ?? `orchestrator-${key(machine.stateDir)}`
@@ -129,7 +132,7 @@ export class Runtime extends Service implements SourceHost {
       this.settings = new Settings({ store, sources, engine: { policyChanged }, health: board, context: ctx, lifetime: this.lifetime, sessions,
         sourceHost: this, setup, requestPass: () => { this.passes.request() } })
       this.executor = new DshExecutor({ context: ctx, get engine() { return runtime.engine }, store, effects, health: board.claim('worker'), machine,
-        localProjects, localOnly: () => store.settings().sources.github?.enabled === false,
+        localProjects, existingDshProjects, localOnly: () => store.settings().sources.github?.enabled === false,
         lifetime: this.lifetime, sessions, closing: () => this.closing(), paused: () => this.paused(), environment, sourceLink: link,
         repliedTo: trigger => repliedTo({ store, sources }, trigger) })
       this.assessor = new MasterAssessor({ get engine() { return runtime.engine }, commands, get deployment() { return setup.deployment }, effects,
