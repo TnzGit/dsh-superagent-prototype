@@ -2,7 +2,7 @@
 import { randomUUID, createHash } from 'node:crypto'
 import { execFile as execFileCallback } from 'node:child_process'
 import { promisify } from 'node:util'
-import { chmod, cp, lstat, mkdir, readFile, readdir, rename, rm, stat } from 'node:fs/promises'
+import { chmod, cp, lstat, mkdir, readFile, readdir, rename, rm, stat, writeFile } from 'node:fs/promises'
 import { lstatSync, readFileSync, realpathSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { LocalProjectRegistry, type Project, type ProjectSpec } from './project-registry.ts'
@@ -113,10 +113,13 @@ export async function createProjectSnapshot(input: SnapshotRequest): Promise<voi
       if (sourceStatus.trim()) throw new Error('Git source has uncommitted changes: commit or use a separate operator-approved snapshot')
       if (await stat(join(project.root,'.gitmodules')).then(() => true, () => false))
         throw new Error('Git submodules need explicit operator approval and are not supported in local snapshot mode')
+      const tracked = await runGit(['-C',project.root,'ls-files','-z'],parent)
+      if (tracked.split('\0').some(p => p && excluded(p)))
+        throw new Error('Git source tracks sensitive or excluded paths; review and remove them before staging')
       await runGit(['clone','--local','--no-hardlinks','--',project.root,staging],parent)
       // Do not leave an accidental push/fetch path from a worker back to the operator's source.
       await runGit(['-C',staging,'remote','remove','origin'],parent)
-      await validateTree(staging,false)
+      await validateTree(staging,true)
     } else {
       await validateTree(project.root,true)
       await cp(project.root,staging,{recursive:true,force:false,errorOnExist:true,dereference:false,
@@ -131,8 +134,7 @@ export async function createProjectSnapshot(input: SnapshotRequest): Promise<voi
     // Source identity, not absolute source path or credentials, in the worker workspace.
     const info: SnapshotManifest = {projectId,rootFingerprint:input.fingerprint,kind:project.kind,
       sourceRevision:(await runGit(['-C',staging,'rev-parse','HEAD'],parent)).trim()}
-    await import('node:fs/promises').then(fs => fs.writeFile(join(staging,'.dsh-project.json'),
-      JSON.stringify(info)+'\n',{flag:'wx',mode:0o600}))
+    await writeFile(join(staging,'.dsh-project.json'),JSON.stringify(info)+'\n',{flag:'wx',mode:0o600})
     await rename(staging,candidate)
   } catch(error) {
     await rm(staging,{recursive:true,force:true}).catch(()=>{})
@@ -143,8 +145,10 @@ export async function createProjectSnapshot(input: SnapshotRequest): Promise<voi
 export async function verifyProjectSnapshot(input: SnapshotRequest): Promise<void> {
   const project = input.registry.get(input.projectId)
   if (projectFingerprint(project) !== input.fingerprint) throw new Error('Project configuration differs from original Ticket')
-  const root = realpathSync(input.directory), info = await lstat(root)
+  const info = await lstat(input.directory)
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Ticket workspace is not a normal directory')
+  const root = realpathSync(input.directory)
+  if (root !== resolve(input.directory)) throw new Error('Ticket workspace was redirected through a symlink')
   assertWorkspaceOutsideProject(project,root)
   const metadata = JSON.parse(await readFile(join(root,'.dsh-project.json'),'utf8')) as SnapshotManifest
   if (metadata.projectId !== input.projectId || metadata.rootFingerprint !== input.fingerprint || metadata.kind !== project.kind)
