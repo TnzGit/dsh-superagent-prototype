@@ -92,13 +92,15 @@ export function apply(ctx:Context):void {
   ctx.effect(()=>{
     const controller=new AbortController()
     const source=sourceContext(ctx.orchestrator,nativeWeixinKind)
-    const running=pollNativeWeixin(source,controller.signal).catch(error=>source.report(WEIXIN_SOURCE,
+    const route=(trigger:Trigger)=>ctx.orchestrator.routeNativeWeixin?.(trigger)??false
+    const running=pollNativeWeixin(source,controller.signal,route).catch(error=>source.report(WEIXIN_SOURCE,
       {state:'error',detail:'Weixin loop failed: '+(error instanceof Error?error.name:'unknown')}))
     return async()=>{controller.abort();await running}
   },'weixin native poll')
 }
 /** Serial long polling; cursors commit only after acknowledged DSH ingestion. */
-export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal):Promise<void> {
+export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
+  route?:(trigger:Trigger)=>boolean|Promise<boolean>):Promise<void> {
   await ctx.ready
   let timeoutMs=35000,failures=0,accountHash=''
   while(!signal.aborted) {
@@ -128,7 +130,10 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal):Pr
         if(signal.aborted)return
         const trigger=messageToTrigger(input)
         if(!trigger || !canReceive(config,String(trigger.meta.peer??'')))continue
-        await ctx.receive(trigger)
+        // Only a strictly approved, already-persisted one-shot relay bypasses
+        // the default Engine. Never execute the same Trigger twice.
+        const handled=route?await route(trigger):false
+        if(!handled)await ctx.receive(trigger)
         for(const ref of trigger.threads)ctx.threads.describe(threadKey(ref),
           {facts:{conversation:{value:{zh:'微信私聊',en:'Weixin direct'}}}})
       }
