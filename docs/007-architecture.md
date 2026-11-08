@@ -303,6 +303,9 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/sources/weixin-native.ts` | Disabled-by-default native Weixin SourceKind, operator-owned credential file, allowlists, durable long poll cursor and context-token replies |
 | `src/local-first/model-queue.ts` | Bounded per-endpoint model queue, fairness, cancellations, waiting budgets and the process-level queue registry; not yet installed as the DSH LLM call intercept |
 | `src/local-first/model-routing.ts` | Fail-closed candidate selection by priority, capabilities, health, privacy and paid-provider approval; provider integration is pending |
+| `src/local-first/dsh-relay-store.ts` | Opt-in SQLite ledger for 3080 Session pre-prompt receipts, one-shot approvals, human-confirmed thread binding, conservative context expiry and atomic Outbox handoff |
+| `src/local-first/dsh-relay-routing.ts` | Exact-hash, operator-authorized original DSH project and Session selection, verified one-slot route attestation; no fuzzy/implicit Session selection |
+| `src/local-first/dsh-relay-coordinator.ts` | Disabled-by-default native Weixin ingress hook and durable effect joining original DSH prompt, Session output correlation and idempotent reply |
 | `src/local-first/dsh-3080-output.ts` | Strict exact-request DSH Session event correlation and original Weixin Trigger context-token preserving idempotent Outbox message factory; not yet installed in live route |
 | `src/local-first/dsh-3080-bridge.ts` | Disabled-by-default, loopback-only DSH Session RPC adapter: read-only preflight and human-approved prompt with strict provider, permission and queue-route checks; no live Weixin wiring yet |
 | `src/local-first/existing-dsh-projects.ts` | Private imported DSH Workspace/Session catalog with deterministic aliases, exact-match and confirmed-thread selection, and ambiguous/new-project fail-closed behavior |
