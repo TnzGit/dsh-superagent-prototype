@@ -47,6 +47,12 @@ test('unrelated user message in same original DSH Session rejects reply leakage'
   assert.equal(correlateDshCompletion(receipt,wait(),page([foreign,input,assistant,end])).status,'ambiguous')
   assert.equal(correlateDshCompletion(receipt,wait(),page([assistant,end])).status,'ambiguous')
 })
+test('replacement user nodes or a new turn after the matching completion are unsafe to relay',()=>{
+  const replaced=event(11,'user/message',{source:{kind:'user',rpcId:receipt.requestId}}, {op:'replace',startSeq:3,endSeq:4})
+  assert.equal(correlateDshCompletion(receipt,wait(),page([replaced,assistant,end])).status,'ambiguous')
+  const nextTurn=event(17,'turn/start',{turn:2})
+  assert.equal(correlateDshCompletion(receipt,wait('idle',17),page([input,assistant,end,nextTurn],17)).status,'ambiguous')
+})
 test('timeout, pending input, unfinished turn and aborted turns never yield Weixin text',()=>{
   assert.equal(correlateDshCompletion(receipt,wait('timeout'),page()).status,'pending')
   assert.equal(correlateDshCompletion(receipt,wait('input-required'),page()).status,'blocked')
