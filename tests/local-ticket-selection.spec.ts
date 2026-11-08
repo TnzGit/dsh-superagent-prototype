@@ -7,6 +7,7 @@ import { DshExecutor } from '../src/executor/dsh.ts'
 import { LocalProjectRegistry } from '../src/local-first/project-registry.ts'
 import { projectFingerprint } from '../src/local-first/project-workspaces.ts'
 import { SettingsSchema } from '../src/policy.ts'
+import { parseDshCatalog } from '../src/local-first/existing-dsh-projects.ts'
 function ticket(message: string) {
   return { id:'0123456789abcdeffedcba9876543210',origin:{triggerId:'trigger-x',triggerIds:['trigger-x']},
     mandate:{strength:'explicit',basis:{},scope:'change'},title:'Fix test' } as never
@@ -35,6 +36,25 @@ describe('DshExecutor local project selection at accepted Ticket boundary',()=>{
       .prepare(ticket(text),outcome).execution
     expect(create('Please fix a file')?.localProjectError).toMatch(/Select a registered local project/)
     expect(create('/project unknown\nPlease fix')?.localProjectError).toMatch(/not registered/)
+  })
+  it('does not hijack an original 3080 DSH Workspace or start an unrelated Ticket Worker',()=>{
+    const existingDshProjects=parseDshCatalog({
+      version:1,origin:'dsh-host',hostId:'mac-dsh-3080',collectedAt:new Date().toISOString(),
+      workspaces:[{workspaceId:'original-workspace-xyz',title:'My Existing Project',
+        path:'/Users/example/project',sessionIds:['original-session-with-history']}]
+    })
+    const settings=SettingsSchema.parse({sources:{github:{enabled:false,config:{}}}})
+    const create=(text:string)=>new DshExecutor({store:{settings:()=>settings,tickets:{open:()=>[]},
+      triggers:{get:()=>({text})}}, effects:{handle:()=>{}},
+      machine:{stateDir:'/tmp/isolated-staging'},existingDshProjects,localOnly:()=>true} as never)
+      .prepare(ticket(text),outcome).execution
+    const explicit=create('/project '+existingDshProjects[0]!.projectId+'\\n继续这个旧项目')
+    expect(explicit?.projectId).toBeUndefined()
+    expect(explicit?.localProjectError).toMatch(/authenticated delegation|3080 Session/)
+    const named=create('继续《My Existing Project》项目')
+    expect(named?.localProjectError).toMatch(/authenticated delegation|3080 Session/)
+    const fresh=create('/new-project a-fresh-idea')
+    expect(fresh?.localProjectError).toMatch(/New project requested/)
   })
   it('retains historical GitHub behavior without an explicit local selector',()=>{
     const settings=SettingsSchema.parse({})
