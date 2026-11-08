@@ -1,4 +1,8 @@
-# LOCAL_AGENT_STAGE_C2 — 3080 original-Session output correlation, OFFLINE verification
+# LOCAL_AGENT_STAGE_C2 — 已完成（下一阶段请使用 Stage C3）
+
+> **2026-11-08 本地 C2 已验收**：提交 d98da43，`pnpm check` 1205/1205、五个离线文件 35/35 PASS，真实 3080 接力及微信回传均 NOT RUN。3080 局域网无鉴权访问保持完整。后续远程已提交新的默认关闭 SQLite/微信受控接力代码；**新任务唯一有效交接是 `LOCAL_AGENT_STAGE_C3.md`，不要重复 C0/C1/C2，也不要改动任何线上服务。**
+
+## 以下为历史 C2 任务书
 
 > **Stages B, C0 and C1 completed. Do not repeat QR pairing or inventory.**
 > This instruction tests remote code submitted after the C1 report. It authorizes **NO real Session prompt, NO service restart, NO profile or provider changes**.
