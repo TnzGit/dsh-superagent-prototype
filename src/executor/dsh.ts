@@ -4,7 +4,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { mkdir, rmdir, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import { LocalProjectRegistry } from '../local-first/project-registry.ts'
+import type { LocalProjectRegistry } from '../local-first/project-registry.ts'
 import { createProjectSnapshot, projectFingerprint, projectIdFromRequest, verifyProjectSnapshot } from '../local-first/project-workspaces.ts'
 import { key, latestAssignment, latestReport, liveTicket, runningAssignment, threadKey, waitsForPerson } from '../core/index.ts'
 import type { AssessmentOutcome, Assignment, EngineForExecutor, Execution, Executor, Mandate, PolicyEffect, Ticket, TicketInput, Trigger }
