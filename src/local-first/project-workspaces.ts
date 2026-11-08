@@ -104,7 +104,7 @@ export async function createProjectSnapshot(input: SnapshotRequest): Promise<voi
   assertWorkspaceOutsideProject(project, directory)
   const parent = realpathSync(dirname(directory))
   const candidate = resolve(parent, basename(directory))
-  if (candidate !== directory) throw new Error('Workspace directory must use its canonical parent')
+  // /var is a normal alias of /private/var on macOS; compare canonical parents, not raw caller spelling.
   await stat(candidate).then(() => { throw new Error('Workspace already exists') }, err => { if (err.code !== 'ENOENT') throw err })
   const staging = join(parent, '.dsh-stage-' + randomUUID())
   try {
@@ -148,7 +148,8 @@ export async function verifyProjectSnapshot(input: SnapshotRequest): Promise<voi
   const info = await lstat(input.directory)
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Ticket workspace is not a normal directory')
   const root = realpathSync(input.directory)
-  if (root !== resolve(input.directory)) throw new Error('Ticket workspace was redirected through a symlink')
+  if (root !== resolve(realpathSync(dirname(input.directory)),basename(input.directory)))
+    throw new Error('Ticket workspace was redirected through a symlink')
   assertWorkspaceOutsideProject(project,root)
   const metadata = JSON.parse(await readFile(join(root,'.dsh-project.json'),'utf8')) as SnapshotManifest
   if (metadata.projectId !== input.projectId || metadata.rootFingerprint !== input.fingerprint || metadata.kind !== project.kind)
