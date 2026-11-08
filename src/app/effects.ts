@@ -20,6 +20,8 @@ export interface EffectPayloads {
   /** Inject a notice into the main Session without waking it; the key names what it reports, such as `prompts`. */
   notice: { value: Record<string, unknown>; summary: string }
   /** Send a message for a Channel through its Source; the key is the message ID, whose receipt the Outbox keeps. */
+  /** One explicitly operator-approved native Weixin message delegated to original DSH 3080. */
+  'dsh-relay': { triggerId: string }
   reply: Record<string, never>
 }
 export type EffectKind = keyof EffectPayloads
