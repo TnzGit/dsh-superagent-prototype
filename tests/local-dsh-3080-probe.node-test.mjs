@@ -21,7 +21,7 @@ test('C0 read-only host audit never invokes session/prompt or discloses original
         result:{ok:true,value:{items:[{
           sessionId:'test-1',running:false,blank:false,formatStatus:'current',
           projections:{kind:'cached',values:{
-            modelSelection:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'},
+            modelSelection:{lastUsed:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'},next:{provider:'cmp170hx',model:'Qwen3.8-Flash-Next'}},
             permissions:{currentValue:'workspace-write'}
           }}
         }]}}}),{status:200})
@@ -29,6 +29,9 @@ test('C0 read-only host audit never invokes session/prompt or discloses original
     const result=await probe({catalogFile:file},{fetcher})
     assert.deepEqual(result.summary.sessionCount,1)
     assert.equal(result.summary.workspaceCount,1)
+    assert.equal(result.summary.lastUsedLocalQwen,1)
+    assert.equal(result.summary.nextSelectedLocalQwen,1)
+    assert.equal(result.summary.nextUnknownOrDifferent,0)
     assert.equal(result.summary.readyForLivePrompt,false)
     assert.deepEqual(calls.map(x=>x.method),['session/list'])
     const displayed=JSON.stringify(result)
