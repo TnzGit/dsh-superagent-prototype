@@ -1,11 +1,10 @@
 #!/usr/bin/env node
 /** Read-only validation of a private DSH Workspace/Session inventory export. No network or writes. */
-import { realpathSync } from 'node:fs'
 import { pathToFileURL } from 'node:url'
 import { readDshCatalog } from '../src/local-first/existing-dsh-projects.ts'
 
 export function checkCatalog(file, list=false) {
-  const items=readDshCatalog(realpathSync(file))
+  const items=readDshCatalog(file)
   const sessions=items.reduce((total,p)=>total+p.sessionIds.length,0)
   if(items.length===0) throw Error('No existing DSH Workspaces in the inventory')
   if(list) {
