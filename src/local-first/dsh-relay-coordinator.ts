@@ -12,7 +12,7 @@ import type {ExistingDshProject} from './existing-dsh-projects.ts'
 import {Dsh3080Bridge} from './dsh-3080-bridge.ts'
 import {trackDshContinuation} from './dsh-3080-output.ts'
 import {DshRelayStore,weixinContextFresh,MAX_RELAY_CONTEXT_AGE_MS} from './dsh-relay-store.ts'
-import {chooseApprovedNativeRelay,routeAttested,type NativeRelayApproval,type NativeRelaySelection} from './dsh-relay-routing.ts'
+import {chooseApprovedNativeRelay,routeAttested,type NativeRelayApproval} from './dsh-relay-routing.ts'
 
 export interface NativeRelayCoordinatorHost {
   store:Store
