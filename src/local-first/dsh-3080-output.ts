@@ -65,12 +65,13 @@ export function correlateDshCompletion(receipt:DshContinuationReceipt,wait:DshWa
     return fail('pending','session_not_idle')
   const events:{seq:number;type:string;data:Obj;surfaceOp:unknown}[]=[]
   for(const entry of page.records){
-    if(!obj(entry)||entry.type!=='event'||!obj(entry.event)||!seq(entry.event.seq)||
-       typeof entry.event.type!=='string'||!obj(entry.event.data))
+    if(!obj(entry)||entry.type!=='event'||!obj(entry.event))
       return fail('ambiguous','invalid_dsh_history_event')
-    const e=entry.event
-    if(e.seq>page.cursor)return fail('ambiguous','history_event_after_read_cut')
-    if(e.seq>receipt.afterSeq)events.push({seq:e.seq,type:e.type,data:e.data,surfaceOp:e.surfaceOp})
+    const eSeq=entry.event.seq,eType=entry.event.type,eData=entry.event.data
+    if(!seq(eSeq)||typeof eType!=='string'||!obj(eData))
+      return fail('ambiguous','invalid_dsh_history_event')
+    if(eSeq>page.cursor)return fail('ambiguous','history_event_after_read_cut')
+    if(eSeq>receipt.afterSeq)events.push({seq:eSeq,type:eType,data:eData,surfaceOp:entry.event.surfaceOp})
   }
   events.sort((a,b)=>a.seq-b.seq)
   if(events.some((e,i)=>i>0&&events[i-1]!.seq===e.seq))
