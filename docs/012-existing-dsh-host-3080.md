@@ -137,3 +137,15 @@ The original 3080 LAN anonymous owner access is **required and must remain intac
 **Remaining real-world acceptance gates:** (1) explicitly approve Gate①.6 Phase B provider reasoning metadata fix; (2) explicitly approve a *new, disposable* original 3080 Workspace/Session and precise model switch/default restore; (3) only then separately authorize one actual 8123-routed prompt and verify event-to-Weixin output under the existing one-shot grant. No restart currently needed for provider visibility, and Gate② remains independently unapproved. No old historical Session may be used as a disposable test merely because it is idle.
 
 **Status:** Weixin chat/reply through 3083 is previously verified; original 3080 historical-Session continuation and native new-project E2E remain **NOT RUN**. Do not promote C4 mocks to production claims.
+
+
+## C5 operator-authorized live E2E handoff (2026-11-08)
+
+The operator has approved the **bounded one-shot** Phase B reasoning-metadata correction and genuine original-host disposable Workspace/Session + one native-Weixin-triggered local-8123 inference. **This approval is not evidence any live write or prompt has occurred.** The complete host runbook is `LOCAL_AGENT_GATE3_LIVE_E2E_RUNBOOK.md`, and `LOCAL_AGENT_TASK.md` points to it as the active task; `LOCAL_AGENT_PROTOCOL.md` records the scope without authorizing historical Session changes.
+
+Remote code now includes:
+- `dsh-3080-operator-rpc.ts`: exact official localhost 3080 RPC wire envelopes (`session/list`, `session/projections`, `session/state`, `session/modelCatalog`, `settings/describe`, `settings/replace`, `session/selectModel`, `workspace/create`, `session/create`) with **independent exact target + one-shot call budgets** for Session model writes versus new Workspace writes; verified Workspace-to-Session membership is required on every model-gate read.
+- `dsh-3080-operator-provision.ts`: canonical owner-writable new-project parent checks, private owner-only fsynced grant ledger and official one-shot Workspace/Session POSTs; read-only `workspace/follow` membership observation MUST be supplied by the installed Host's official stream client, because it is not a POST list endpoint.
+- Offline Node regression suites on Linux and macOS exercise full request wire shape, grant replay/wrong-ID rejection, private on-disk ledger, owner-only filesystem checks and old Workspace protection, plus model default save/restore failure cases.
+
+**Still real-world unverified until the local Agent reports otherwise:** provider low/high live availability, new Workspace/Session, revision-CAS switch-and-restore on a real original Session, actual Qwen 8123 inference, original Session event correlation and native Weixin message delivery. The operator has provided all necessary permissions, so no duplicate authorization is required; any remaining stop is a *technical safety gate* or a necessary genuine human Weixin input.
