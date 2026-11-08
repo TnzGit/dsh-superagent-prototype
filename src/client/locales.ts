@@ -41,6 +41,7 @@ const TEXT = {
   'health.launch': ['派工启动', 'Assignment launches'],
   'health.delivery': ['输入送达', 'Input delivery to Assignments'],
   'health.relay': ['转达给主 Session 的消息', 'Relays to the main Session'],
+  'health.dsh-relay': ['原 DSH 3080 会话接力', 'Original DSH 3080 Session relay'],
   'health.notice': ['给主 Session 的通知', 'Notices to the main Session'],
   'health.reply': ['发往渠道的消息', 'Messages to Channels'],
   'health.worker': ['执行器事件处理', 'Executor event handling'],
