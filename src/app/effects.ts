@@ -1,8 +1,5 @@
-/**
- * Signals that an effect cannot run right now, such as when processing is paused or all worker slots are full.
- * Effects reschedules the row after the initial retry delay without incrementing its failure count, and DshExecutor throws it from launch and delivery handlers.
- */
-export class Later extends Error {}
+import { Later } from './later.ts'
+export { Later } from './later.ts'
 /** Consecutive failures before an effect kind reports an error, matching the Sources poll failure threshold. */
 export const FAILURES_BEFORE_ERROR = 3
 import type { HealthBoard, HealthEntry } from '../infra/health.ts'
