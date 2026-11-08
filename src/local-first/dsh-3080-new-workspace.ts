@@ -39,6 +39,7 @@ export interface NativeWorkspaceProvisionPort {
   /** Official workspace/follow read-only projection; no session log reads. */
   inspectWorkspace(workspaceId:string):Promise<NewDshWorkspace>
 }
+/** Fail-closed error with a stable reason for manual native-Workspace reconciliation. */
 export class NativeWorkspaceProvisionBlocked extends Error {
   readonly code:string
   constructor(code:string,message:string){super(message);this.name='NativeWorkspaceProvisionBlocked';this.code=code}
