@@ -9,7 +9,7 @@ import {continuationReceipt,continuationWeixinReply,type DshContinuationReceipt,
   type DshContinuationResult} from './dsh-3080-output.ts'
 
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex')
-export type RelayStatus='prepared'|'admitted'|'uncertain'|'completed'|'reply-expired'
+export type RelayStatus='prepared'|'admitted'|'uncertain'|'completed'|'reply-expired'|'review-required'
 export interface RelayRecord extends DshContinuationReceipt {
   status:RelayStatus
   textHash:string
@@ -49,7 +49,8 @@ export class DshRelayStore {
     host.db.exec(
       'CREATE TABLE IF NOT EXISTS dsh_relay_binding (thread TEXT PRIMARY KEY,value TEXT NOT NULL);'+
       'CREATE TABLE IF NOT EXISTS dsh_relay_receipt (request_id TEXT PRIMARY KEY,'+
-      'trigger_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL);'
+      'trigger_id TEXT NOT NULL UNIQUE,value TEXT NOT NULL);'+
+      'CREATE TABLE IF NOT EXISTS dsh_relay_approval (approval_id TEXT PRIMARY KEY,trigger_id TEXT NOT NULL UNIQUE);'
     )
   }
   /** Bind the precise original Session only after a persisted, human-confirmed Weixin Trigger. */
@@ -86,6 +87,22 @@ export class DshRelayStore {
     const project=projects.find(p=>p.hostId===binding.hostId&&p.projectId===binding.projectId&&
       p.workspaceId===binding.workspaceId&&p.sessionIds.includes(binding.sessionId))
     return project?{project,sessionId:binding.sessionId}:undefined
+  }
+  /** Consume an operator-approved one-shot approval ID together with the original Trigger.
+   * Returns false when the approval was already consumed; it can never be reassigned
+   * to a different message. Enclose in the caller's Store.atomic admission transaction.
+   */
+  claimApproval(approvalId:string,triggerId:string):boolean {
+    if(!approvalId||approvalId.length>256||!triggerId||triggerId.length>256)
+      throw Error('Invalid DSH relay one-shot approval')
+    const changed=this.host.db.prepare('INSERT OR IGNORE INTO dsh_relay_approval(approval_id,trigger_id) VALUES(?,?)')
+      .run(approvalId,triggerId).changes
+    return Number(changed)===1
+  }
+  /** Require staff review after an unrelated user message or other non-retryable ambiguity. */
+  reviewRequired(requestId:string):RelayRecord {
+    return this.update(requestId,row=>row.status==='completed'||row.status==='reply-expired'
+      ?row:{...row,status:'review-required'})
   }
   /** Permanent per-trigger dedupe, even if a DSH prompt's HTTP outcome was uncertain. */
   byTrigger(id:string):RelayRecord|undefined {
