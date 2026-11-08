@@ -303,6 +303,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/sources/weixin-native.ts` | Disabled-by-default native Weixin SourceKind, operator-owned credential file, allowlists, durable long poll cursor and context-token replies |
 | `src/local-first/model-queue.ts` | Bounded per-endpoint model queue, fairness, cancellations, waiting budgets and the process-level queue registry; not yet installed as the DSH LLM call intercept |
 | `src/local-first/model-routing.ts` | Fail-closed candidate selection by priority, capabilities, health, privacy and paid-provider approval; provider integration is pending |
+| `src/local-first/project-workspaces.ts` | Host-only registered project configuration, explicit Ticket selectors, transactional isolated Git clone/non-Git snapshot preparation, safety checks and workspace verification |
 | `src/local-first/project-registry.ts` | Registered local project IDs, canonical path checks, forbidden paths and per-project write serialization; not a substitute for OS sandboxing or worker integration |
 | `src/core/model.ts` | The domain types, among them the typed Ticket and `MandateBasis`, with `threadKey`, `ticketOutcome`, `reached`, `followupOwners`, `settled`, `waitsForPerson`, `liveTicket`, `runningAssignment`, `latestAssignment` and `latestReport` |
 | `src/core/ports.ts` | The ports: `Repositories`, `Policy`, `SourceScope`, `Assessor`, `Executor`, `Outbox`, and the domain events |
@@ -412,6 +413,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/core-engine.spec.ts` | Domain rules on in-memory repositories: receiving, Eval, fan-out, resume and stop, interrupted Assignments, the pause, Policy changes, reports and outcomes, attaching, replies, failed deliveries and dismissed problems |
 | `tests/stage.spec.ts` | The Ticket stages, row by row |
 | `tests/policy.spec.ts` | Source scope, the gate, the admission table, Mandate revalidation, the Policy version, settings migrations and assessment outcomes |
+| `tests/local-ticket-selection.spec.ts` | Actual DshExecutor.prepare local project selection and fail-closed no-project path |
 | `tests/weixin-native.spec.ts` | DSH-native iLink Source peer allowlist and owner-only credentials, tested with Vitest (no real QR) |
 | `tests/registry.spec.ts` | `SourceRegistry`: instances, validation, Policy parts, Channels and Thread context |
 | `tests/sources.spec.ts` | The Feishu and GitHub Sources on a `SourceContext`: translation, polls and read positions, the pull request rules, health |
