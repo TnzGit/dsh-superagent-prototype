@@ -149,7 +149,10 @@ export class Sessions {
     const settings = this.host.store.settings()
     await initializeRoleModel(ctx, result.agent, role === 'orchestrator' ? settings.eval.model : settings.executor.model)
     await this.decorate(result.agent)
-    ctx.permissionPresets.set(result.agent.session, 'danger-full-access')
+    // Registered local-project Tickets run only in a disposable snapshot, not with unrestricted host write access.
+    const localTicketId = role === 'worker' ? ticketOfSession(id) : undefined
+    const localTicket = localTicketId ? this.host.store.tickets.get(localTicketId) : undefined
+    ctx.permissionPresets.set(result.agent.session, localTicket?.execution?.projectId ? 'workspace-write' : 'danger-full-access')
     await ctx.sessionController.rename({ sessionId: id as SessionId, title })
     return result.agent
   }
