@@ -1,7 +1,7 @@
 /** Probes repository and account CLIs, configures the worker execution environment and command shims, and tracks setup readiness. */
 import type { Context } from '@deepseek-ai/cordis'
 import { UserError } from '../core/index.ts'
-import { SETUP_FIELDS, resolveDeployment, resolveFeishuBot, workerProbe, type Deployment, type Machine } from '../deployment.ts'
+import { SETUP_FIELDS, localOnlyDeployment, resolveDeployment, resolveFeishuBot, workerProbe, type Deployment, type Machine } from '../deployment.ts'
 import { agentVariables, applyEnvironment, verifyEnvironment, withoutDirectory, workerBin, writeEnvironment } from '../infra/environment.ts'
 import type { Settings, SettingsBlock } from '../policy.ts'
 import { SetupError, type SetupProblem } from '../setup.ts'
@@ -13,9 +13,14 @@ export interface SetupHost {
   restart(): void
 }
 
-const setupFields = (settings: Settings) =>
+const accountFields = (settings: Settings) =>
   JSON.stringify(Object.entries(SETUP_FIELDS).map(([id, keys]) => keys.map(key => settings.sources[id]?.config[key] ?? '')))
-export const setupChanged = (before: Settings, after: Settings): boolean => setupFields(before) !== setupFields(after)
+/** Account CLI/repository changes require management-panel authority, not a Source toggle. */
+export const setupAccountFieldsChanged = (before: Settings, after: Settings): boolean =>
+  accountFields(before) !== accountFields(after)
+/** A GitHub Source toggle also needs a restart, but does not itself change stored account credentials. */
+export const setupChanged = (before: Settings, after: Settings): boolean =>
+  setupAccountFieldsChanged(before, after) || (before.sources.github?.enabled !== false) !== (after.sources.github?.enabled !== false)
 
 /**
  * Resolves the target repository, GitHub account, and optional Feishu bot by probing CLIs, then writes and applies the isolated git and shim environment used by worker processes.
@@ -61,7 +66,8 @@ export class Setup {
   async checkAccounts(block: SettingsBlock, settings: Settings): Promise<void> {
     const { machine } = this.host
     const check = block === 'source:feishu' ? resolveFeishuBot(machine, settings.sources.feishu?.config, this.probe())
-      : resolveDeployment(machine, settings.sources.github?.config, this.probe())
+      : block === 'source:github' && settings.sources.github?.enabled !== false
+        ? resolveDeployment(machine, settings.sources.github?.config, this.probe()) : Promise.resolve()
     await check.catch((error: unknown) => { if (!(error instanceof SetupError) || error.place === block.slice(7)) throw error })
   }
   async blockCommands(blocked: readonly string[]): Promise<void> {
@@ -76,7 +82,10 @@ export class Setup {
   private async resolve(settings: Settings): Promise<Deployment> {
     const { context, machine, lifetime } = this.host
     const probe = this.probe()
-    const deployment = await resolveDeployment(machine, settings.sources.github?.config, probe)
+    // A missing Github Source configuration still means enabled, preserving setup validation for existing profiles.
+    const deployment = settings.sources.github?.enabled === false
+      ? localOnlyDeployment(machine)
+      : await resolveDeployment(machine, settings.sources.github?.config, probe)
     const feishu = await resolveFeishuBot(machine, settings.sources.feishu?.config, probe).catch((error: unknown) => {
       if (!(error instanceof SetupError)) throw error
       this.feishuProblem = error.problem

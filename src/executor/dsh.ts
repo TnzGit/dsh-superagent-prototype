@@ -4,6 +4,9 @@ import type { SessionId } from '@deepseek-ai/dsh-session'
 import type { Agent } from '@deepseek-ai/dsh-agent'
 import { mkdir, rmdir, stat } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import type { LocalProjectRegistry } from '../local-first/project-registry.ts'
+import { createProjectSnapshot, projectFingerprint, projectIdFromRequest, verifyProjectSnapshot } from '../local-first/project-workspaces.ts'
+import { chooseExistingDshProject, type ExistingDshProject } from '../local-first/existing-dsh-projects.ts'
 import { key, latestAssignment, latestReport, liveTicket, runningAssignment, threadKey, waitsForPerson } from '../core/index.ts'
 import type { AssessmentOutcome, Assignment, EngineForExecutor, Execution, Executor, Mandate, PolicyEffect, Ticket, TicketInput, Trigger }
   from '../core/index.ts'
@@ -68,6 +71,12 @@ export interface ExecutorHost {
   /** The `worker` health entry, which reports whether background worker event handling failed. */
   readonly health: HealthEntry
   readonly machine: Pick<Machine, 'stateDir'>
+  /** Optional operator-owned local project registry; never populated from chat input. */
+  readonly localProjects?: LocalProjectRegistry
+  /** Read-only inventory from a separate running DSH; never execute it by creating an unrelated Worker. */
+  readonly existingDshProjects?: readonly ExistingDshProject[]
+  /** GitHub-disabled mode requires an explicit registered project ID for every implementation ticket. */
+  localOnly?(): boolean
   readonly lifetime: AbortSignal
   /** Session manager for worker sessions and for relaying worker reports to the main Session. */
   readonly sessions: Pick<Sessions, 'ensure' | 'prompt' | 'promptedId' | 'relay' | 'holds'>
@@ -236,7 +245,39 @@ export class DshExecutor implements Executor {
   }
   /** Populates a newly accepted ticket's `execution` attributes (worktree name, workspace directory, and assignment text). */
   prepare(ticket: Ticket, outcome: Extract<AssessmentOutcome, { kind: 'accept' }>): Ticket {
-    return { ...ticket, execution: ticketExecution(ticket, outcome, this.host.store.settings(), this.host.machine.stateDir) }
+    const settings = this.host.store.settings()
+    const execution = ticketExecution(ticket, outcome, settings, this.host.machine.stateDir)
+    const source = sourceTrigger(this.host, ticket)
+    const request = source?.text ?? ''
+    const selected = projectIdFromRequest(request)
+    // An already-running DSH Workspace and its Session history belong to THAT DSH host.
+    // Never pretend a new Superagent Ticket snapshot has resumed the existing Session.
+    const existing = chooseExistingDshProject(request, this.host.existingDshProjects ?? [])
+    const local = selected && this.host.localProjects?.list().find(p => p.id === selected)
+    if (!local && existing.kind === 'existing') {
+      return { ...ticket, execution: { ...execution, localProjectError:
+        'Existing DSH Workspace selected, but authenticated delegation to its original 3080 Session is not yet configured. ' +
+        'Do not start an unrelated Worker or modify that Workspace; complete the 3080 integration first.' } }
+    }
+    if (!local && existing.kind === 'new-request') {
+      return { ...ticket, execution: { ...execution, localProjectError:
+        'New project requested: first obtain operator approval for its root and create a genuine DSH Workspace on the owning host.' } }
+    }
+    if (!local && existing.kind === 'clarify' && !selected) {
+      return { ...ticket, execution: { ...execution, localProjectError:
+        'Project identity is ambiguous; ask the user to select an exact registered project ID.' } }
+    }
+    if (!selected && !this.host.localOnly?.()) return { ...ticket, execution }
+    if (!selected) return { ...ticket, execution: { ...execution,
+      localProjectError: 'Select a registered local project on the first line: /project project-id' } }
+    const project = local
+    if (!project) return { ...ticket, execution: { ...execution,
+      localProjectError: 'The selected local project ID is not registered or the registry is not configured' } }
+    if (project.readOnly) return { ...ticket, execution: { ...execution,
+      localProjectError: 'This registered project is read-only and cannot run a change ticket' } }
+    return { ...ticket, execution: { ...execution, projectId: project.id,
+      projectFingerprint: projectFingerprint(project),
+      directory: join(executionRoot(settings, this.host.machine.stateDir), project.id, execution.name) } }
   }
   /**
    * Runs the configured `executor.prepare` command for a new ticket workspace in its parent directory with the ticket's
@@ -245,7 +286,22 @@ export class DshExecutor implements Executor {
    * @throws PrepareFailed with the command's output when the prepare command fails.
    */
   private async prepareDirectory(ticket: Ticket): Promise<void> {
-    const directory = ticket.execution?.directory ?? ''
+    const execution = ticket.execution
+    if (execution?.localProjectError) throw new PrepareFailed(execution.localProjectError)
+    const directory = execution?.directory ?? ''
+    if (execution?.projectId) {
+      if (!this.host.localProjects || !execution.projectFingerprint)
+        throw new PrepareFailed('Local project registry is missing for this Ticket')
+      try {
+        await this.host.localProjects.write(execution.projectId, () => createProjectSnapshot({
+          registry: this.host.localProjects!, projectId: execution.projectId!,
+          fingerprint: execution.projectFingerprint!, directory }))
+        await verifyDirectory(directory, this.host.context.subprocess, this.host.lifetime)
+      } catch (error) {
+        throw new PrepareFailed('Preparing local project snapshot failed: ' + (error instanceof Error ? error.message : String(error)))
+      }
+      return
+    }
     await mkdir(dirname(directory), { recursive: true })
     const command = this.host.store.settings().executor.prepare.trim()
     const env = Object.fromEntries(this.host.environment(ticket).map(variable => [variable.key, variable.value]))
@@ -437,6 +493,14 @@ export class DshExecutor implements Executor {
       if (!current()) return
     }
     if (!current()) return
+    // A pre-existing directory must still belong to the original registered project, not a redirected path.
+    if (ticket.execution?.projectId) {
+      if (!this.host.localProjects || !ticket.execution.projectFingerprint)
+        throw new PrepareFailed('Local project registry is unavailable for this Ticket')
+      await verifyProjectSnapshot({registry:this.host.localProjects,
+        projectId:ticket.execution.projectId,fingerprint:ticket.execution.projectFingerprint,directory:workspace})
+        .catch(error=>{throw new PrepareFailed('Local workspace verification failed: '+String(error))})
+    }
     const sessionId = workerSessionId(ticket.id)
     const agent = await this.host.sessions.ensure(sessionId, workspace, ticket.title, 'worker')
     if (!current()) return
@@ -459,7 +523,10 @@ export class DshExecutor implements Executor {
     if (!current()) return
     const batch = told ? [] : batchOf(this.host, ticket).map(batchLine)
     const text = told ? JSON.stringify({ ticket_id: ticket.id, assignment: ticket.assignments.length, ...retried })
-      : JSON.stringify({ ticket_id: ticket.id, title: ticket.title, ...(brief ? { assignment: brief } : {}),
+      : JSON.stringify({ ticket_id: ticket.id, title: ticket.title,
+        ...(ticket.execution?.projectId ? { project_id: ticket.execution.projectId, workspace_mode: 'isolated-snapshot',
+          source_write: 'forbidden', delivery: 'review diff before explicit manual apply' } : {}),
+        ...(brief ? { assignment: brief } : {}),
         ...(read ? { assignment_chars: chars, assignment_read: read } : {}), ...(card ? { trigger: card } : {}),
         ...(batch.length ? { batch } : {}), ...retried })
     const requestId = later ? `assignment:${ticket.id}:${assignment.id}` : first

@@ -105,6 +105,11 @@ export async function resolveDeployment(machine: Machine, github: unknown, probe
   return { ...machine, repository, github: { cli, login: agent.login, noreply: `${agent.id}+${agent.login}@users.noreply.github.com` } }
 }
 
+/** Start without GitHub only when the Github Source has been explicitly disabled by the operator. */
+export function localOnlyDeployment(machine: Machine): Deployment {
+  return { ...machine, repository: '', github: { cli: '', login: '', noreply: '' } }
+}
+
 const AuthStatus = z.object({ appId: z.string().regex(/^cli_[A-Za-z0-9]+$/), brand: z.enum(['feishu', 'lark']).default('feishu'), identities: z.object({ bot: z.object({ status: z.string() }) }) })
 const BotInfo = z.object({ bot: z.object({ open_id: z.string().regex(/^ou_[A-Za-z0-9]+$/), app_name: z.string().default('') }) })
 /**

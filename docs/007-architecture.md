@@ -244,6 +244,7 @@ Each model request binds the Session to the current prompt revision. The revisio
 
 | Glue | Translates |
 | --- | --- |
+| `src/app/later.ts` | Standalone deferred-effect marker shared by the effect queue and strip-types-compatible original-DSH relay coordinator |
 | `src/app/runtime.ts` | The composition root: builds the parts with the interfaces they use, registers the routes and the Source host, and starts and stops dsh-superagent |
 | `src/app/notices.ts` | Domain events and worker reports into notices and relays for the main Session |
 | `src/app/tools/main.ts`, `src/app/tools/executor.ts` | Tool arguments of the main Session and the Executor Sessions into calls of the core classes, and their results into cards |
@@ -298,6 +299,19 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/limits.ts` | The limits of the values a person sets, which the settings schemas check and the panel's fields offer |
 | `src/kv.ts` | `KV`: every family of `kv` records with its key, its value's type and its owner, and the `Key` and `Family` types the Store and `SourceContext.state` take |
 | `src/navigation.ts` | Opens a DeepSeek Harness Session from the panel once the host's catalog lists it |
+| `src/local-first/openai-queue-proxy.ts` | Loopback OpenAI-compatible proxy that holds one queue slot through each upstream response stream, with bearer auth and bounded body/queue |
+| `src/local-first/weixin-native-protocol.ts` | Direct Tencent iLink Weixin HTTP client, stable Trigger and outbound client IDs; no OpenClaw dependencies |
+| `src/sources/weixin-native.ts` | Disabled-by-default native Weixin SourceKind, operator-owned credential file, allowlists, durable long poll cursor and context-token replies |
+| `src/local-first/model-queue.ts` | Bounded per-endpoint model queue, fairness, cancellations, waiting budgets and the process-level queue registry; not yet installed as the DSH LLM call intercept |
+| `src/local-first/model-routing.ts` | Fail-closed candidate selection by priority, capabilities, health, privacy and paid-provider approval; provider integration is pending |
+| `src/local-first/dsh-relay-store.ts` | Opt-in SQLite ledger for 3080 Session pre-prompt receipts, one-shot approvals, human-confirmed thread binding, conservative context expiry and atomic Outbox handoff |
+| `src/local-first/dsh-relay-routing.ts` | Exact-hash, operator-authorized original DSH project and Session selection, verified one-slot route attestation; no fuzzy/implicit Session selection |
+| `src/local-first/dsh-relay-coordinator.ts` | Disabled-by-default native Weixin ingress hook and durable effect joining original DSH prompt, Session output correlation and idempotent reply |
+| `src/local-first/dsh-3080-output.ts` | Strict exact-request DSH Session event correlation and original Weixin Trigger context-token preserving idempotent Outbox message factory; not yet installed in live route |
+| `src/local-first/dsh-3080-bridge.ts` | Disabled-by-default, loopback-only DSH Session RPC adapter: read-only preflight and human-approved prompt with strict provider, permission and queue-route checks; no live Weixin wiring yet |
+| `src/local-first/existing-dsh-projects.ts` | Private imported DSH Workspace/Session catalog with deterministic aliases, exact-match and confirmed-thread selection, and ambiguous/new-project fail-closed behavior |
+| `src/local-first/project-workspaces.ts` | Host-only registered project configuration, explicit Ticket selectors, transactional isolated Git clone/non-Git snapshot preparation, safety checks and workspace verification |
+| `src/local-first/project-registry.ts` | Registered local project IDs, canonical path checks, forbidden paths and per-project write serialization; not a substitute for OS sandboxing or worker integration |
 | `src/core/model.ts` | The domain types, among them the typed Ticket and `MandateBasis`, with `threadKey`, `ticketOutcome`, `reached`, `followupOwners`, `settled`, `waitsForPerson`, `liveTicket`, `runningAssignment`, `latestAssignment` and `latestReport` |
 | `src/core/ports.ts` | The ports: `Repositories`, `Policy`, `SourceScope`, `Assessor`, `Executor`, `Outbox`, and the domain events |
 | `src/core/engine.ts` | The Engine, the core's entry point, and the role interfaces `EngineForSources`, `EngineForMainSession`, `EngineForPeople`, `EngineForSettings` and `EngineForExecutor` |
@@ -322,6 +336,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/app/store-read.ts` | `storeReads`: the Store's read queries for the views, the tools and the Sources' polls, which never write |
 | `src/app/migration.ts` | The schema 11 migration: one step from schema 10 that writes every stored record in its current shape |
 | `src/app/effects.ts` | Effects |
+| `src/app/later.ts` | Shared `Later` backpressure marker for retryable deferred effects, also usable by the original-DSH relay without loading the Effects implementation |
 | `src/app/versions.ts` | `Versions`: a record kept as numbered snapshots with a pointer to the current one, for the settings and the prompts |
 | `src/app/cache.ts` | `TextCache`: texts kept in memory within a size, the least recently used dropped first |
 | `src/app/settings.ts` | Settings |
@@ -406,6 +421,8 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/core-engine.spec.ts` | Domain rules on in-memory repositories: receiving, Eval, fan-out, resume and stop, interrupted Assignments, the pause, Policy changes, reports and outcomes, attaching, replies, failed deliveries and dismissed problems |
 | `tests/stage.spec.ts` | The Ticket stages, row by row |
 | `tests/policy.spec.ts` | Source scope, the gate, the admission table, Mandate revalidation, the Policy version, settings migrations and assessment outcomes |
+| `tests/local-ticket-selection.spec.ts` | Actual DshExecutor.prepare local project selection and fail-closed no-project path |
+| `tests/weixin-native.spec.ts` | DSH-native iLink Source peer allowlist and owner-only credentials, tested with Vitest (no real QR) |
 | `tests/registry.spec.ts` | `SourceRegistry`: instances, validation, Policy parts, Channels and Thread context |
 | `tests/sources.spec.ts` | The Feishu and GitHub Sources on a `SourceContext`: translation, polls and read positions, the pull request rules, health |
 | `tests/commands.spec.ts` | CLI calls as the deployment's accounts, the Channels' answers, and repository-scoped GitHub calls |
@@ -435,6 +452,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/prompts.spec.ts` | Prompt validation, assembly and versions |
 | `tests/cards.spec.ts` | The rules the built-in text must state, file by file |
 | `tests/model-surface.spec.ts` | Everything models read: tools, prompts, skills and inputs, checked against the tool schemas, the execution environment and the glossary, within a size budget per role |
+| `tests/local-only-setup.spec.ts` | Explicitly disabled GitHub Source startup, disabled-credential shim and setup-restart selection |
 | `tests/deployment.spec.ts`, `tests/environment.spec.ts`, `tests/index.spec.ts` | The plugin configuration and setup, the agent's process environment, the plugin entry |
 | `tests/service-script.spec.ts` | `scripts/dsh-superagent` against fake `ps`, `tmux` and `dsh` |
 | `tests/client.spec.tsx`, `tests/navigation.spec.ts`, `tests/controls.spec.tsx` | The client plugin's registration and polling, Session navigation and route memory, the local controls, and the panel's imports, which have no cycle |

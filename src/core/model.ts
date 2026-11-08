@@ -312,7 +312,13 @@ export interface Ticket {
  * Thread closed; the ticket then ends unless its work has not finished (see `Tickets.unfinished`).
  */
 export interface Follow { thread: string; own: boolean; closed?: { at: string; outcome: 'merged' | 'closed' } }
-export interface Execution { name: string; directory: string; assignment: string }
+/** A selected registered project is snapshotted into the isolated Ticket directory; no direct source writes. */
+export interface Execution {
+  name: string; directory: string; assignment: string
+  projectId?: string
+  projectFingerprint?: string
+  localProjectError?: string
+}
 
 /** Whether a ticket is open: it has not ended. */
 export const liveTicket = (ticket: Pick<Ticket, 'ended'>): boolean => !ticket.ended
