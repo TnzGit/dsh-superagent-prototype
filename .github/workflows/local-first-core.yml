@@ -3,6 +3,7 @@ on:
   push:
     branches: [feat/local-first-wechat-foundation]
   pull_request:
+    types: [opened, synchronize, reopened, edited]
   workflow_dispatch:
 permissions:
   contents: read
