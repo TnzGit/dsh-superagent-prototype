@@ -90,7 +90,7 @@ export class Dsh3080Bridge {
     this.verifyRoute=options.verifyRoute
     this.approvedModel=options.approvedModel??ALLOWED_MODEL
   }
-  private async call<T>(method:'session/list'|'session/prompt',request:RecordObject):Promise<T> {
+  private async call<T>(method:'session/list'|'session/prompt'|'session/state'|'session/wait'|'session/page',request:RecordObject):Promise<T> {
     const rpcId=randomUUID()
     const endpoint=this.origin+'/api/'+method
     const response=await this.fetcher(endpoint,{
@@ -116,6 +116,35 @@ export class Dsh3080Bridge {
       return fail('rpc_rejected',typeof error?.code==='string'?'DSH refused '+error.code:'DSH refused the request')
     }
     return envelope.result.value as T
+  }
+  /** Guard all event/cursor access by the same explicit human-approved Session allowlist. */
+  private requireReadableSession(sessionId:string):void {
+    if(!this.enabled||!this.allowedSessionIds.has(sessionId))
+      fail('session_not_operator_approved','The existing DSH Session is not authorized for continuation observation')
+  }
+  /** Read-only state snapshot from the original Host, not the Superagent's copied database.
+   * Capture cursor BEFORE sending a prompt and persist it with the original Trigger ID.
+   */
+  async sessionCursor(sessionId:string):Promise<number> {
+    this.requireReadableSession(sessionId)
+    const state=await this.call<{cursor?:unknown;running?:unknown;pendingInput?:unknown}>('session/state',{sessionId})
+    if(!record(state)||typeof state.cursor!=='number'||!Number.isSafeInteger(state.cursor)||
+      state.cursor<0||state.running!==false||
+      !Array.isArray(state.pendingInput)||state.pendingInput.length!==0)
+      return fail('session_not_idle','Session state cannot supply a safe idle baseline cursor')
+    return state.cursor
+  }
+  /** Poll only the approved original DSH Session; 'wait' never promises that output belongs to this RPC. */
+  async waitForSession(sessionId:string,afterSeq:number):Promise<unknown> {
+    this.requireReadableSession(sessionId)
+    if(!Number.isSafeInteger(afterSeq)||afterSeq<0) return fail('invalid_cursor','Invalid original Session baseline cursor')
+    return this.call('session/wait',{sessionId,afterSeq,timeoutMs:8_000,maxMessages:64})
+  }
+  /** Bounded backwards history at one exact read cut; caller must prove original requestId correlation. */
+  async pageSession(sessionId:string,throughSeq:number):Promise<unknown> {
+    this.requireReadableSession(sessionId)
+    if(!Number.isSafeInteger(throughSeq)||throughSeq<0)return fail('invalid_cursor','Invalid original Session history cut')
+    return this.call('session/page',{address:{kind:'session',sessionId},throughSeq,maxMessages:128})
   }
   /** Read-only, does not activate Agents or touch any stored Session. */
   async listSessions():Promise<DshSessionListItem[]> {
