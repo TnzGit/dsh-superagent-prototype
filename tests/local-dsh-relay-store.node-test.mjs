@@ -33,7 +33,15 @@ const completed=r=>({status:'completed',requestId:r.requestId,cursor:42,assistan
 test('new relay ledger is opt-in and creates only own staging SQLite tables',()=>{
   const {db}=fixture()
   const tables=db.prepare("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name").all().map(x=>x.name)
-  assert.deepEqual(tables,['dsh_relay_binding','dsh_relay_receipt'])
+  assert.deepEqual(tables,['dsh_relay_approval','dsh_relay_binding','dsh_relay_receipt'])
+  db.close()
+})
+test('one-shot operator approval cannot be replayed by another Weixin Trigger',()=>{
+  const {db,store}=fixture()
+  assert.equal(store.claimApproval('approval-1','weixin-trigger-1'),true)
+  assert.equal(store.claimApproval('approval-1','weixin-trigger-1'),false)
+  assert.equal(store.claimApproval('approval-1','weixin-trigger-2'),false)
+  assert.equal(store.claimApproval('approval-2','weixin-trigger-1'),false)
   db.close()
 })
 test('confirmed binding requires persisted human Weixin message and exact Session membership',()=>{
