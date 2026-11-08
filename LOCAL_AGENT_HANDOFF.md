@@ -1,4 +1,6 @@
-# 本地 Agent 任务书：DSH 原生微信通道（分两阶段，扫码必须由用户授权）
+# 本地 Agent 任务书：DSH 原生微信通道（阶段 B 已完成）
+
+> **2026-11-08 状态更新：用户已亲自扫码，旧 Clawbot 会话身份沿用，微信原生收发、白名单和本地 Qwen 代理均已真实验收。不要重复 A/B 配对步骤，也不要停止当前在线的 staging 微信 Source。** 本文剩余 A/B 说明供历史查询；新的任务请优先打开 **LOCAL_AGENT_STAGE_C.md**，只验收本地项目 Ticket → Worker 执行链。远程 ChatGPT 负责代码和 CI，本地 Agent 负责真实环境测试；未经许可不得重启、部署、合并或修改原业务项目。
 
 > 2026-11-08 用户最终选定的使用方式：**DSH Superagent 直接使用微信 Clawbot/iLink 通道；完全不使用 OpenClaw**。旧 OpenClaw 早已停用。不要安装/启动 OpenClaw、其 Gateway、`@tencent-weixin/openclaw-weixin` OpenClaw 插件，也不要导入其旧凭据或旧配置。用户希望复用过去的微信入口，但**原机器人身份能否沿用必须通过扫码和官方后端确认，不得预先保证**。
 
