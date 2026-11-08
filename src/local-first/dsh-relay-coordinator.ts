@@ -6,7 +6,7 @@
 import type {Trigger} from '../core/index.ts'
 import type {Store} from '../app/store.ts'
 import type {Effects} from '../app/effects.ts'
-import {Later} from '../app/effects.ts'
+import {Later} from '../app/later.ts'
 import type {Outbox} from '../app/outbox.ts'
 import type {ExistingDshProject} from './existing-dsh-projects.ts'
 import {Dsh3080Bridge} from './dsh-3080-bridge.ts'
