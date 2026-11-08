@@ -62,6 +62,7 @@ export interface ModelGateApproval {
   /** No broad permission for other Sessions or model/provider routes. */
   allowedReasoningEffort?: 'low' | 'high'
 }
+/** Fail-closed, machine-readable classification for manual model-gate recovery. */
 export class DshModelGateBlocked extends Error {
   readonly code: string
   constructor(code: string, detail: string) {
