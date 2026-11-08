@@ -15,7 +15,7 @@ Each official `WorkspaceView` contains `workspaceId`, canonical `path`, `title`,
 
 ## Read-only inventory (Stage C0, before changing any running host)
 
-Ask the local Agent to use the official authenticated **read-only** Workspace and Session APIs available in the already-installed DSH 0.2.2-alpha.2 and its legitimate user session. Do not install a second DSH, load a plugin into port 3080, stop it, restart it, or query its SQLite/JSON session history directly. If the Host API requires app login or has different method names, stop and report the exact public type signatures instead of inventing an endpoint.
+The local Agent has now verified the real **read-only** Workspace and Session APIs in installed DSH 0.2.2-alpha.2. WARNING: this host currently treats unauthenticated loopback requests as the owner; it is not the authenticated transport originally assumed. Do not install a second DSH, load a plugin into port 3080, stop it, restart it, or query its SQLite/JSON session history directly. If the Host API requires app login or has different method names, stop and report the exact public type signatures instead of inventing an endpoint.
 
 Produce a private 0600 JSON file (outside repositories, never uploaded) with this shape, populated only from real Workspace projection fields:
 
@@ -55,6 +55,33 @@ Implemented as a pure function in `src/local-first/existing-dsh-projects.ts`:
 At the DshExecutor Ticket-preparation boundary, choosing an imported 3080 project **fails closed**, rather than starting a disconnected snapshot worker. This is intentional until an authenticated 3080 Session delegation implementation is available. The Git/non-Git snapshot Worker from `docs/011-local-project-workers.md` remains a **separate, opt-in path for explicitly registered staging project directories**. It cannot preserve historical DSH Session context and is not a replacement for original-host continuation.
 
 Future delegate acceptance must prove: DSH 3080 authenticated Workspace/Session listing, exact Session chosen or newly created in existing Workspace; permissions maintained, model path policy confirmed, durable idempotent request IDs, clear delivery receipts, no double-writing into same Workspace, no accidental cloud API, no leakage of other Sessions, restart recovery, prompt-to-response correlation and a safe manual revoke/rollback. Do not switch live Weixin routing until real host checks pass.
+
+## Verified Stage C0 results (2026-11-08, aggregate only)
+
+The operator's private C0 report is not checked in; it includes private filesystem paths and host settings. Verified non-identifying facts:
+
+- DSH CLI checkout version `0.2.2-alpha.2`, existing 3080 process bound to **0.0.0.0**, rather than loopback. `allowUnauthenticated: true` together with a trustedHosts fence means local `POST /api/...` clients are accepted as owner without a login token or cookie. An absent Origin header was accepted. **Origin checking is not authentication; binding to 0.0.0.0 with owner-style anonymous access presents a material LAN exposure.** Ask the operator to approve a controlled rebind to loopback and authenticated-access review, or enforce an equivalent host firewall restriction, before extending privileges. Changing the existing production service is outside this PR.
+- The official WorkspaceController has **no unary list** operation. It enumerates using the `workspace/follow` baseline from the `/api/remote.mux` stream. DSH SessionController **does** expose `session/list`, `session/prompt`, `session/selectModel` and `session/wait`; `session/history` is not a valid endpoint.
+- Inventory: **27 Workspaces / 841 Sessions**, of which 214 are Workspace members and 627 are standalone. 20/27 Workspaces contain multiple Sessions; there are 286 `migration-required` Sessions. These require the operator to choose a specific Session and forbid automatic migration/rebinding of histories.
+- The existing DSH host's default Qwen provider goes **directly to vLLM**, bypassing the 8123 one-slot proxy used by 3083. Some saved Sessions select cloud providers, and some request `danger-full-access`. Never use a global default or a mere project title as approval. **Do not automatically call `session/selectModel`** to change old Sessions: in the verified SDK, that call also attempts to save a new default. Changing provider routes needs explicit user consent and a rollback plan.
+- The C0 run never prompted an existing Session or restarted services. Its private, owner-only `DSH-CATALOG.json` is the source of Workspace/Session membership; never upload it.
+
+## Guarded adapter (mock-tested source, not live integrated)
+
+`src/local-first/dsh-3080-bridge.ts` now implements precisely the reported unary RPC wire: `POST http://127.0.0.1:3080/api/session/list` or `.../session/prompt`, with `{type:"client-request", rpcId, method, payload:{args:{_request:{...}}}}`, matching `server-response` and `rpcId` checks. It is a **library not mounted on the current live Weixin path**. It accepts *only* the exact 127.0.0.1:3080 origin, does not use cookies/launch tokens or imply the remote's owner trust is secure authentication, and exposes no general RPC passthrough.
+
+Read-only preflight from a specific imported Workspace/Session must verify that the Session is still listed, is a member of the original Workspace, is not busy or a subagent, is of current persistence format (no implicit migration), has the `workspace-write` permission preset, and selects precisely the approved local Qwen provider/model. Any absent or uncertain projection blocks. Actual delivery requires independent manual approval, an **explicit allowed Session ID**, an enabled bridge, verified access through the **one-slot model queue proxy**, and a host-specific route audit callback. The current 3080 host's direct-to-vLLM route **fails this precondition**; no real prompt will be sent by default.
+
+A stable `requestId` is derived from exact Session ID plus original Weixin message ID; retrying an ambiguous network request with the same ID relies on the SessionController's durable deduplication. `session/prompt` replies only `accepted:true` when the message enters the original Session's inbox; that **does not prove task completion or provide an assistant reply**. Correlating output via the original Session's state/wait or follow stream is still to be implemented and must not forward unrelated Session history.
+
+**Read-only private host audit (does not send prompts):**
+
+```bash
+node --experimental-strip-types scripts/probe-dsh-3080.mjs \
+  --catalog "$HOME/.dsh-superagent-private/DSH-CATALOG.json"
+```
+
+It can also inspect one **known** Workspace alias and Session ID with `--project` and `--session`; output only counts and refusal reasons, not original private paths or history.
 
 ## Stage C0 handoff
 
