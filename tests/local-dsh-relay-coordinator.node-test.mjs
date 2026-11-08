@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import {DatabaseSync} from 'node:sqlite'
+import {Later} from '../src/app/later.ts'
 import {mkdtempSync,writeFileSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
@@ -112,7 +113,7 @@ test('route attestation unavailable: no real or mock DSH prompt is dispatched',a
   const f=fixture({noAttestation:true})
   try{
     assert.equal(f.coordinator.receive(f.input),true)
-    await assert.rejects(f.process(),error=>error.name==='Later')
+    await assert.rejects(f.process(),error=>error instanceof Later)
     assert.equal(f.calls.filter(c=>c.method==='session/prompt').length,0)
     assert.equal(f.coordinator.ledger.byTrigger(f.input.id),undefined)
   }finally{f.close()}
