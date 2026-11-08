@@ -105,7 +105,7 @@ export async function createProjectSnapshot(input: SnapshotRequest): Promise<voi
   const parent = realpathSync(dirname(directory))
   const candidate = resolve(parent, basename(directory))
   // /var is a normal alias of /private/var on macOS; compare canonical parents, not raw caller spelling.
-  await stat(candidate).then(() => { throw new Error('Workspace already exists') }, err => { if (err.code !== 'ENOENT') throw err })
+  await lstat(candidate).then(() => { throw new Error('Workspace already exists') }, err => { if (err.code !== 'ENOENT') throw err })
   const staging = join(parent, '.dsh-stage-' + randomUUID())
   try {
     if (project.kind === 'git') {
