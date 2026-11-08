@@ -1,4 +1,6 @@
-# LOCAL_AGENT_STAGE_C — 先保留并接入 Mac 上 DSH 3080 的已有项目
+# LOCAL_AGENT_STAGE_C — 现有 DSH 3080 项目接入（C0 已完成）
+
+> **2026-11-08 C0 已完成**：3080 官方 `workspace/follow` baseline 与 `session/list` 已完成只读盘点，私有目录 0600 已落盘。三个服务无扰动。不要重复 C0，也不要把 3080 会话历史复制到 3083。**下阶段唯一生效的新指令是 `LOCAL_AGENT_STAGE_C1.md`：远程适配器离线测试、只读 RPC 探针、安全与 Qwen 单槽路由评估、报告并停止。**
 
 > 最新指令优先级：**现有 3080 DSH Workspace/Session 的保留与复用，优先于独立项目副本 Worker 的 Stage C 回归。** 已经完成微信阶段 B，不再需要重新扫码。
 
