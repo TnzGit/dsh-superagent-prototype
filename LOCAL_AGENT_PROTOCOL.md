@@ -64,9 +64,13 @@ C6A synthetic non-Git snapshot/preview passed all local and GitHub CI evidence i
 
 C6B1 passed synthetic-only safety tests and GitHub CI; its default-OFF module remains disconnected from Runtime, Worker and Weixin. No real source apply/rollback was permitted or performed.
 
-## Current authorization: C6B2A OFFLINE MULTI-FILE STAGING ONLY
+## C6B2A offline batch staging acceptance — completed
 
-The active `LOCAL_AGENT_TASK.md` permits new synthetic disposable project tests, code review and one sanitized GitHub report push for a **private multi-file evidence stage/seal** module. It can copy before/after images into a separate owner-only test journal; **it has no source apply/rollback API and grants no real project write**. Historical C5.5B approval is consumed. No new real Weixin, original DSH Session Prompt, 3083 restart, original 3080/8123 change, host project write, global model/profile mutation or reuse of a prior grant is authorized.
+C6B2A was independently accepted on code SHA `fbf0a8f`, with complete offline synthetic evidence and green CI #220. The report-only commit #221 experienced macOS runner allocation cancellation while Linux and build passed; this is CI infrastructure status, not grounds to overwrite the report or repeat its complete test sequence.
+
+## Current authorization: C6B2B1 OFFLINE READ-ONLY RECOVERY CLASSIFIER ONLY
+
+The active `LOCAL_AGENT_TASK.md` now covers independent offline testing of the sealed batch recovery classifier, existing C6B2A stage fixes and one sanitized report push using only synthetic disposable projects. The classifier is read-only and CANNOT apply/rollback files, auto-retry, repair, change real projects, or issue a live DSH/Weixin action. C5.5B and all former live grants are permanently consumed. New real host writes require a fresh explicit operator approval and a separate new task.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
