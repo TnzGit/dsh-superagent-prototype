@@ -60,9 +60,13 @@ Independent GitHub review confirms the local Agent's sanitized C5.5B report and 
 
 C6A synthetic non-Git snapshot/preview passed all local and GitHub CI evidence in its sanitized report. No live project mutation was authorized or performed.
 
-## Current authorization: C6B1 OFFLINE SYNTHETIC APPLY/ROLLBACK ONLY
+## C6B1 offline single-file apply/rollback acceptance — completed
 
-`LOCAL_AGENT_TASK.md` permits code review, isolated disposable synthetic project tests, CI verification and one sanitized report push. The new one-file apply/rollback module is default-OFF and NOT wired to the running service. **No real operator project apply/rollback, 3083 restart, 3080 Session prompt, Weixin message/reply, grant reuse, model/default change or production journal/SQLite write is authorized.** C5.5B's earlier one-shot grant stays consumed. A new human approval is mandatory before a later genuine host mutation.
+C6B1 passed synthetic-only safety tests and GitHub CI; its default-OFF module remains disconnected from Runtime, Worker and Weixin. No real source apply/rollback was permitted or performed.
+
+## Current authorization: C6B2A OFFLINE MULTI-FILE STAGING ONLY
+
+The active `LOCAL_AGENT_TASK.md` permits new synthetic disposable project tests, code review and one sanitized GitHub report push for a **private multi-file evidence stage/seal** module. It can copy before/after images into a separate owner-only test journal; **it has no source apply/rollback API and grants no real project write**. Historical C5.5B approval is consumed. No new real Weixin, original DSH Session Prompt, 3083 restart, original 3080/8123 change, host project write, global model/profile mutation or reuse of a prior grant is authorized.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
