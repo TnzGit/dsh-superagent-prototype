@@ -13,13 +13,16 @@ const id=(s:unknown)=>typeof s==='string'&&s.length>0&&s.length<=256
 export const textHash=(text:string):string=>createHash('sha256').update(text).digest('hex')
 /** Private operator-approved, exactly-one-message grant. It cannot be supplied by Weixin text. */
 export interface NativeRelayApproval {
-  version:1
+  /** V1 has one exact hash; V2 admits exactly two independently preapproved complete UTF-8 messages. */
+  version:1|2
   approvalId:string
   operation:'prompt'|'bind'
   peer:string
   projectId:string
   sessionId:string
   textSha256:string
+  /** V2 only: second explicit full-message hash, never a substring/fuzzy match. */
+  alternateTextSha256?:string
   expiresAt:string
   operatorApproved:true
   /** For an approved test prompt, caller separately verifies a recent route attestation. */
@@ -33,12 +36,42 @@ export function readNativeRelayApproval(file=process.env.DSH_SUPERAGENT_DSH_RELA
   if(!stat.isFile()||stat.isSymbolicLink()||(stat.mode&0o077)!==0)
     throw Error('Native DSH relay approval must be an owner-only non-symlink file')
   const p=JSON.parse(readFileSync(file,'utf8')) as NativeRelayApproval
-  if(p.version!==1||p.operatorApproved!==true||!['prompt','bind'].includes(p.operation)||
+  const validHash=(v:unknown):v is string=>typeof v==='string'&&/^[a-f0-9]{64}$/.test(v)
+  if(![1,2].includes(p.version)||p.operatorApproved!==true||!['prompt','bind'].includes(p.operation)||
     !id(p.approvalId)||!id(p.peer)||!id(p.projectId)||!id(p.sessionId)||
-    !/^[a-f0-9]{64}$/.test(p.textSha256)||!Number.isFinite(Date.parse(p.expiresAt))||
+    !validHash(p.textSha256)||
+    (p.version===1?p.alternateTextSha256!==undefined:
+      p.operation!=='prompt'||!validHash(p.alternateTextSha256)||
+      p.alternateTextSha256===p.textSha256)||
+    !Number.isFinite(Date.parse(p.expiresAt))||
     (p.routeAttestationFile!==undefined&&(!isAbsolute(p.routeAttestationFile)||p.operation!=='prompt')))
     throw Error('Invalid operator-approved DSH relay grant')
   return p
+}
+/** Exact full-message hashing only; no Unicode normalization or semantic matching.
+ * A V2 alternate is a separately reviewed complete literal message, not a wildcard.
+ */
+export function approvedRelayTextMatches(text:string,approval:NativeRelayApproval):boolean {
+  const hash=textHash(text)
+  return hash===approval.textSha256||
+    (approval.version===2&&hash===approval.alternateTextSha256)
+}
+/** A near miss must never fall through to the ordinary Engine and mimic E2E success.
+ * This quarantines ONLY an active approved peer's explicit exact project-selector
+ * attempt. Other messages retain the normal Engine behavior.
+ */
+export function isApprovedRelayTextMismatch(trigger:Trigger,approval:NativeRelayApproval,
+  projects:readonly ExistingDshProject[],nowMs=Date.now()):boolean {
+  if(approval.operation!=='prompt'||trigger.source!=='weixin'||!trigger.human||
+    !trigger.addressed||trigger.actor.id!==approval.peer||
+    trigger.channel?.source!=='weixin'||trigger.channel.address.peer!==approval.peer||
+    !trigger.channel.address.contextToken||!Number.isFinite(nowMs)||
+    nowMs>=Date.parse(approval.expiresAt)||
+    !projects.some(p=>p.projectId===approval.projectId&&p.sessionIds.includes(approval.sessionId)))
+    return false
+  const lines=trigger.text.split(/\r?\n/)
+  return lines.length>=2&&lines[0]?.trim()===('/project '+approval.projectId)&&
+    !approvedRelayTextMatches(trigger.text,approval)
 }
 export interface NativeRelaySelection {
   operation:'prompt'|'bind'
@@ -56,7 +89,7 @@ export function chooseApprovedNativeRelay(trigger:Trigger,approval:NativeRelayAp
   if(trigger.source!=='weixin'||!trigger.human||!trigger.addressed||
     trigger.actor.id!==approval.peer||trigger.channel?.address.peer!==approval.peer||
     trigger.channel.source!=='weixin'||!trigger.channel.address.contextToken||
-    approval.operatorApproved!==true||textHash(trigger.text)!==approval.textSha256||
+    approval.operatorApproved!==true||!approvedRelayTextMatches(trigger.text,approval)||
     !Number.isFinite(nowMs)||nowMs>=Date.parse(approval.expiresAt))return
   const project=projects.find(p=>p.projectId===approval.projectId&&
     p.sessionIds.includes(approval.sessionId))

@@ -12,7 +12,7 @@ import type {ExistingDshProject} from './existing-dsh-projects.ts'
 import {Dsh3080Bridge,DshBridgeBlocked} from './dsh-3080-bridge.ts'
 import {trackDshContinuation} from './dsh-3080-output.ts'
 import {DshRelayStore,weixinContextFresh,MAX_RELAY_CONTEXT_AGE_MS} from './dsh-relay-store.ts'
-import {chooseApprovedNativeRelay,routeAttested,type NativeRelayApproval} from './dsh-relay-routing.ts'
+import {chooseApprovedNativeRelay,isApprovedRelayTextMismatch,routeAttested,type NativeRelayApproval} from './dsh-relay-routing.ts'
 
 export interface NativeRelayCoordinatorHost {
   store:Store
@@ -54,7 +54,8 @@ export class NativeRelayCoordinator {
     const {store,effects,projects,approval}=this.host
     if(!this.host.authorized(trigger)||!weixinContextFresh(trigger,Date.now()))return false
     const chosen=chooseApprovedNativeRelay(trigger,approval,projects,this.ledger)
-    if(!chosen)return false
+    const mismatch=!chosen&&isApprovedRelayTextMismatch(trigger,approval,projects)
+    if(!chosen&&!mismatch)return false
     return store.atomic(()=>{
       if(store.triggers.get(trigger.id))return true
       // Do not route a message into both the ordinary Engine evaluation and 3080.
@@ -67,6 +68,13 @@ export class NativeRelayCoordinator {
       }
       store.triggers.save(trigger)
       store.triggers.saveDisposition(trigger.id,{fanout:[],at:new Date().toISOString()})
+      if(!chosen){
+        // Exact approved project selector + peer, but unapproved literal payload:
+        // consume the one-shot grant and persist a no-send terminal. Never let
+        // ordinary Engine reply with a misleading E2E success-looking message.
+        this.ledger.markNotSubmitted(trigger.id,approval.approvalId,'text-hash-mismatch')
+        return true
+      }
       if(chosen.operation==='bind'){
         this.ledger.confirmBinding(trigger,chosen.project,chosen.sessionId,true)
         const message=this.bindingAcknowledgement(trigger)

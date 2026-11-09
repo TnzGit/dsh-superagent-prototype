@@ -11,7 +11,7 @@ import {continuationReceipt,continuationWeixinReply,type DshContinuationReceipt,
 const hash=(s:string)=>createHash('sha256').update(s).digest('hex')
 export type RelayStatus='prepared'|'admitted'|'uncertain'|'completed'|'reply-expired'|'review-required'
 /** No pre-prompt receipt/cursor exists when a consumed grant was not submitted. */
-export type NoSubmitReason='context-expired'|'approval-expired'|'selection-unavailable'|'preflight-rejected'
+export type NoSubmitReason='context-expired'|'approval-expired'|'selection-unavailable'|'preflight-rejected'|'text-hash-mismatch'
 export interface NoSubmitRecord {
   triggerId:string;approvalId:string;status:'not-submitted';reason:NoSubmitReason;createdAt:string
 }

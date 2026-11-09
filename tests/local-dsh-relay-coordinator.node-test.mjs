@@ -80,7 +80,7 @@ function fixture(overrides={}){
   }
   const coordinator=new NativeRelayCoordinator({store,effects,outbox,projects:[project],
     approval,authorized:()=>overrides.authorized!==false,fetcher})
-  return{coordinator,approval,store,queued,outbound,calls,input,trigger:id=>triggers.get(id),
+  return{coordinator,approval,store,dispositions,queued,outbound,calls,input,trigger:id=>triggers.get(id),
     process:async()=>handler(queued[0].payload),close:()=>{db.close();rmSync(dir,{recursive:true,force:true})}}
 }
 test('offline end-to-end: one approved Weixin Trigger is consumed once and returned by correlated Outbox',async()=>{
@@ -140,5 +140,30 @@ test('expired grant leaves terminal evidence before receipt',async()=>{
     await x.process()
     assert.equal(x.coordinator.ledger.notSubmittedByTrigger(x.input.id)?.reason,'approval-expired')
     assert.equal(x.calls.filter(c=>c.method==='session/prompt').length,0)
+  }finally{x.close()}
+})
+
+test('quote-normalized near-miss consumes exact selector grant, blocks Engine and sends nothing',async()=>{
+  const x=fixture()
+  try{
+    const received={...x.input,text:x.input.text+'!'}
+    assert.equal(x.coordinator.receive(received),true)
+    assert.deepEqual(x.dispositions.get(received.id)?.fanout,[])
+    assert.equal(x.coordinator.ledger.notSubmittedByTrigger(received.id)?.reason,'text-hash-mismatch')
+    assert.equal(x.queued.length,0)
+    assert.equal(x.outbound.length,0)
+    assert.equal(x.calls.length,0)
+    assert.equal(x.coordinator.receive({...received,id:'second-message',
+      channel:{...received.channel,address:{...received.channel.address,messageId:'second-id'}}}),true)
+    assert.equal(x.queued.length,0)
+    assert.equal(x.outbound.length,0)
+  }finally{x.close()}
+})
+test('unrelated Weixin messages still use the normal Engine route',()=>{
+  const x=fixture()
+  try{
+    assert.equal(x.coordinator.receive({...x.input,text:'hello normal message'}),false)
+    assert.equal(x.coordinator.receive({...x.input,actor:{source:'weixin',id:'other'}}),false)
+    assert.equal(x.queued.length,0)
   }finally{x.close()}
 })

@@ -4,7 +4,8 @@ import {mkdtempSync,writeFileSync,chmodSync,rmSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {parseDshCatalog} from '../src/local-first/existing-dsh-projects.ts'
-import {textHash,chooseApprovedNativeRelay,readNativeRelayApproval,routeAttested}
+import {textHash,approvedRelayTextMatches,isApprovedRelayTextMismatch,
+  chooseApprovedNativeRelay,readNativeRelayApproval,routeAttested}
   from '../src/local-first/dsh-relay-routing.ts'
 const [project]=parseDshCatalog({version:1,origin:'dsh-host',hostId:'mac-dsh-3080',
   collectedAt:'2026-11-08T00:00:00.000Z',
@@ -82,5 +83,56 @@ test('owner-only private grant and short-lived route attestation are mandatory',
     assert.equal(routeAttested(route,'session-1',now+5*60*1000+1),false)
     chmodSync(route,0o666)
     assert.equal(routeAttested(route,'session-1',now),false)
+  }finally{rmSync(dir,{recursive:true,force:true})}
+})
+
+test('V2 grant permits only two preapproved FULL literal hashes: straight versus curly quotes',()=>{
+  const base='/project '+project.projectId+'\n/session session-1\n请仅回复 "OK"'
+  const curly=base.replace('"OK"','“OK”')
+  const v2=approval(base,{version:2,alternateTextSha256:textHash(curly)})
+  assert.equal(approvedRelayTextMatches(base,v2),true)
+  assert.equal(approvedRelayTextMatches(curly,v2),true)
+  assert.equal(chooseApprovedNativeRelay(trigger(curly),v2,[project],empty,now)?.task,
+    '请仅回复 “OK”')
+  for(const other of [base+'!',curly+' ',curly.replace('OK','NO'),curly.replace('session-1','session-2')]){
+    assert.equal(approvedRelayTextMatches(other,v2),false)
+    assert.equal(chooseApprovedNativeRelay(trigger(other),v2,[project],empty,now),undefined)
+  }
+  assert.equal(chooseApprovedNativeRelay(trigger(curly),approval(base),[project],empty,now),undefined,
+    'legacy V1 grants remain EXACT and do not accept quote substitution')
+})
+test('near-miss quarantine is bound to exact explicit project selector, peer and fresh grant',()=>{
+  const text='/project '+project.projectId+'\n/session session-1\n请仅回复 "OK"'
+  const curly=text.replace('"OK"','“OK”')
+  const v1=approval(text)
+  assert.equal(isApprovedRelayTextMismatch(trigger(curly),v1,[project],now),true)
+  assert.equal(isApprovedRelayTextMismatch(trigger(text),v1,[project],now),false)
+  assert.equal(isApprovedRelayTextMismatch(trigger(curly),approval(text,{
+    version:2,alternateTextSha256:textHash(curly)}),[project],now),false)
+  assert.equal(isApprovedRelayTextMismatch(trigger('你好'),v1,[project],now),false)
+  assert.equal(isApprovedRelayTextMismatch(trigger(curly.replace(project.projectId,'dsh-other')),
+    v1,[project],now),false)
+  assert.equal(isApprovedRelayTextMismatch({...trigger(curly),actor:{source:'weixin',id:'other'}},
+    v1,[project],now),false)
+  assert.equal(isApprovedRelayTextMismatch(trigger(curly),v1,[],now),false)
+  assert.equal(isApprovedRelayTextMismatch(trigger(curly),v1,[project],now+120_000),false)
+})
+test('private grant loader only permits V2 validated pair, V1 remains single-hash',()=>{
+  const dir=mkdtempSync(join(tmpdir(),'dsh-v2-private-'))
+  try{
+    const file=join(dir,'grant.json')
+    const original='/project '+project.projectId+'\n/session session-1\n请回复 "OK"'
+    const alt=original.replace('"OK"','“OK”')
+    const v2=approval(original,{version:2,alternateTextSha256:textHash(alt)})
+    const load=value=>{
+      writeFileSync(file,JSON.stringify(value),{mode:0o600})
+      return readNativeRelayApproval(file)
+    }
+    assert.equal(load(v2)?.alternateTextSha256,textHash(alt))
+    assert.throws(()=>load({...v2,alternateTextSha256:textHash(original)}),/Invalid operator/)
+    assert.throws(()=>load({...v2,alternateTextSha256:'bad'}),/Invalid operator/)
+    assert.throws(()=>load({...v2,alternateTextSha256:undefined}),/Invalid operator/)
+    assert.throws(()=>load({...v2,version:1}),/Invalid operator/)
+    assert.equal(load(approval(original))?.version,1)
   }finally{rmSync(dir,{recursive:true,force:true})}
 })

@@ -154,3 +154,15 @@ test('a reserved pre-prompt receipt cannot be marked as not-submitted',()=>{
   assert.throws(()=>store.markNotSubmitted(a.id,'approval-reserved','preflight-rejected'),/pre-prompt receipt/)
   db.close()
 })
+
+test('literal hash mismatch terminal is durable, sanitised and permanently replay-protected',()=>{
+  const {db,store,seen,host}=fixture(),a=trigger('typed-quote')
+  seen.set(a.id,a)
+  assert.equal(store.claimApproval('approval-quote',a.id),true)
+  assert.equal(store.markNotSubmitted(a.id,'approval-quote','text-hash-mismatch').reason,'text-hash-mismatch')
+  assert.equal(new DshRelayStore(host).notSubmittedByTrigger(a.id)?.reason,'text-hash-mismatch')
+  assert.equal(store.byTrigger(a.id),undefined)
+  assert.equal(JSON.stringify(store.notSubmittedByTrigger(a.id)).includes('private-reply-token'),false)
+  assert.throws(()=>store.reserve(a,project,'session-1',20),/already terminated/)
+  db.close()
+})
