@@ -97,3 +97,52 @@ test('bad DSH wire shapes fail closed without sending or confusing request ID',a
     assert.equal(result.requestId,receipt.requestId)
   }
 })
+
+test('C5.4B live event order: exact RPC followed by three DSH-owned context snapshots and completion',async()=>{
+  const snapshots=['runtime-context','skill-catalog','time-context'].map((kind,i)=>
+    event(12+i,'user/message',{role:'user',source:{kind},
+      content:[{type:'text',text:'DSH-generated context, not a human prompt'}]},'append'))
+  const livePage=page([input,...snapshots,assistant,end])
+  const result=correlateDshCompletion(receipt,wait(),livePage)
+  assert.equal(result.status,'completed')
+  assert.equal(result.requestId,receipt.requestId)
+  assert.equal(result.text,'已经完成测试修复。')
+  const reader={waitForSession:async()=>wait(),pageSession:async()=>livePage}
+  const tracked=await trackDshContinuation(reader,receipt)
+  assert.equal(tracked.status,'completed')
+  assert.equal(continuationWeixinReply(trigger,receipt,tracked).text,'已经完成测试修复。')
+})
+test('unknown, genuine human, missing provenance and claimed context with rpcId stay ambiguous',()=>{
+  const variants=[
+    {source:{kind:'user'}},
+    {source:{kind:'user',rpcId:'another-human-rpc'}},
+    {source:{kind:'other-injected-context'}},
+    {source:{kind:'runtime-context',rpcId:'another-human-rpc'}},
+    {source:{kind:'skill-catalog',rpcId:receipt.requestId}},
+    {source:{}},{},
+  ]
+  for(const v of variants){
+    const event13=event(13,'user/message',v,'append')
+    const result=correlateDshCompletion(receipt,wait(),page([input,event13,assistant,end]))
+    assert.equal(result.status,'ambiguous',JSON.stringify(v))
+    assert.equal(result.reason,'unrelated_user_message_in_continuation_window')
+  }
+})
+test('DSH context snapshots before matching RPC, after completion, and non-append cannot authorize reply',()=>{
+  const snapshot=(kind,seq,surface='append')=>
+    event(seq,'user/message',{role:'user',source:{kind}},surface)
+  for(const kind of ['runtime-context','skill-catalog','time-context']){
+    let outcome=correlateDshCompletion(receipt,wait(),page([
+      snapshot(kind,11),event(12,'user/message',input.event.data,'append'),assistant,end
+    ]))
+    assert.equal(outcome.status,'ambiguous',kind+' before prompt')
+    outcome=correlateDshCompletion(receipt,wait('idle',17),page([
+      input,assistant,end,snapshot(kind,17)
+    ],17))
+    assert.equal(outcome.status,'ambiguous',kind+' after completion')
+    outcome=correlateDshCompletion(receipt,wait(),page([
+      input,snapshot(kind,13,{op:'replace',startSeq:2,endSeq:3}),assistant,end
+    ]))
+    assert.equal(outcome.status,'ambiguous',kind+' non-append')
+  }
+})

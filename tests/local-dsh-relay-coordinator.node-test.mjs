@@ -71,6 +71,7 @@ function fixture(overrides={}){
         ?{cursor:20,hasMore:false,records:[]}
         :{cursor:24,hasMore:false,records:[
           e(21,'user/message',{role:'user',source:{kind:'user',rpcId:id},content:[]},true),
+          e(22,'user/message',{role:'user',source:{kind:'runtime-context'},content:[]},true),
           e(23,'assistant/message',{message:{content:[{type:'text',text:'测试通过'}]}},true),
           e(24,'turn/end',{reason:{kind:'completed'},turn:1})
         ]}

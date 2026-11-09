@@ -13,6 +13,11 @@ const obj=(value:unknown):value is Obj=>value!==null&&typeof value==='object'&&!
 const seq=(v:unknown):v is number=>typeof v==='number'&&Number.isSafeInteger(v)&&v>=0
 const MAX_TEXT_BYTES=8000
 const MAX_RECORDS=2000
+/** Verified DSH-owned per-turn context snapshots, NOT independently prompted humans.
+ * Be deliberately exhaustive, not "all source.kind !== user" or a fuzzy match.
+ * The gateway's own source.kind is trusted provenance, not user message text.
+ */
+const INTERNAL_CONTEXT_SOURCES=new Set(['runtime-context','skill-catalog','time-context'])
 
 /** The durable routing identity that a future caller must persist BEFORE prompt submission. */
 export interface DshContinuationReceipt {
@@ -84,9 +89,21 @@ export function correlateDshCompletion(receipt:DshContinuationReceipt,wait:DshWa
       return fail('ambiguous','another_turn_after_our_completion')
     if(event.type==='user/message'){
       if(event.surfaceOp!=='append')return fail('ambiguous','non_append_user_surface_event')
-      // A user message may have its source directly as event.data.source (normal DSH
-      // wire shape). Treat any concurrent human input as an ambiguous response.
+      // C5.4B real 3080 evidence: DSH appends three per-turn user/message
+      // snapshots after the matching prompt (runtime-context, skill-catalog,
+      // time-context). They have no rpcId and are not separate human requests.
+      // Ignore ONLY these exact known source kinds, and ONLY inside the proven
+      // matching turn. Unknown kinds, forged rpcIds and human user messages
+      // remain ambiguous-fatal. Never assume every non-user kind is harmless.
       const source=event.data.source
+      if(obj(source)&&INTERNAL_CONTEXT_SOURCES.has(source.kind as string)&&
+        !Object.hasOwn(source,'rpcId')) {
+        if(!seen||completed)
+          return fail('ambiguous','context_snapshot_outside_matching_turn')
+        continue
+      }
+      // Real human user messages carry source.rpcId, which must match exactly
+      // once. Missing/unknown/foreign source provenance always fails closed.
       const id=obj(source)&&typeof source.rpcId==='string'?source.rpcId:undefined
       if(id!==receipt.requestId||seen)
         return fail('ambiguous','unrelated_user_message_in_continuation_window')
