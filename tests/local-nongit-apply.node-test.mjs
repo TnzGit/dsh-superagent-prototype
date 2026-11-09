@@ -53,7 +53,7 @@ test('added file is no-clobber and rollback deletes only exactly matching after-
   assert.deepEqual(readFileSync(join(source,'created.bin')),Buffer.from([0,1,2,255]))
   writeFileSync(join(source,'created.bin'),'external change')
   await assert.rejects(rollbackOneNonGitFile(request,{journalDirectory:journal,
-    approvalFile:grant('rollback',preview.digest,{rollbackOfTransactionId:applied.transactionId})}),/Source has changed/)
+    approvalFile:grant('rollback',preview.digest,{rollbackOfTransactionId:applied.transactionId})}),/Source content or mode changed/)
   assert.equal(readFileSync(join(source,'created.bin'),'utf8'),'external change')
 }))
 test('one-file delete can restore backed-up original with a new rollback grant',async()=>fixture(async({source,request,journal,grant})=>{
