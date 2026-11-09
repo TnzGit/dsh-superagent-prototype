@@ -50,3 +50,11 @@ test('direct chat ignores unsupported group and bot echo updates',()=>{
   assert.equal(messageToTrigger({...received,message_state:1}),undefined)
   assert.equal(messageToTrigger({...received,message_type:2}),undefined)
 })
+
+test('native Weixin Trigger preserves incoming curly quote bytes for strict grant hashing',()=>{
+  const text='/project dsh-testalias\n请仅回复“OK”'
+  const input={...received,item_list:[{type:1,text_item:{text}}]}
+  const result=messageToTrigger(input)
+  assert.equal(result?.text,text)
+  assert.notEqual(result?.text,'/project dsh-testalias\n请仅回复"OK"')
+})
