@@ -56,9 +56,9 @@ Independent GitHub review confirms the local Agent's sanitized C5.5B report and 
 
 **ALL historical C5/C5.3/C5.4B/C5.5B one-shot live grants are permanently finished.** Never use a report publication as new permission.
 
-## Current authorization: NONE — CLOSED
+## Current authorization: C6A OFFLINE ONLY / NO LIVE ACTIONS
 
-`LOCAL_AGENT_TASK.md` now records completion and is not runnable. No more original Session prompts, live Weixin messages/sends, 3083 restarts, new grants, historical receipt recovery, model/default/profile writes or other host operations until a new scoped task is published, with an independent human authorization for any live action.
+The remote-owned source branch has advanced with a read-only non-Git Worker change-preview function; `LOCAL_AGENT_TASK.md` now permits a new, explicitly bounded **offline** testing and report-publishing task on synthetic throwaway projects. The historical C5.5B real E2E remains complete with its one-shot grant permanently consumed. The current C6A task DOES NOT authorize operator project changes, production apply/rollback, a new original Session prompt, real Weixin input/reply, 3083 staging/restart, any grant, historical receipt recovery, model/default/profile writes or server-side operations. Only code CI, offline isolated tests, optional host read-only checks and one sanitized report push are within scope.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
