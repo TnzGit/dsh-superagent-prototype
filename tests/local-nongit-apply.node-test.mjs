@@ -133,3 +133,30 @@ test('unreconciled write-ahead journal blocks fresh apply without touching sourc
     approvalFile:grant('apply',plan.digest)}),/Unreconciled/)
   assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'before')
 }))
+
+test('source executable-mode drift after apply blocks rollback without overwriting',async()=>fixture(async({source,request,journal,grant})=>{
+  const file=join(source,'a.txt');writeFileSync(file,'before')
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const plan=await previewNonGitProjectChanges(request)
+  const applied=await applyOneNonGitFile(request,{journalDirectory:journal,approvalFile:grant('apply',plan.digest)})
+  chmodSync(file,0o700)
+  await assert.rejects(rollbackOneNonGitFile(request,{journalDirectory:journal,
+    approvalFile:grant('rollback',plan.digest,{rollbackOfTransactionId:applied.transactionId})}),/mode changed/)
+  assert.equal(readFileSync(file,'utf8'),'after')
+}))
+test('tampering with journal patch scope is rejected before rollback',async()=>fixture(async({source,request,journal,grant})=>{
+  writeFileSync(join(source,'a.txt'),'before')
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const plan=await previewNonGitProjectChanges(request)
+  const applied=await applyOneNonGitFile(request,{journalDirectory:journal,approvalFile:grant('apply',plan.digest)})
+  const file=join(journal,'tx-'+applied.transactionId,'journal.json')
+  const row=JSON.parse(readFileSync(file,'utf8'))
+  row.change.path='another.txt'
+  row.path='another.txt'
+  writeFileSync(file,JSON.stringify(row))
+  await assert.rejects(rollbackOneNonGitFile(request,{journalDirectory:journal,
+    approvalFile:grant('rollback',plan.digest,{rollbackOfTransactionId:applied.transactionId})}),/journal change no longer matches/)
+  assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'after')
+}))

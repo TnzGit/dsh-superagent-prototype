@@ -7,7 +7,7 @@ import {constants as fsConstants,lstatSync,realpathSync} from 'node:fs'
 import {copyFile,link,lstat,mkdir,open,readFile,readdir,rename,rm,unlink,chmod} from 'node:fs/promises'
 import {dirname,isAbsolute,join,relative,resolve,sep} from 'node:path'
 import {createReadStream} from 'node:fs'
-import {previewNonGitProjectChanges,type NonGitChange,type SnapshotRequest} from './project-workspaces.ts'
+import {previewNonGitProjectChanges,projectFingerprint,type NonGitChange,type SnapshotRequest} from './project-workspaces.ts'
 
 const TX=/^[a-z0-9][a-z0-9-]{7,79}$/
 const HASH=/^[a-f0-9]{64}$/
@@ -222,6 +222,8 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
   if(approval.operation!=='rollback'||approval.projectId!==input.projectId||
     approval.rootFingerprint!==input.fingerprint)throw Error('Rollback approval scope mismatch')
   const root=journalRoot(input,opts.journalDirectory)
+  if(projectFingerprint(input.registry.get(input.projectId))!==input.fingerprint)
+    throw Error('Rollback project identity drift')
   return underLock(root,async()=>{
     const dir=join(root,'tx-'+approval.rollbackOfTransactionId)
     const info=await lstat(dir)
@@ -234,10 +236,29 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
       !['applied','applying'].includes(row.status)||row.rollbackApprovalId)
       throw Error('Rollback journal scope or terminal status mismatch')
     const target=safeTarget(input,row.change),parent=dirname(target)
-    if(row.path!==row.change.path)throw Error('Conflicting transaction path')
+    if(row.path!==row.change.path||row.change.action!=='add'&&
+      row.change.action!=='modify'&&row.change.action!=='delete'||
+      typeof row.change.executable!=='boolean'||
+      row.change.before!==undefined&&!/^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(row.change.before)||
+      row.change.after!==undefined&&!/^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(row.change.after)||
+      row.change.before===undefined&&row.change.after===undefined)
+      throw Error('Invalid transaction journal change')
+    const expected=createHash('sha256').update(JSON.stringify({
+      projectId:row.projectId,rootFingerprint:row.rootFingerprint,
+      sourceRevision:row.sourceRevision,changes:[row.change]
+    })).digest('hex')
+    if(expected!==row.previewDigest)
+      throw Error('Transaction journal change no longer matches approved preview')
     const actual=await fileBlob(target,row.change.after?.length??row.change.before?.length??40)
     if(actual!==row.change.after&&actual!==row.change.before)
       throw Error('Source has changed since apply; no automatic overwrite')
+    if(actual!==undefined&&actual===row.change.after&&row.change.after&&
+      ((await lstat(target)).mode&0o111)!==(row.change.executable?0o100:0))
+      throw Error('Source mode changed since apply; manual review required')
+    if(actual!==undefined&&actual===row.change.before&&row.change.before&&
+      typeof row.beforeMode==='number'&&
+      ((await lstat(target)).mode&0o777)!==row.beforeMode)
+      throw Error('Source original mode changed; manual review required')
     const marked={...row,status:'rolling-back' as const,rollbackApprovalId:approval.approvalId}
     await atomicJournal(dir,marked)
     // If a crash left the original baseline already present, terminalize without mutation.
