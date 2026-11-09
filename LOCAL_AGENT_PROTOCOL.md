@@ -36,15 +36,19 @@ The existing 3080 DSH must **remain** `0.0.0.0:3080`, `allowUnauthenticated: tru
 
 Keep existing 3080/3083/8123 processes online unless a future task includes a **separately granted** restart approval. No OpenClaw, cloud-model selection, new Weixin QR, private Session history copying, profile change, or real original Session prompt without separate operator approval.
 
-The historical C5 setup gates are **complete and must not be repeated** merely because C5.3 is authorized. The only new bounded live gate is one human Weixin-triggered original disposable Session prompt/reply plus necessary reversible 3083 staging under the current task. Offline mocks and report pushes never prove this real path.
+The historical C5 setup gates are **complete and must not be repeated**. Past C5, C5.3 and C5.4B one-shot approvals are all finished. Any future live gate requires a separately approved new one-shot task; offline mocks, report pushes, and a prior admitted Prompt never grant authorization to resend.
 
 ## C5.3 trial completed 2026-11-09: NOT_SUBMITTED / authorization finished
 
 C5.3 did run once with a real human Weixin message. The prepared text hash did not match the exact incoming text after a quote-glyph change; no real 3080 `session/prompt` was issued. The message instead went through the ordinary Engine, and normal 3083 bundle/env was fully restored. Its private `approvalId` was NOT consumed in SQLite because the text gate rejected the message; nevertheless the **user's one-shot C5.3 trial authorization IS FINISHED and may never be reused or re-armed**. The operator's approval was for one human message attempt, not unlimited retries. Do not confuse the ordinary Engine's reply with a successful relay. See the sanitized C5.3 report for evidence.
 
-## Current authorization: C5.4A OFFLINE ONLY
+## C5.4B one-shot trial completed (PARTIAL_5_OF_6_LEGS); grant CONSUMED
 
-The currently active `LOCAL_AGENT_TASK.md` permits only offline code/test acceptance and optional read-only host checks. No new C5.4 real Weixin message, grant, staging restart, original Session prompt/reply, new Workspace, model/default change or provider patch is approved. A later live C5.4B requires the operator's NEW explicit one-shot grant after acceptance; only remote ChatGPT may publish an updated authorized live task.
+A genuine new Weixin message and ONE original disposable 3080 Session `session/prompt` were accepted and verified; 8123 local Qwen inference produced a completed Assistant turn. The response was NOT sent because correlation treated legitimate DSH-owned `runtime-context`, `skill-catalog`, and `time-context` snapshots as foreign user messages and placed the receipt in `review-required`. The operator's one-shot C5.4B grant is PERMANENTLY CONSUMED. The original 3083 bundle/env was restored, original 3080/8123 were untouched, and original historical Sessions and shared default were preserved. **No rerun or retroactive reply** is permitted with that grant or receipt.
+
+## Current authorization: C5.5A OFFLINE ONLY
+
+The active `LOCAL_AGENT_TASK.md` authorizes only offline correlation regression tests and optional read-only host checks. It expressly forbids restoring an old C5.4B reply, changing a `review-required` row, new original Session Prompt, new live Weixin message, new grant, 3083 staging/restart or host/profile/default modifications. A future C5.5B real E2E requires a NEW independent one-shot operator authorization and updated live task from remote ChatGPT.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 

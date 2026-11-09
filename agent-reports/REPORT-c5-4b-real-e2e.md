@@ -5,10 +5,10 @@ Code-under-test SHA: `180eb3dc80c5af80f5ea12594081ee8987b2ae30` (report-tip; pro
 
 ## Legs (acceptance criteria)
 
-1. REAL WEIXIN INBOUND: **PASS** — exactly one genuine two-line message, quote-free line 2 with alphanumeric marker; received bytes SHA256 = grant SHA256 (`0da44504…9dc1`) **exact match** (V1 grant).
-2. REAL ORIGINAL-SESSION PROMPT: **PASS** — ONE real `session/prompt` via guarded bridge: receipt `admitted`, `requestId=dsh-bridge-5e6a9b50…`, `afterSeq=3`; one-shot grant consumed (new `dsh_relay_approval` row bound to this trigger); no re-arm.
+1. REAL WEIXIN INBOUND: **PASS** — exactly one genuine two-line message, quote-free line 2 with alphanumeric marker; received bytes SHA256 = grant SHA256 (`[redacted full-message hash]`) **exact match** (V1 grant).
+2. REAL ORIGINAL-SESSION PROMPT: **PASS** — ONE real `session/prompt` via guarded bridge: receipt `admitted`, `requestId=[redacted request ID]`, `afterSeq=3`; one-shot grant consumed (new `dsh_relay_approval` row bound to this trigger); no re-arm.
 3. REAL 8123 LOCAL INFERENCE: **PASS** — session events prove provider `llm-local-proxy` → `http://127.0.0.1:8123/v1` single-slot queue → upstream vLLM; both the main turn and the title turn used the local route; no cloud fallback.
-4. REAL CORRELATED ASSISTANT COMPLETION: **PASS (at the Session level)** — original Session page through cursor 20 shows the matching `user/message` with `source.rpcId = requestId`, `turn/start`, `step/start`, `assistant/message` (visible text `C54B-OK`), `step/end`, `turn/end reason.kind=completed`. Session cursor 3→20, idle, queue/pendingInput empty.
+4. REAL CORRELATED ASSISTANT COMPLETION: **PASS (at the Session level)** — original Session page through cursor 20 shows the matching `user/message` with `source.rpcId = requestId`, `turn/start`, `step/start`, `assistant/message` (visible text `[redacted acceptance marker]`), `step/end`, `turn/end reason.kind=completed`. Session cursor 3→20, idle, queue/pendingInput empty.
 5. REAL NATIVE OUTBOX REPLY: **FAIL — `review-required`** — relay correlation rejected the page, so no `dsh-3080-reply-<40hex>` Outbox message was ever created and nothing was sent to Weixin. The operator received NO reply (message stays terminal; not retried).
 6. NORMAL 3083 RESTORE: **PASS** — bundle symlink restored to pre-C5.4B target, controlled relaunch with ORIGINAL env (zero `DSH_SUPERAGENT_*` vars), new pid LISTENing 127.0.0.1:3083; 3080 pid 1482 and 8123 pid 90215 untouched all along.
 
@@ -24,7 +24,7 @@ GitHub CI on exact SHA `180eb3d`: run 42589202191 success (all three jobs). `pnp
 ## Gate B/C — baseline, grant, staging: PASS
 
 - Owner-only 0700 baseline before staging (pids/listeners/env/bundle/profile checksum/SQLite `.backup`/rowcounts outbox 4, trigger 9, effect 0, relay rows old-C5-consumed-only, receipts 0, terminals 0, bindings 0). Zero drift.
-- Catalog regenerated read-only from the official `workspace/follow` stream (29 workspaces incl. the disposable one; alias check `dsh-eb0061f2a70f7406` re-proven). NEW V1 grant: unique `approvalId c54b-relay-…`, quote-free two-line text (125 bytes, marker `C54B-OK`, no quotes → immune to WeChat glyph normalization), 6-hour expiry, peer-bound to the allowlisted account, session-bound; 0600+fsync. Fresh route attestation (provider/model/baseURL/operatorObserved, 5-min freshness) kept continuously refreshed by the private monitor during the live window.
+- Catalog regenerated read-only from the official `workspace/follow` stream (29 workspaces incl. the disposable one; alias check `[redacted project alias]` re-proven). NEW V1 grant: unique `approvalId [redacted approval ID]`, quote-free two-line text (125 bytes, marker `[redacted acceptance marker]`, no quotes → immune to WeChat glyph normalization), 6-hour expiry, peer-bound to the allowlisted account, session-bound; 0600+fsync. Fresh route attestation (provider/model/baseURL/operatorObserved, 5-min freshness) kept continuously refreshed by the private monitor during the live window.
 - Real guarded `Dsh3080Bridge.inspect()` (read-only, AFTER fresh attestation per task): `allowed:true reasons:[] provider:llm-local-proxy permission:workspace-write originalSessionVerified:true` — no prompt during the check; disposable Session verified idle (cursor 3, queue/pendingInput empty) before admission.
 - Controlled 3083 staging: bundle swap to run worktree, single restart with grant+catalog env; loopback listener OK, pairing/cursor/Outbox preserved; 3080/8123 untouched; effect queue empty before staging (no conflict).
 
