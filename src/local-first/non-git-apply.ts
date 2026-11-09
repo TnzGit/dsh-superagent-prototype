@@ -40,6 +40,8 @@ export interface NonGitFileJournal {
   path:string
   change:NonGitChange
   beforeExecutable?:boolean
+  /** Exact original POSIX permissions, restored only after an independent rollback grant. */
+  beforeMode?:number
   status:FileJournalStatus
   /** Populated BEFORE attempting a rollback. Reuse never grants a second write. */
   rollbackApprovalId?:string
@@ -139,9 +141,9 @@ async function noPendingTransaction(root:string):Promise<void>{
       throw Error('Unreconciled transaction journal must be manually reviewed')
   }
 }
-async function copyVerified(from:string,to:string,oid:string,executable:boolean):Promise<void>{
+async function copyVerified(from:string,to:string,oid:string,executable:boolean,mode?:number):Promise<void>{
   await copyFile(from,to,fsConstants.COPYFILE_EXCL)
-  await chmod(to,executable?0o700:0o600)
+  await chmod(to,mode??(executable?0o700:0o600))
   const got=await fileBlob(to,oid.length)
   if(got!==oid)throw Error('File content changed during private copy')
   const handle=await open(to,'r')
@@ -172,13 +174,13 @@ export async function applyOneNonGitFile(input:SnapshotRequest,opts:{
     const row:NonGitFileJournal={version:1,transactionId:approval.transactionId,
       approvalId:approval.approvalId,projectId:plan.projectId,rootFingerprint:plan.rootFingerprint,
       previewDigest:plan.digest,sourceRevision:plan.sourceRevision,path:change.path,change,
-      ...(beforeMode===undefined?{}:{beforeExecutable:(beforeMode&0o111)!==0}),status:'prepared'}
+      ...(beforeMode===undefined?{}:{beforeExecutable:(beforeMode&0o111)!==0,beforeMode:beforeMode&0o777}),status:'prepared'}
     const temp=join(parent,'.dsh-apply-'+randomUUID())
     try{
       const before=await fileBlob(target,change.before?.length??change.after?.length??40)
       if(before!==change.before)throw Error('Source drift immediately before apply')
       if(change.before){
-        await copyVerified(target,join(dir,'before.bin'),change.before,row.beforeExecutable===true)
+        await copyVerified(target,join(dir,'before.bin'),change.before,false,0o600)
       }
       if(change.after){
         const worker=resolve(realpathSync(input.directory),change.path)
@@ -246,7 +248,10 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
           const before=join(dir,'before.bin')
           if(await fileBlob(before,row.change.before.length)!==row.change.before)
             throw Error('Private rollback backup corrupt')
-          await copyVerified(before,temp,row.change.before,row.beforeExecutable===true)
+          if(typeof row.beforeMode!=='number'||row.beforeMode<0||
+            row.beforeMode>0o777||!Number.isInteger(row.beforeMode))
+            throw Error('Rollback journal has invalid original file mode')
+          await copyVerified(before,temp,row.change.before,row.beforeExecutable===true,row.beforeMode)
           if(await fileBlob(target,row.change.after?.length??40)!==row.change.after)
             throw Error('Source drift before rollback')
           if(row.change.action==='delete'){
@@ -262,8 +267,8 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
     }
     if(await fileBlob(target,row.change.before?.length??row.change.after?.length??40)!==row.change.before)
       throw Error('Rollback verification failed; manual review required')
-    if(row.change.before&&((await lstat(target)).mode&0o111)!==(row.beforeExecutable?0o100:0))
-      throw Error('Rollback executable mode mismatch')
+    if(row.change.before&&((await lstat(target)).mode&0o777)!==row.beforeMode)
+      throw Error('Rollback original mode mismatch')
     const done={...marked,status:'rolled-back' as const}
     await atomicJournal(dir,done)
     return done

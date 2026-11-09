@@ -56,9 +56,13 @@ Independent GitHub review confirms the local Agent's sanitized C5.5B report and 
 
 **ALL historical C5/C5.3/C5.4B/C5.5B one-shot live grants are permanently finished.** Never use a report publication as new permission.
 
-## Current authorization: C6A OFFLINE ONLY / NO LIVE ACTIONS
+## C6A offline preview acceptance — completed
 
-The remote-owned source branch has advanced with a read-only non-Git Worker change-preview function; `LOCAL_AGENT_TASK.md` now permits a new, explicitly bounded **offline** testing and report-publishing task on synthetic throwaway projects. The historical C5.5B real E2E remains complete with its one-shot grant permanently consumed. The current C6A task DOES NOT authorize operator project changes, production apply/rollback, a new original Session prompt, real Weixin input/reply, 3083 staging/restart, any grant, historical receipt recovery, model/default/profile writes or server-side operations. Only code CI, offline isolated tests, optional host read-only checks and one sanitized report push are within scope.
+C6A synthetic non-Git snapshot/preview passed all local and GitHub CI evidence in its sanitized report. No live project mutation was authorized or performed.
+
+## Current authorization: C6B1 OFFLINE SYNTHETIC APPLY/ROLLBACK ONLY
+
+`LOCAL_AGENT_TASK.md` permits code review, isolated disposable synthetic project tests, CI verification and one sanitized report push. The new one-file apply/rollback module is default-OFF and NOT wired to the running service. **No real operator project apply/rollback, 3083 restart, 3080 Session prompt, Weixin message/reply, grant reuse, model/default change or production journal/SQLite write is authorized.** C5.5B's earlier one-shot grant stays consumed. A new human approval is mandatory before a later genuine host mutation.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
