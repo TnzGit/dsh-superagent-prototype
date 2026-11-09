@@ -7,7 +7,11 @@
 
 ## 1. CI baseline (step 1)
 
-CI run `42665477581` (attempt 1) for the exact SHA: `completed` / `success`, all three jobs (`local-first-core`, `dsh-typecheck-and-build`, `macos-portability`) green. No `BLOCKED_INFRA_MACOS` condition was observed for the accepted baseline. The report commit's own CI is polled for a bounded period only (no unbounded polling).
+CI run `42665477581` (run 223, push event) for the exact SHA `2e1ee00`:
+- **attempt 1**: `local-first-core` = success, `dsh-typecheck-and-build` = success, `macos-portability` = **cancelled** (queued ~15 min on the `macos-latest` runner with no steps executed, then cancelled by the workflow's `cancel-in-progress` concurrency group — a platform/queue condition, not a code failure; run conclusion `failure`).
+- **attempt 2** (targeted rerun of the failed job only, `gh run rerun --failed`): `completed` / `success` — all three jobs (`local-first-core`, `dsh-typecheck-and-build`, `macos-portability`) green.
+
+So the accepted baseline ends at 3/3 green; the transient macOS cancellation is recorded as `BLOCKED_INFRA_MACOS` **only** for attempt 1 and does not block this task. Bounded polling only (20 × 30 s), no unbounded waiting.
 
 ## 2. Local toolchain verification (step 2)
 
@@ -103,10 +107,11 @@ Repo-wide grep for `inspectNonGitBatchRecovery` / `classifyNonGitBatchObservatio
 
 1. `verifyNonGitStagedBatch` on a folder where `seal.json` is missing (crash residue) throws a raw `ENOENT` from `readPrivateJson`'s `lstat` whose message embeds the private absolute path (unlike the masked `Batch directory is unsafe or unavailable` for a missing folder). Suggested remote-side improvement: mask this like the folder-level case, or route through `Unsealed or corrupt batch requires manual reconciliation`.
 2. Duplicate observations are rejected by the length check (`Incomplete batch recovery observation`) before the positional check; this is fail-closed and acceptable, but the message could be made more specific remotely.
+3. Infra observation for remote: push-triggered CI runs of **report-only commits** (docs under `agent-reports/`) complete as `failure` with zero jobs and a "workflow file issue" banner (runs 221, 224, 225 — all three attempts), even though the workflow blob is identical to a run that passed 3/3 at the code baseline. Baseline code commits trigger the workflow normally. Likely a transient GitHub-side check-suite issue; if it persists across code pushes, the workflow file itself should be re-examined remotely (no local change made).
 
 ## 6. Publishing and post-publish CI
 
-This report was committed to `agent-reports/REPORT-c6b2b1-offline-batch-recovery-inspection.md` on the branch (single file, no code change). The report commit's own CI is polled for a bounded period; if its macOS job remains queued or is cancelled for platform reasons, that is recorded as `BLOCKED_INFRA_MACOS` **for the report commit only** — the accepted code baseline `2e1ee00` already passed all three jobs in run `42665477581`.
+This report was committed to `agent-reports/REPORT-c6b2b1-offline-batch-recovery-inspection.md` on the branch (single file, no code change; pushed to `feat/local-first-wechat-foundation` as commit `8cc15ce`). The report commit's own CI runs — push run `42671697624` (224) and dispatch reruns `42672118636` (225, attempts 1–3) — completed as `failure` with **zero jobs created**: a workflow-level failure on the GitHub side ("This run likely failed because of a workflow file issue"; the check suite contains no check runs, and `gh run rerun` on run 224 reports the run cannot be retried). The workflow file blob is byte-identical to the accepted baseline's (verified with `git show` + `diff`: blob `17ee37577d9b20197975c74471f5bb7cd7d6366f`), and that file passed all three jobs at the baseline. The same zero-job pattern occurred for the earlier C6B2A report commit (push run 221). This is a platform/infra artifact affecting report-only commits, **not** a code failure, and no product code or workflow file was changed locally. Bounded polling only (no unbounded waiting). The accepted code baseline `2e1ee00` is the CI authority for this task and ended 3/3 green.
 
 ## G. Risk and rollback
 
