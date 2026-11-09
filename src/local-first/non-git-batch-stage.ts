@@ -164,10 +164,16 @@ async function existingBatches(root:string,approvalId?:string):Promise<void>{
       intent=await readPrivateJson(join(folder,'intent.json')) as NonGitBatchStageGrant
       seal=await readPrivateJson(join(folder,'seal.json')) as NonGitBatchSeal
     }catch{throw Error('Unsealed or corrupt batch requires manual reconciliation')}
-    if(!intent||!seal||seal.status!=='sealed'||seal.batchId!==intent.batchId||
-      seal.approvalId!==intent.approvalId||
-      entry.name!=='batch-'+seal.batchId)
+    if(!intent||!seal||seal.version!==1||seal.status!=='sealed'||
+      seal.batchId!==intent.batchId||seal.approvalId!==intent.approvalId||
+      seal.projectId!==intent.projectId||
+      seal.rootFingerprint!==intent.rootFingerprint||
+      seal.previewDigest!==intent.previewDigest||
+      entry.name!=='batch-'+seal.batchId||!Array.isArray(seal.changes))
       throw Error('Unsealed or mismatched batch requires manual reconciliation')
+    const {digest:proof,...fields}=seal
+    if(proof!==digest(fields))
+      throw Error('Corrupt sealed batch requires manual reconciliation')
     if(approvalId&&seal.approvalId===approvalId)
       throw Error('Batch stage approval was already consumed')
   }
@@ -236,6 +242,20 @@ export async function stageNonGitChangeBatch(input:SnapshotRequest,opts:{
     const planAgain=await previewNonGitProjectChanges(input)
     if(planAgain.digest!==plan.digest)
       throw Error('Original or Worker project drift during batch staging')
+    // Git blob OIDs capture content but NOT all file permission bits. Re-check
+    // both source and worker modes and bytes immediately before sealing.
+    for(const item of changes){
+      for(const [location,oid,expectedMode] of [
+        [item.before?input.registry.path(input.projectId,item.path,'read'):undefined,
+          item.before,item.beforeMode],
+        [item.after?resolve(worker,item.path):undefined,item.after,item.afterMode]
+      ] as const){
+        if(!location||!oid)continue
+        const actual=await hashedFile(location,MAX_COPY_BYTES,oid.length as 40|64)
+        if(actual.oid!==oid||actual.mode!==expectedMode)
+          throw Error('Source or Worker content/mode drift before batch seal')
+      }
+    }
     // Ownership-only grant file is rechecked before final seal, including expiry.
     const current=readGrant(opts.approvalFile)
     if(JSON.stringify(current)!==JSON.stringify(grant))
@@ -304,7 +324,15 @@ export async function verifyNonGitStagedBatch(input:SnapshotRequest,opts:{
       if(!stat.isFile()||stat.isSymbolicLink()||(stat.mode&0o077)!==0)
         throw Error('Unsafe private batch image')
       const actual=await hashedFile(file,MAX_COPY_BYTES-total,oid.length as 40|64)
-      if(actual.oid!==oid)throw Error('Corrupted sealed batch image')
+      if(actual.oid!==oid||actual.mode!==0o600)
+        throw Error('Corrupted sealed batch image')
+      const current=which==='before'
+        ?input.registry.path(input.projectId,change.path,'read')
+        :resolve(realpathSync(input.directory),change.path)
+      const currentFile=await hashedFile(current,MAX_COPY_BYTES,oid.length as 40|64)
+      const expectedMode=which==='before'?change.beforeMode:change.afterMode
+      if(currentFile.oid!==oid||currentFile.mode!==expectedMode)
+        throw Error('Original or Worker file content/mode drift since seal')
       total+=actual.size
     }
   }

@@ -126,3 +126,33 @@ test('symlinked journal root and symlinked worker path fail closed',async()=>fix
   await assert.rejects(stageNonGitChangeBatch(input,{journalRoot,approvalFile:file}),/Symlink|symlink|Unsafe/)
   assert.equal(readFileSync(join(source,'change.txt'),'utf8'),'old content')
 }))
+
+test('chmod-only source/worker drift after seal fails verification despite unchanged Git blob OIDs',async()=>fixture(async({source,input,journalRoot,grant})=>{
+  const preview=await prepare(source,input)
+  const {file,value}=grant(preview.digest)
+  await stageNonGitChangeBatch(input,{journalRoot,approvalFile:file})
+  chmodSync(join(source,'change.txt'),0o600)
+  await assert.rejects(verifyNonGitStagedBatch(input,{journalRoot,batchId:value.batchId,
+    expectedPreviewDigest:preview.digest}),/content\/mode drift/)
+  chmodSync(join(source,'change.txt'),0o644)
+  chmodSync(join(input.directory,'change.txt'),0o600)
+  await assert.rejects(verifyNonGitStagedBatch(input,{journalRoot,batchId:value.batchId,
+    expectedPreviewDigest:preview.digest}),/content\/mode drift/)
+  assert.equal(readFileSync(join(source,'change.txt'),'utf8'),'old content')
+}))
+test('extra file and altered seal are rejected by read-only verifier',async()=>fixture(async({source,input,journalRoot,grant})=>{
+  const preview=await prepare(source,input)
+  const {file,value}=grant(preview.digest)
+  await stageNonGitChangeBatch(input,{journalRoot,approvalFile:file})
+  const folder=join(journalRoot,'batch-'+value.batchId)
+  writeFileSync(join(folder,'unknown.bin'),'not staged')
+  await assert.rejects(verifyNonGitStagedBatch(input,{journalRoot,batchId:value.batchId,
+    expectedPreviewDigest:preview.digest}),/Unexpected file/)
+  rmSync(join(folder,'unknown.bin'))
+  const seal=join(folder,'seal.json')
+  const changed=JSON.parse(readFileSync(seal,'utf8'))
+  changed.changes[0].action='delete'
+  writeFileSync(seal,JSON.stringify(changed))
+  await assert.rejects(verifyNonGitStagedBatch(input,{journalRoot,batchId:value.batchId,
+    expectedPreviewDigest:preview.digest}),/digest mismatch/)
+}))
