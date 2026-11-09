@@ -70,6 +70,11 @@ function readApproval(file:string):NonGitFileApproval {
 }
 import {readFileSync} from 'node:fs'
 function requireRead(path:string):string{return readFileSync(path,'utf8')}
+function recheckApproval(file:string,expected:NonGitFileApproval):void {
+  const now=readApproval(file)
+  if(JSON.stringify(now)!==JSON.stringify(expected))
+    throw Error('Private approval changed before source write')
+}
 function journalRoot(input:SnapshotRequest,dir:string):string {
   if(!isAbsolute(dir))throw Error('Journal directory must be absolute')
   const info=lstatSync(dir)
@@ -190,6 +195,8 @@ export async function applyOneNonGitFile(input:SnapshotRequest,opts:{
       }
       await syncDir(dir)
       await atomicJournal(dir,row)
+      // Expiry or permission revocation during a long preview blocks the write.
+      recheckApproval(opts.approvalFile,approval)
       await atomicJournal(dir,{...row,status:'applying'})
       // One more pre-write drift check; external writers must be quiesced by the
       // operator (our lock only serializes calls using this module).
@@ -229,7 +236,12 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
     const info=await lstat(dir)
     if(!info.isDirectory()||info.isSymbolicLink()||(info.mode&0o077)!==0)
       throw Error('Untrusted transaction journal directory')
-    const row=JSON.parse(await readFile(join(dir,'journal.json'),'utf8')) as NonGitFileJournal
+    const journalFile=join(dir,'journal.json')
+    const journalStat=await lstat(journalFile)
+    if(!journalStat.isFile()||journalStat.isSymbolicLink()||
+      (journalStat.mode&0o077)!==0)
+      throw Error('Unsafe private transaction journal file')
+    const row=JSON.parse(await readFile(journalFile,'utf8')) as NonGitFileJournal
     if(row.version!==1||row.transactionId!==approval.rollbackOfTransactionId||
       row.projectId!==approval.projectId||row.rootFingerprint!==approval.rootFingerprint||
       row.previewDigest!==approval.previewDigest||
@@ -259,6 +271,7 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
     // A foreign chmod after apply must not silently qualify for rollback.
     if(!restored&&!applied)
       throw Error('Source content or mode changed since apply; manual review required')
+    recheckApproval(opts.approvalFile,approval)
     const marked={...row,status:'rolling-back' as const,rollbackApprovalId:approval.approvalId}
     await atomicJournal(dir,marked)
     // If a crash left original bytes AND mode already present, do not rewrite them.

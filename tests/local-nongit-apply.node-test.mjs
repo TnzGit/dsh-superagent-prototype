@@ -182,3 +182,15 @@ test('mode-only Worker change is reverted even when Git blob OIDs are identical'
   assert.equal(statSync(file).mode&0o777,0o700)
   assert.equal(readFileSync(file,'utf8'),'#!/bin/sh\nexit 0\n')
 }))
+
+test('expired, unapproved or altered operator file never authorizes source mutation',async()=>fixture(async({source,request,journal,grant})=>{
+  writeFileSync(join(source,'a.txt'),'original')
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'worker')
+  const plan=await previewNonGitProjectChanges(request)
+  const expired=grant('apply',plan.digest,{expiresAt:new Date(Date.now()-1000).toISOString()})
+  await assert.rejects(applyOneNonGitFile(request,{journalDirectory:journal,approvalFile:expired}),/Invalid or expired/)
+  const notApproved=grant('apply',plan.digest,{operatorApproved:false})
+  await assert.rejects(applyOneNonGitFile(request,{journalDirectory:journal,approvalFile:notApproved}),/Invalid or expired/)
+  assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'original')
+}))
