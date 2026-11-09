@@ -160,3 +160,25 @@ test('tampering with journal patch scope is rejected before rollback',async()=>f
     approvalFile:grant('rollback',plan.digest,{rollbackOfTransactionId:applied.transactionId})}),/journal change no longer matches/)
   assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'after')
 }))
+
+test('mode-only Worker change is reverted even when Git blob OIDs are identical',async()=>fixture(async({source,request,journal,grant})=>{
+  const file=join(source,'script.sh')
+  writeFileSync(file,'#!/bin/sh\nexit 0\n',{mode:0o700})
+  chmodSync(file,0o700)
+  await createProjectSnapshot(request)
+  const worker=join(request.directory,'script.sh')
+  chmodSync(worker,0o600)
+  const plan=await previewNonGitProjectChanges(request)
+  assert.equal(plan.changes.length,1)
+  assert.equal(plan.changes[0].action,'modify')
+  assert.equal(plan.changes[0].before,plan.changes[0].after)
+  const result=await applyOneNonGitFile(request,{journalDirectory:journal,
+    approvalFile:grant('apply',plan.digest)})
+  const {statSync}=await import('node:fs')
+  assert.equal(statSync(file).mode&0o777,0o600)
+  const rolled=await rollbackOneNonGitFile(request,{journalDirectory:journal,
+    approvalFile:grant('rollback',plan.digest,{rollbackOfTransactionId:result.transactionId})})
+  assert.equal(rolled.status,'rolled-back')
+  assert.equal(statSync(file).mode&0o777,0o700)
+  assert.equal(readFileSync(file,'utf8'),'#!/bin/sh\nexit 0\n')
+}))

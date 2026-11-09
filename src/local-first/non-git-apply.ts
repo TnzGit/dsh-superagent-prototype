@@ -250,19 +250,19 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
     if(expected!==row.previewDigest)
       throw Error('Transaction journal change no longer matches approved preview')
     const actual=await fileBlob(target,row.change.after?.length??row.change.before?.length??40)
-    if(actual!==row.change.after&&actual!==row.change.before)
-      throw Error('Source has changed since apply; no automatic overwrite')
-    if(actual!==undefined&&actual===row.change.after&&row.change.after&&
-      ((await lstat(target)).mode&0o111)!==(row.change.executable?0o100:0))
-      throw Error('Source mode changed since apply; manual review required')
-    if(actual!==undefined&&actual===row.change.before&&row.change.before&&
-      typeof row.beforeMode==='number'&&
-      ((await lstat(target)).mode&0o777)!==row.beforeMode)
-      throw Error('Source original mode changed; manual review required')
+    const currentMode=actual===undefined?undefined:(await lstat(target)).mode&0o777
+    const restored=actual===row.change.before&&
+      (row.change.before===undefined||currentMode===row.beforeMode)
+    const applied=actual===row.change.after&&
+      (row.change.after===undefined||currentMode===(row.change.executable?0o700:0o600))
+    // Content alone is insufficient: mode-only changes share the same Git blob OID.
+    // A foreign chmod after apply must not silently qualify for rollback.
+    if(!restored&&!applied)
+      throw Error('Source content or mode changed since apply; manual review required')
     const marked={...row,status:'rolling-back' as const,rollbackApprovalId:approval.approvalId}
     await atomicJournal(dir,marked)
-    // If a crash left the original baseline already present, terminalize without mutation.
-    if(actual!==row.change.before){
+    // If a crash left original bytes AND mode already present, do not rewrite them.
+    if(!restored){
       const temp=join(parent,'.dsh-revert-'+randomUUID())
       try{
         if(row.change.before){
