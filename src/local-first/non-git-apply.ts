@@ -4,8 +4,8 @@
  */
 import {createHash,randomUUID} from 'node:crypto'
 import {constants as fsConstants,lstatSync,realpathSync} from 'node:fs'
-import {copyFile,link,lstat,mkdir,open,readFile,rename,rm,unlink,chmod} from 'node:fs/promises'
-import {basename,dirname,isAbsolute,join,relative,resolve,sep} from 'node:path'
+import {copyFile,link,lstat,mkdir,open,readFile,readdir,rename,rm,unlink,chmod} from 'node:fs/promises'
+import {dirname,isAbsolute,join,relative,resolve,sep} from 'node:path'
 import {createReadStream} from 'node:fs'
 import {previewNonGitProjectChanges,type NonGitChange,type SnapshotRequest} from './project-workspaces.ts'
 
@@ -39,6 +39,7 @@ export interface NonGitFileJournal {
   sourceRevision:string
   path:string
   change:NonGitChange
+  beforeExecutable?:boolean
   status:FileJournalStatus
   /** Populated BEFORE attempting a rollback. Reuse never grants a second write. */
   rollbackApprovalId?:string
@@ -126,6 +127,18 @@ function safeTarget(input:SnapshotRequest,change:NonGitChange):string {
     throw Error('Invalid target path')
   return input.registry.path(input.projectId,change.path,'write')
 }
+/** Prevent a new apply while a previous transaction remains uncertain. */
+async function noPendingTransaction(root:string):Promise<void>{
+  for(const item of await readdir(root,{withFileTypes:true})){
+    if(!item.name.startsWith('tx-'))continue
+    if(!item.isDirectory()||item.isSymbolicLink())throw Error('Unsafe transaction journal entry')
+    let row:NonGitFileJournal
+    try{row=JSON.parse(await readFile(join(root,item.name,'journal.json'),'utf8')) as NonGitFileJournal}
+    catch{throw Error('Unreconciled transaction journal')}
+    if(['prepared','applying','rolling-back'].includes(row.status))
+      throw Error('Unreconciled transaction journal must be manually reviewed')
+  }
+}
 async function copyVerified(from:string,to:string,oid:string,executable:boolean):Promise<void>{
   await copyFile(from,to,fsConstants.COPYFILE_EXCL)
   await chmod(to,executable?0o700:0o600)
@@ -146,6 +159,7 @@ export async function applyOneNonGitFile(input:SnapshotRequest,opts:{
     approval.rootFingerprint!==input.fingerprint)throw Error('Apply approval scope mismatch')
   const root=journalRoot(input,opts.journalDirectory)
   return underLock(root,async()=>{
+    await noPendingTransaction(root)
     const plan=await previewNonGitProjectChanges(input)
     if(plan.digest!==approval.previewDigest||plan.changes.length!==1)
       throw Error('Single-file plan digest mismatch or more than one change')
@@ -154,16 +168,17 @@ export async function applyOneNonGitFile(input:SnapshotRequest,opts:{
     const dir=join(root,'tx-'+approval.transactionId)
     await mkdir(dir,{mode:0o700})
     await syncDir(root)
+    const beforeMode=change.before?(await lstat(target)).mode:undefined
     const row:NonGitFileJournal={version:1,transactionId:approval.transactionId,
       approvalId:approval.approvalId,projectId:plan.projectId,rootFingerprint:plan.rootFingerprint,
-      previewDigest:plan.digest,sourceRevision:plan.sourceRevision,path:change.path,change,status:'prepared'}
+      previewDigest:plan.digest,sourceRevision:plan.sourceRevision,path:change.path,change,
+      ...(beforeMode===undefined?{}:{beforeExecutable:(beforeMode&0o111)!==0}),status:'prepared'}
     const temp=join(parent,'.dsh-apply-'+randomUUID())
     try{
       const before=await fileBlob(target,change.before?.length??change.after?.length??40)
       if(before!==change.before)throw Error('Source drift immediately before apply')
       if(change.before){
-        await copyVerified(target,join(dir,'before.bin'),change.before,
-          (await lstat(target)).mode%8!==0) // mode is corrected below for actual executable metadata
+        await copyVerified(target,join(dir,'before.bin'),change.before,row.beforeExecutable===true)
       }
       if(change.after){
         const worker=resolve(realpathSync(input.directory),change.path)
@@ -178,6 +193,8 @@ export async function applyOneNonGitFile(input:SnapshotRequest,opts:{
       // operator (our lock only serializes calls using this module).
       if(await fileBlob(target,change.before?.length??change.after?.length??40)!==change.before)
         throw Error('Source drift immediately before mutation')
+      if(change.before&&((await lstat(target)).mode&0o111)!==(beforeMode!&0o111))
+        throw Error('Source executable mode drift')
       if(change.action==='add'){
         await link(temp,target) // atomic no-clobber: fails if source appeared
         await unlink(temp)
@@ -229,8 +246,7 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
           const before=join(dir,'before.bin')
           if(await fileBlob(before,row.change.before.length)!==row.change.before)
             throw Error('Private rollback backup corrupt')
-          const original=await lstat(before)
-          await copyVerified(before,temp,row.change.before,(original.mode&0o111)!==0)
+          await copyVerified(before,temp,row.change.before,row.beforeExecutable===true)
           if(await fileBlob(target,row.change.after?.length??40)!==row.change.after)
             throw Error('Source drift before rollback')
           if(row.change.action==='delete'){
@@ -246,6 +262,8 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
     }
     if(await fileBlob(target,row.change.before?.length??row.change.after?.length??40)!==row.change.before)
       throw Error('Rollback verification failed; manual review required')
+    if(row.change.before&&((await lstat(target)).mode&0o111)!==(row.beforeExecutable?0o100:0))
+      throw Error('Rollback executable mode mismatch')
     const done={...marked,status:'rolled-back' as const}
     await atomicJournal(dir,done)
     return done

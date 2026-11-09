@@ -104,3 +104,32 @@ test('private journal root symlink is refused even with an approved matching pla
     approvalFile:grant('apply',preview.digest)}),/Journal root/)
   assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'before')
 }))
+
+test('executable file restored with original mode after independent rollback approval',async()=>fixture(async({source,request,journal,grant})=>{
+  const file=join(source,'run.sh')
+  writeFileSync(file,'#!/bin/sh\necho old\n',{mode:0o700});chmodSync(file,0o700)
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'run.sh'),'#!/bin/sh\necho new\n')
+  chmodSync(join(request.directory,'run.sh'),0o600)
+  const plan=await previewNonGitProjectChanges(request)
+  const applied=await applyOneNonGitFile(request,{journalDirectory:journal,approvalFile:grant('apply',plan.digest)})
+  assert.equal(readFileSync(file,'utf8'),'#!/bin/sh\necho new\n')
+  const rolled=await rollbackOneNonGitFile(request,{journalDirectory:journal,
+    approvalFile:grant('rollback',plan.digest,{rollbackOfTransactionId:applied.transactionId})})
+  assert.equal(rolled.beforeExecutable,true)
+  assert.equal(readFileSync(file,'utf8'),'#!/bin/sh\necho old\n')
+  const {statSync}=await import('node:fs')
+  assert.equal(statSync(file).mode&0o111,0o100)
+}))
+test('unreconciled write-ahead journal blocks fresh apply without touching source',async()=>fixture(async({source,request,journal,grant})=>{
+  writeFileSync(join(source,'a.txt'),'before')
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const plan=await previewNonGitProjectChanges(request)
+  const dir=join(journal,'tx-stale-transaction-00001')
+  mkdirSync(dir,{mode:0o700})
+  writeFileSync(join(dir,'journal.json'),JSON.stringify({status:'applying'}),{mode:0o600})
+  await assert.rejects(applyOneNonGitFile(request,{journalDirectory:journal,
+    approvalFile:grant('apply',plan.digest)}),/Unreconciled/)
+  assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'before')
+}))
