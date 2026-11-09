@@ -140,6 +140,9 @@ async function capture(from:string,to:string,expected:string,room:number):
   if(captured.oid!==expected||sourceAgain.oid!==expected||
     sourceAgain.mode!==before.mode||sourceAgain.size!==before.size)
     throw Error('Source or worker changed while staging')
+  // Barrier for the *directory entry* containing this fsynced image.
+  // A later sealed manifest must never become durable before its images.
+  await syncDirectory(resolve(to,'..'))
   return {mode:before.mode,size:before.size}
 }
 function imageName(i:number,which:'before'|'after'):string {
@@ -256,6 +259,10 @@ export async function stageNonGitChangeBatch(input:SnapshotRequest,opts:{
           throw Error('Source or Worker content/mode drift before batch seal')
       }
     }
+    // Explicit durability barrier: evidence image directory entries must be
+    // persisted BEFORE seal.json is ever created. If sync fails, the incomplete
+    // batch remains unsealed and blocks future stages pending human audit.
+    await syncDirectory(folder)
     // Ownership-only grant file is rechecked before final seal, including expiry.
     const current=readGrant(opts.approvalFile)
     if(JSON.stringify(current)!==JSON.stringify(grant))
@@ -284,9 +291,17 @@ export async function verifyNonGitStagedBatch(input:SnapshotRequest,opts:{
     throw Error('Invalid batch verification scope')
   const root=privateRoot(input,opts.journalRoot)
   const folder=join(root,'batch-'+opts.batchId)
-  const info=await lstat(folder)
+  // Do not include private absolute paths in errors when the batch is absent.
+  let info: Awaited<ReturnType<typeof lstat>>
+  try { info=await lstat(folder) }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code==='ENOENT'||
+        (error as NodeJS.ErrnoException).code==='ENOTDIR')
+      throw Error('Batch directory is unsafe or unavailable')
+    throw error
+  }
   if(!info.isDirectory()||info.isSymbolicLink()||(info.mode&0o077)!==0)
-    throw Error('Batch directory is unsafe')
+    throw Error('Batch directory is unsafe or unavailable')
   const intent=await readPrivateJson(join(folder,'intent.json')) as NonGitBatchStageGrant
   const sealed=await readPrivateJson(join(folder,'seal.json')) as NonGitBatchSeal
   if(!sealed||sealed.version!==1||sealed.status!=='sealed'||

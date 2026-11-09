@@ -156,3 +156,35 @@ test('extra file and altered seal are rejected by read-only verifier',async()=>f
   await assert.rejects(verifyNonGitStagedBatch(input,{journalRoot,batchId:value.batchId,
     expectedPreviewDigest:preview.digest}),/digest mismatch/)
 }))
+
+test('absent batch verification fails with sanitized error, not a private directory path',async()=>fixture(async({source,input,journalRoot})=>{
+  const preview=await prepare(source,input)
+  const missing='batch-missing-00001'
+  await assert.rejects(verifyNonGitStagedBatch(input,{
+    journalRoot,batchId:missing,expectedPreviewDigest:preview.digest
+  }),error=>{
+    assert.match(error.message,/Batch directory is unsafe or unavailable/)
+    assert.equal(error.message.includes(journalRoot),false)
+    assert.equal(error.message.includes(input.directory),false)
+    return true
+  })
+  assert.equal(readFileSync(join(source,'change.txt'),'utf8'),'old content')
+}))
+test('sealed evidence images remain independently readable after stage returns',async()=>fixture(async({source,input,journalRoot,grant})=>{
+  const preview=await prepare(source,input)
+  const {file,value}=grant(preview.digest)
+  const sealed=await stageNonGitChangeBatch(input,{journalRoot,approvalFile:file})
+  const folder=join(journalRoot,'batch-'+value.batchId)
+  assert.equal(sealed.changes.length,3)
+  for(const record of sealed.changes){
+    for(const name of [record.beforeImage,record.afterImage]){
+      if(!name)continue
+      const content=readFileSync(join(folder,name))
+      assert.ok(content.length>0)
+    }
+  }
+  await verifyNonGitStagedBatch(input,{
+    journalRoot,batchId:value.batchId,expectedPreviewDigest:preview.digest
+  })
+  assert.equal(readFileSync(join(source,'change.txt'),'utf8'),'old content')
+}))
