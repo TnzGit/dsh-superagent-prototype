@@ -36,7 +36,7 @@ The existing 3080 DSH must **remain** `0.0.0.0:3080`, `allowUnauthenticated: tru
 
 Keep existing 3080/3083/8123 processes online unless a future task includes a **separately granted** restart approval. No OpenClaw, cloud-model selection, new Weixin QR, private Session history copying, profile change, or real original Session prompt without separate operator approval.
 
-The historical C5 setup gates are **complete and must not be repeated**. Past C5, C5.3 and C5.4B one-shot approvals are all finished. Any future live gate requires a separately approved new one-shot task; offline mocks, report pushes, and a prior admitted Prompt never grant authorization to resend.
+The historical C5 setup gates are **complete and must not be repeated**. Past C5, C5.3, C5.4B and C5.5B one-shot approvals are all finished. Any future live gate requires a separately approved new one-shot task; offline mocks, report pushes, and a prior admitted Prompt never grant authorization to resend.
 
 ## C5.3 trial completed 2026-11-09: NOT_SUBMITTED / authorization finished
 
@@ -46,9 +46,19 @@ C5.3 did run once with a real human Weixin message. The prepared text hash did n
 
 A genuine new Weixin message and ONE original disposable 3080 Session `session/prompt` were accepted and verified; 8123 local Qwen inference produced a completed Assistant turn. The response was NOT sent because correlation treated legitimate DSH-owned `runtime-context`, `skill-catalog`, and `time-context` snapshots as foreign user messages and placed the receipt in `review-required`. The operator's one-shot C5.4B grant is PERMANENTLY CONSUMED. The original 3083 bundle/env was restored, original 3080/8123 were untouched, and original historical Sessions and shared default were preserved. **No rerun or retroactive reply** is permitted with that grant or receipt.
 
-## Current authorization: C5.5A OFFLINE ONLY
+## C5.5A offline acceptance — complete
 
-The active `LOCAL_AGENT_TASK.md` authorizes only offline correlation regression tests and optional read-only host checks. It expressly forbids restoring an old C5.4B reply, changing a `review-required` row, new original Session Prompt, new live Weixin message, new grant, 3083 staging/restart or host/profile/default modifications. A future C5.5B real E2E requires a NEW independent one-shot operator authorization and updated live task from remote ChatGPT.
+The context-snapshot correlator fix passed synthetic live-trace replay and negative tests. Its scope was strictly offline.
+
+## C5.5B real one-shot native Weixin E2E — 6/6 PASS and authorization CONSUMED
+
+Independent GitHub review confirms the local Agent's sanitized C5.5B report and the report commit CI green. Reported live evidence covers one exact-hash native Weixin inbound, one admitted original disposable 3080 Session Prompt, one local 8123 inference, matching request-ID-correlated Assistant completion, one guarded Outbox reply sent and confirmed received by the operator, and original 3083 bundle/environment restoration with relay default-OFF. C5.4B's prior `review-required` record remains unchanged and was NOT replied to. Expected durable C5.5B Trigger, approval consumption, original Session turn and sent reply remain; these are not residual staging configuration.
+
+**ALL historical C5/C5.3/C5.4B/C5.5B one-shot live grants are permanently finished.** Never use a report publication as new permission.
+
+## Current authorization: NONE — CLOSED
+
+`LOCAL_AGENT_TASK.md` now records completion and is not runnable. No more original Session prompts, live Weixin messages/sends, 3083 restarts, new grants, historical receipt recovery, model/default/profile writes or other host operations until a new scoped task is published, with an independent human authorization for any live action.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 

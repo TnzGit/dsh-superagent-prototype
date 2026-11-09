@@ -1,16 +1,16 @@
 # REPORT — C5.5B one-shot real native Weixin → original DSH 3080 → local Qwen 8123 → native Outbox (fixed correlator)
 
 Code-under-test SHA: `32040040e210f1d076b6543e0b6bdc75e38e5440` (the context-snapshot correlator fix `305a910`; fresh clean worktree, built `lib/` for staging). Report-tip branch at publication: `fd57681`.
-**Verdict: `REAL_E2E_PASS_6_OF_6_LEGS`** — exactly ONE real Weixin message, ONE real original-session prompt, ONE local 8123 inference, ONE correlated native reply delivered. One-shot rule honored; grant consumed; environment fully restored; zero residual.
+**Verdict: `REAL_E2E_PASS_6_OF_6_LEGS`** — exactly ONE real Weixin message, ONE real original-session prompt, ONE local 8123 inference, ONE correlated native reply delivered. One-shot rule honored; grant consumed; original deployment bundle/environment restored; expected durable acceptance evidence retained.
 
 ## Legs
 
-1. REAL WEIXIN INBOUND: **PASS** — one genuine two-line message (quote-free line 2, alphanumeric marker `C55B-OK`); received bytes SHA256 = fresh V1 grant SHA256 (`1fb88b66…b36105`) **exact match** at 10:02:23Z (trigger `12bba7e1…`, addressed=direct, human=true).
-2. REAL ORIGINAL-SESSION PROMPT: **PASS** — exactly one `session/prompt` via guarded bridge: receipt `admitted`, `requestId=dsh-bridge-01dcd62f…`, `afterSeq=20` (continues from C5.4B's completed cursor); fresh grant consumed (new `dsh_relay_approval` row bound to this trigger); no re-arm, no retry.
+1. REAL WEIXIN INBOUND: **PASS** — one genuine two-line message (quote-free line 2, alphanumeric marker `[redacted acceptance marker]`); received bytes SHA256 = fresh V1 grant SHA256 (`[redacted full-message hash]`) **exact match** at 10:02:23Z (trigger `[redacted Trigger ID]`, addressed=direct, human=true).
+2. REAL ORIGINAL-SESSION PROMPT: **PASS** — exactly one `session/prompt` via guarded bridge: receipt `admitted`, `requestId=[redacted request ID]`, `afterSeq=20` (continues from C5.4B's completed cursor); fresh grant consumed (new `dsh_relay_approval` row bound to this trigger); no re-arm, no retry.
 3. REAL 8123 LOCAL INFERENCE: **PASS** — session events (seq 22–29) prove the turn ran through the local route (provider selection + `request/header`; title turn also local); upstream vLLM `prompt_tokens_total` advanced; single-slot proxy queue (max concurrent inference = 1); no cloud fallback.
-4. REAL CORRELATED ASSISTANT COMPLETION: **PASS** — page shows the matching `user/message` at seq 25 (`source.rpcId` = requestId), DSH-injected `time-context` snapshot at seq 26 now correctly IGNORED by the fixed correlator (this is exactly the event class that caused C5.4B's `review-required`), `assistant/message` (visible text `C55B-OK`) at seq 27, `step/end` seq 28, `turn/end reason.kind=completed` seq 29. Receipt transitioned `admitted` → `completed` (+6.2s).
-5. REAL NATIVE OUTBOX REPLY: **PASS** — Outbox row `dsh-3080-reply-8137bdd7a…` kind:reply status:**sent** (guarded `singleSendAttemptAt` recorded; channel source weixin; operator confirmed receipt in WeChat — reply text `C55B-OK`). Exactly one reply row created; repeat-effect cannot resend.
-6. NORMAL 3083 RESTORE: **PASS** — bundle symlink restored to pre-C5.5B target, controlled relaunch with ORIGINAL env (zero `DSH_SUPERAGENT_*`), pid 68379 LISTENing 127.0.0.1:3083; 3080 pid 1482 and 8123 pid 90215 untouched throughout (never restarted per prohibition).
+4. REAL CORRELATED ASSISTANT COMPLETION: **PASS** — page shows the matching `user/message` at seq 25 (`source.rpcId` = requestId), DSH-injected `time-context` snapshot at seq 26 now correctly IGNORED by the fixed correlator (this is exactly the event class that caused C5.4B's `review-required`), `assistant/message` (visible text `[redacted acceptance marker]`) at seq 27, `step/end` seq 28, `turn/end reason.kind=completed` seq 29. Receipt transitioned `admitted` → `completed` (+6.2s).
+5. REAL NATIVE OUTBOX REPLY: **PASS** — Outbox row `dsh-3080-reply-[redacted]` kind:reply status:**sent** (guarded `singleSendAttemptAt` recorded; channel source weixin; operator confirmed receipt in WeChat — reply text `[redacted acceptance marker]`). Exactly one reply row created; repeat-effect cannot resend.
+6. NORMAL 3083 RESTORE: **PASS** — bundle symlink restored to pre-C5.5B target, controlled relaunch with ORIGINAL env (zero `DSH_SUPERAGENT_*`), 3083 listening on its original loopback service address; 3080 and 8123 PIDs/listeners unchanged throughout (never restarted per prohibition).
 
 ## Staging note (environment lesson, not a defect)
 
@@ -22,7 +22,7 @@ CI on exact `3204004`: run 42595855746 all three jobs success. Local: `pnpm chec
 
 ## Gate B/C — baseline, grant, preflight: PASS
 
-Owner-only 0700 baseline before staging: pids 1482/56849/90215; zero `DSH_SUPERAGENT` env on 3083; bundle `../../../..`; profile sha `6a1fd290…`; SQLite `.backup` snapshot; counts outbox 4, trigger 10, effect 0, receipt `review-required` (C5.4B), approvals 2 (old C5.3 + C5.4B consumed), terminals 0, bindings 0. Zero drift. Catalog regenerated read-only from official `workspace/follow` (29 workspaces incl. disposable; alias `dsh-eb0061f2a70f7406` re-proven). NEW V1 grant (quote-free two-line text, 125 bytes, marker `C55B-OK`, 6-hour expiry, peer+session bound, 0600+fsync) — C5.4B's consumed grant NOT reused, no old-reply recovery attempted. Fresh route attestation (provider/model/baseURL/operatorObserved) refreshed continuously by the private monitor during the live window. Read-only preflight: disposable Session idle (cursor 20, queue/pendingInput empty), effect queue empty, global default unchanged. Real guarded `Dsh3080Bridge.inspect()` (read-only, AFTER fresh attestation): `allowed:true reasons:[] provider:llm-local-proxy permission:workspace-write originalSessionVerified:true`.
+Owner-only 0700 baseline before staging: original 3080/3083/8123 PIDs verified privately; zero `DSH_SUPERAGENT` env on 3083; bundle `../../../..`; profile sha `[redacted profile checksum]`; SQLite `.backup` snapshot; counts outbox 4, trigger 10, effect 0, receipt `review-required` (C5.4B), approvals 2 (old C5.3 + C5.4B consumed), terminals 0, bindings 0. Zero drift. Catalog regenerated read-only from official `workspace/follow` (29 workspaces incl. disposable; alias `[redacted project alias]` re-proven). NEW V1 grant (quote-free two-line text, 125 bytes, marker `[redacted acceptance marker]`, 6-hour expiry, peer+session bound, 0600+fsync) — C5.4B's consumed grant NOT reused, no old-reply recovery attempted. Fresh route attestation (provider/model/baseURL/operatorObserved) refreshed continuously by the private monitor during the live window. Read-only preflight: disposable Session idle (cursor 20, queue/pendingInput empty), effect queue empty, global default unchanged. Real guarded `Dsh3080Bridge.inspect()` (read-only, AFTER fresh attestation): `allowed:true reasons:[] provider:llm-local-proxy permission:workspace-write originalSessionVerified:true`.
 
 ## Gate D — live window: see legs above.
 
@@ -30,7 +30,7 @@ Monitor caught the trigger at 10:02:23Z (hash exact match), receipt `admitted` 1
 
 ## Gate E — invariants: PASS
 
-Global default unchanged (`rev 17 cmp170hx/Qwen3.8-Flash-Next/xhigh`); disposable Session cursor 29, idle, queue/pendingInput empty, no pending input; no new Workspace/Session (probe counts 27 ws / 847 sessions, `lastUsedLocalQwen 556`, `nextSelectedLocalQwen 557`, `unknown 290`, `cloud 76` — identical to baseline, zero unexplained drift); triggers 11 (the one real message), outbox 5 (one new `sent` reply), effects 0, terminals 0; relay approvals = old C5.3-consumed + C5.4B-consumed + this run's consumed; receipts = C5.4B `review-required` preserved untouched + this run `completed`; 3083 restored normal with relay OFF; zero residual changes.
+Global default unchanged (`rev 17 cmp170hx/Qwen3.8-Flash-Next/xhigh`); disposable Session cursor 29, idle, queue/pendingInput empty, no pending input; no new Workspace/Session (probe counts 27 ws / 847 sessions, `lastUsedLocalQwen 556`, `nextSelectedLocalQwen 557`, `unknown 290`, `cloud 76` — identical to baseline, zero unexplained drift); triggers 11 (the one real message), outbox 5 (one new `sent` reply), effects 0, terminals 0; relay approvals = old C5.3-consumed + C5.4B-consumed + this run's consumed; receipts = C5.4B `review-required` preserved untouched + this run `completed`; 3083 restored normal with relay OFF; zero residual deployment/configuration changes (expected durable one-shot records remain).
 
 ## Not run / not claimed
 
@@ -38,7 +38,7 @@ No second message/prompt/retry; no QR re-pairing; no cloud model call; C5.4B's `
 
 ## Rollback
 
-Fully restored, zero residual: bundle symlink + env back to pre-C5.5B state via the controlled restart; grant permanently consumed and replay-blocked; DB live (only pre-staging `.backup` taken; no rollback performed); nothing re-armed; private evidence (trigger JSON, hashes, receipts, monitor output, session page dump) stays owner-only 0700, never uploaded; this report is sanitized (truncated hashes, no credentials, no raw chat beyond the acceptance marker).
+Original deployment bundle/environment restored, with expected durable Trigger, completed disposable Session turn, consumed approval and sent reply retained: bundle symlink + env back to pre-C5.5B state via the controlled restart; grant permanently consumed and replay-blocked; DB live (only pre-staging `.backup` taken; no rollback performed); nothing re-armed; private evidence (trigger JSON, hashes, receipts, monitor output, session page dump) stays owner-only 0700, never uploaded; this current revision redacts the actual project alias, acceptance marker, private hash/checksum and Trigger/request/Outbox ID prefixes. Earlier public Git commit history may still retain the old report revision.
 
 ## Next step
 
