@@ -194,3 +194,51 @@ test('expired, unapproved or altered operator file never authorizes source mutat
   await assert.rejects(applyOneNonGitFile(request,{journalDirectory:journal,approvalFile:notApproved}),/Invalid or expired/)
   assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'original')
 }))
+
+test('orphaned owner-only apply lock redacts private journal path and never steals or mutates source',async()=>fixture(async({source,request,journal,grant})=>{
+  writeFileSync(join(source,'a.txt'),'before')
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const preview=await previewNonGitProjectChanges(request)
+  const lock=join(journal,'.single-file-apply.lock')
+  writeFileSync(lock,'orphaned synthetic lock',{mode:0o600})
+  await assert.rejects(
+    applyOneNonGitFile(request,{journalDirectory:journal,approvalFile:grant('apply',preview.digest)}),
+    error=>{
+      assert.equal(error.message,'Single-file apply lock exists; human reconciliation required')
+      assert.equal(error.message.includes(journal),false)
+      assert.equal(error.message.includes(source),false)
+      return true
+    }
+  )
+  assert.equal(readFileSync(lock,'utf8'),'orphaned synthetic lock','orphan must not be stolen')
+  assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'before')
+  assert.equal(existsSync(join(journal,'tx-apply-transaction-00001')),false,'no attempt journal may be created')
+}))
+test('orphaned owner-only rollback lock redacts path and leaves applied synthetic bytes unchanged',async()=>fixture(async({source,request,journal,grant})=>{
+  writeFileSync(join(source,'a.txt'),'before')
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const preview=await previewNonGitProjectChanges(request)
+  const applied=await applyOneNonGitFile(request,{
+    journalDirectory:journal,approvalFile:grant('apply',preview.digest)
+  })
+  assert.equal(applied.status,'applied')
+  const lock=join(journal,'.single-file-apply.lock')
+  writeFileSync(lock,'orphaned synthetic rollback lock',{mode:0o600})
+  await assert.rejects(
+    rollbackOneNonGitFile(request,{
+      journalDirectory:journal,
+      approvalFile:grant('rollback',preview.digest,{rollbackOfTransactionId:applied.transactionId})
+    }),
+    error=>{
+      assert.equal(error.message,'Single-file apply lock exists; human reconciliation required')
+      assert.equal(error.message.includes(journal),false)
+      assert.equal(error.message.includes(source),false)
+      return true
+    }
+  )
+  assert.equal(readFileSync(lock,'utf8'),'orphaned synthetic rollback lock')
+  assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'after')
+  assert.equal(readFileSync(join(journal,'tx-'+applied.transactionId,'journal.json'),'utf8').includes('"status":"applied"'),true)
+}))

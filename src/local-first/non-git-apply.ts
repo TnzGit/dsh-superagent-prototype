@@ -104,7 +104,15 @@ async function atomicJournal(dir:string,row:NonGitFileJournal):Promise<void>{
 /** An existing lock is NEVER broken automatically after a crash: human audit required. */
 async function underLock<T>(root:string,work:()=>Promise<T>):Promise<T>{
   const lock=join(root,'.single-file-apply.lock')
-  const f=await open(lock,'wx',0o600)
+  // A prior crash or concurrent operator attempt must not reveal the private
+  // journal root through the raw Node EEXIST error. Never steal or retry locks.
+  let f:Awaited<ReturnType<typeof open>>
+  try{f=await open(lock,'wx',0o600)}
+  catch(error){
+    if((error as NodeJS.ErrnoException).code==='EEXIST')
+      throw Error('Single-file apply lock exists; human reconciliation required')
+    throw error
+  }
   try{await f.sync();await syncDir(root);return await work()}
   finally{await f.close();await unlink(lock);await syncDir(root)}
 }
