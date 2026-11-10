@@ -1,11 +1,13 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {mkdtempSync,mkdirSync,rmSync,writeFileSync,chmodSync,symlinkSync,readdirSync,statSync} from 'node:fs'
+import {mkdtempSync,mkdirSync,rmSync,writeFileSync,chmodSync,symlinkSync,readdirSync,statSync,realpathSync} from 'node:fs'
 import {spawn} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-import {reserveSyntheticApproval,inspectSyntheticApproval,reserveFixtureBoundSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
+import {reserveSyntheticApproval,inspectSyntheticApproval,reserveFixtureBoundSyntheticApproval,inspectRegistryBoundSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
+import {LocalProjectRegistry} from '../src/local-first/project-registry.ts'
+import {projectFingerprint} from '../src/local-first/project-workspaces.ts'
 const grant=(journalRoot)=>({version:1,approvalId:'approval-synthetic-00001',transactionId:'transaction-synthetic-00001',projectFingerprint:'a'.repeat(64),previewDigest:'b'.repeat(64),operation:'apply',journalRoot})
 async function fixture(run){
  const base=mkdtempSync(join(tmpdir(),'dsh-ledger-synthetic-'))
@@ -124,4 +126,75 @@ test('independent OS processes compete for one synthetic ID; exactly one reserva
   assert.equal(results.filter(x=>x.stdout==='WIN').length,1,JSON.stringify(results))
   assert.equal(results.filter(x=>x.stdout==='DENIED').length,3,JSON.stringify(results))
   assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,1)
+}))
+
+test('registry preflight binds a registered synthetic root and never creates an approval',()=>fixture(async({root,journal})=>{
+  const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const project=join(external,'registered')
+    mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([external],[{id:'synthetic-alpha',root:project,kind:'local'}])
+    const fingerprint=projectFingerprint(registry.get('synthetic-alpha'))
+    const base=join(root,'..')
+    writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fingerprint
+    }),{mode:0o600})
+    const result=await inspectRegistryBoundSyntheticApproval(registry,'synthetic-alpha',base,{
+      ...grant(journal),projectFingerprint:fingerprint
+    })
+    assert.equal(result.projectFingerprint,fingerprint)
+    assert.equal(result.ledgerRoot,realpathSync(root))
+    assert.equal(result.journalRoot,realpathSync(journal))
+    assert.equal(readdirSync(root).length,0,'read-only preflight must not reserve an approval')
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-alpha',base,{
+      ...grant(journal),projectFingerprint:'a'.repeat(64)
+    }),/differs from registered project/)
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'unknown-project',base,{
+      ...grant(journal),projectFingerprint:fingerprint
+    }),/Unknown project ID/)
+  }finally{rmSync(external,{recursive:true,force:true})}
+}))
+test('registry preflight rejects alternate journal, forged marker fingerprint and unsafe marker mode',()=>fixture(async({root,journal})=>{
+  const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const project=join(external,'registered');mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([external],[{id:'synthetic-beta',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-beta'))
+    const base=join(root,'..'),marker=join(base,'.synthetic-ledger-binding.json')
+    writeFileSync(marker,JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:fp}),{mode:0o600})
+    const alt=join(base,'alternate-journal');mkdirSync(alt,{mode:0o700})
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-beta',base,{
+      ...grant(alt),projectFingerprint:fp
+    }),/journal differs from fixed binding/)
+    chmodSync(marker,0o644)
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-beta',base,{
+      ...grant(journal),projectFingerprint:fp
+    }),/Unsafe synthetic registry binding marker/)
+    chmodSync(marker,0o600)
+    writeFileSync(marker,JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:'a'.repeat(64)}))
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-beta',base,{
+      ...grant(journal),projectFingerprint:fp
+    }),/binding fingerprint mismatch/)
+    assert.equal(readdirSync(root).length,0)
+  }finally{rmSync(external,{recursive:true,force:true})}
+}))
+test('registry preflight rejects a project root swapped for symlink after registration',()=>fixture(async({root,journal})=>{
+  const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const project=join(external,'registered'),alias=join(external,'real-elsewhere')
+    mkdirSync(project,{mode:0o700})
+    mkdirSync(alias,{mode:0o700})
+    const registry=new LocalProjectRegistry([external],[{id:'synthetic-gamma',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-gamma'))
+    const base=join(root,'..')
+    writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    rmSync(project,{recursive:true})
+    symlinkSync(alias,project,'dir')
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-gamma',base,{
+      ...grant(journal),projectFingerprint:fp
+    }),/Registered synthetic project root identity changed/)
+    assert.equal(readdirSync(root).length,0)
+  }finally{rmSync(external,{recursive:true,force:true})}
 }))

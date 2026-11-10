@@ -6,6 +6,8 @@ import {createHash} from 'node:crypto'
 import {lstat,open,realpath,readFile} from 'node:fs/promises'
 import {join,relative,isAbsolute,dirname,basename} from 'node:path'
 import {tmpdir} from 'node:os'
+import {projectFingerprint} from './project-workspaces.ts'
+import type {LocalProjectRegistry} from './project-registry.ts'
 
 const ID=/^[a-z0-9][a-z0-9-]{7,79}$/
 const SHA=/^[a-f0-9]{64}$/
@@ -139,4 +141,79 @@ export async function reserveFixtureBoundSyntheticApproval(
   if(supplied!==fixed)
     throw Error('Synthetic fixture journal root differs from owner binding')
   return reserveSyntheticApproval(ledger,reservation)
+}
+
+
+/** C6B2B4E source-only READ-ONLY synthetic registry/fixture binding gate.
+ * Uses an operator-created LocalProjectRegistry identity and the already defined
+ * projectFingerprint; no source or journal is created, consumed or modified.
+ * Caller-selected registry/configuration and same-user marker remain untrusted;
+ * ordinary Node lstat+realpath is NOT a race-free OS fd-based authorization.
+ * This is NOT connected to any real project Apply or production caller.
+ */
+export async function inspectRegistryBoundSyntheticApproval(
+  registry:Pick<LocalProjectRegistry,'get'>,
+  projectId:string,fixtureRoot:string,reservation:SyntheticApprovalReservation
+):Promise<{
+  projectId:string
+  projectFingerprint:string
+  ledgerRoot:string
+  journalRoot:string
+}>{
+  if(!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(projectId))
+    throw Error('Invalid synthetic registry project ID')
+  const project=registry.get(projectId)
+  if(project.id!==projectId||project.kind!=='local'||project.readOnly)
+    throw Error('Synthetic registry project is not eligible')
+  const projectStat=await lstat(project.root)
+  const canonicalProject=await realpath(project.root)
+  if(!projectStat.isDirectory()||projectStat.isSymbolicLink()||
+    canonicalProject!==project.root)
+    throw Error('Registered synthetic project root identity changed')
+  const fingerprint=projectFingerprint(project)
+  if(reservation.projectFingerprint!==fingerprint)
+    throw Error('Synthetic reservation differs from registered project identity')
+  const fixtureStat=await lstat(fixtureRoot)
+  const fixture=await realpath(fixtureRoot)
+  const canonicalTemp=await realpath(tmpdir())
+  if(!fixtureStat.isDirectory()||fixtureStat.isSymbolicLink()||
+    (fixtureStat.mode&0o077)!==0||dirname(fixture)!==canonicalTemp||
+    !/^dsh-ledger-synthetic-[a-zA-Z0-9_-]{6,70}$/.test(basename(fixture)))
+    throw Error('Unsafe registry-bound synthetic fixture')
+  const contains=(a:string,b:string)=>{
+    const rel=relative(a,b)
+    return rel===''||(!rel.startsWith('..'+(process.platform==='win32'?'\\':'/'))&&
+      rel!=='..'&&!isAbsolute(rel))
+  }
+  if(contains(canonicalProject,fixture)||contains(fixture,canonicalProject))
+    throw Error('Synthetic fixture overlaps registered project root')
+  const marker=join(fixture,'.synthetic-ledger-binding.json')
+  const markerStat=await lstat(marker)
+  if(!markerStat.isFile()||markerStat.isSymbolicLink()||
+    markerStat.nlink!==1||(markerStat.mode&0o777)!==0o600)
+    throw Error('Unsafe synthetic registry binding marker')
+  let parsed:unknown
+  try{parsed=JSON.parse(await readFile(marker,'utf8'))}
+  catch{throw Error('Corrupt synthetic registry binding marker')}
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||
+    Object.keys(parsed).sort().join(',')!=='projectFingerprint,purpose,version')
+    throw Error('Untrusted synthetic registry binding marker')
+  const bound=parsed as Record<string,unknown>
+  if(bound.version!==1||bound.purpose!=='offline-synthetic-only'||
+    bound.projectFingerprint!==fingerprint)
+    throw Error('Synthetic registry binding fingerprint mismatch')
+  const ledger=join(fixture,'ledger'),journal=join(fixture,'journal')
+  for(const dir of [ledger,journal]){
+    const info=await lstat(dir)
+    if(!info.isDirectory()||info.isSymbolicLink()||(info.mode&0o077)!==0||
+      await realpath(dir)!==dir)
+      throw Error('Unsafe synthetic registry private directory')
+  }
+  const requested=await realpath(reservation.journalRoot)
+  const requestedStat=await lstat(reservation.journalRoot)
+  if(requestedStat.isSymbolicLink()||requested!==journal)
+    throw Error('Synthetic registry journal differs from fixed binding')
+  // Return facts for read-only evidence. Never consume a grant in this gate.
+  return Object.freeze({projectId,projectFingerprint:fingerprint,
+    ledgerRoot:ledger,journalRoot:journal})
 }
