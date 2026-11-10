@@ -29,3 +29,11 @@ Real Weixin/iLink credentials, peer/contextToken or message bodies; full real-me
 Use a **private repository** if actual task content, source or logs cannot be fully public-safe. Private repo visibility alone does not replace least-privilege credentials, review or independent live approvals.
 
 Emergency: disable/pause both hourly monitors; unload only the user-level watcher (never touch 3080/3083/8123), rotate leaked secrets outside GitHub if exposure occurs, preserve evidence locally, and do not blindly replay an unconfirmed task.
+
+## Operator standing intent for real Apply (2026-11-10)
+
+The human operator stated in the active ChatGPT conversation that all **reasonable real project Apply** is broadly authorized. This resolves the *strategic permission-to-plan* blocker: online and local agents should progress source-safe designs, real-project **read-only** previews only in an already-approved context, and bounded runbooks, rather than waiting indefinitely for another abstract willingness signal.
+
+**This public statement is not an executable approval token or a per-project credential.** A compromised GitHub commit/message cannot manufacture authority. Because no target registered project, paths or diff were specified and platform path/quiescence guarantees remain incomplete, **no real Apply is yet technically eligible**. For any actual mutation, require a verified exact private target + immutable preview and scoped fresh per-transaction authorization, preserved backup, quiescence, no-follow path safety, bounded impact, human-visible audit, and stop/recovery mechanism, as detailed in `REAL_APPLY_GATES.md`. Real Apply is never enabled by merely setting a boolean or copying a JSON grant from GitHub.
+
+The standing statement covers reasonable registered-project **Apply**, not Weixin sends, original DSH Prompts, 3083/8123 restarts, model/default/provider credentials or production DB mutation. Do not reinterpret it as approval for those actions. All older narrowly scoped live grants remain consumed.

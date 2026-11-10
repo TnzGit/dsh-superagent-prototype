@@ -22,3 +22,7 @@ Remote code commit with all relevant CI jobs green, exact SHA, sanitized tests a
 - ad7a741: orphaned single-file apply/rollback lock EEXIST is converted to a path-free human-reconciliation error; two synthetic cases prove no lock steal or source rewrite.
 - c955892: conservative nlink != 1 and special POSIX mode bit refusals, with second checks before mutating source and four synthetic cases. These do not address kernel path races, owner-only approval authentication, ACLs/xattrs or external writer quiescence.
 - Exact code CI #250 must pass all three jobs before independent local OL-004 acceptance. Unsupported special modes must be marked SKIPPED, never falsely passed.
+
+## Operator intent update
+
+The operator now authorizes reasonable real project Apply **in principle**. This does not waive technical safety blockers or identify an exact project/diff. Continue to complete proof of quiescence, OS-safe path operations and private per-transaction grant before attempting even one real source write. See `agent-handoff/REAL_APPLY_GATES.md`.
