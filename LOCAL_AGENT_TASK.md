@@ -1,27 +1,17 @@
-# LOCAL_AGENT_TASK — CURRENT: C6B2B4B OFFLINE DESIGN REVIEW + DSH SCHEDULER CHECK
+# LOCAL_AGENT_TASK — CURRENT: C6B2B4C OFFLINE SYNTHETIC ADVERSARIAL ACCEPTANCE
 
-New handoff task: OL-20261110-003, type: task, scope: DOCS_ONLY (not the old OL-002 standby ACK).
-Repository: TnzGit/dsh-superagent-prototype, branch: feat/local-first-wechat-foundation.
-Exact verified code baseline: 55d482a385636297ec942a01db80d77b0569f96e, CI #244 3/3 success. New task/docs commits change HEAD only; verify both the baseline CI and latest source task content.
-C6B2B4A is accepted ALL_OFFLINE_PASS; do not rerun it.
+New task OL-20261110-004 (type:task, scope:OFFLINE_SYNTHETIC_ONLY). Previously completed OL-003 must not be replayed.
+Repository TnzGit/dsh-superagent-prototype, branch feat/local-first-wechat-foundation.
+EXACT code SHA c955892055b916f2d37edf4d8f8f2d06e21fafb5.
+Required code CI #250 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42844707509.
+MANDATORY preflight: confirm local-first-core, macos-portability and dsh-typecheck-and-build each SUCCESS for this exact code SHA. If macOS runner still queued or cancelled, report BLOCKED_INFRA_MACOS; never assert 3/3 success or run acceptance prematurely.
 
-## Gate 0: inspect existing DSH hourly task READ-ONLY
+Gate A: Use a new clean detached worktree at exact SHA. Read agent-handoff/README.md, PROJECT_CONTEXT.md, WORK_QUEUE.md, CURRENT_STATE.md, MESSAGE_PROTOCOL.md, SECURITY.md, this task, LOCAL_AGENT_PROTOCOL.md and docs/C6B2B4C-synthetic-adversarial-plan.md. Check full code SHA and CI; newer docs-only handoff HEAD does not change tested source. Run pnpm install --frozen-lockfile, pnpm check, all present Node and proxy tests, report exact counts and exits. If real test fails: BLOCKED_CODE, do not fix product source locally.
 
-The operator reports migration of hourly local polling from launchd to a DSH scheduled task. This is NOT proof of actual autonomous Agent dispatch. Read agent-handoff/LOCAL_WATCHER_SPEC.md. Inspect only the existing schedule/last run/inbox claim state and whether a true timer-triggered Agent execution occurred. No new task creation, changes to DSH services, provider credentials, global defaults, model, production Sessions or restarts. Read-only check old launchd registration; if both may dispatch same inbox, report DUAL_SCHEDULER_RISK and do not change them without separate approval. If no real headless local execution proof, mark SCHEDULER_RUNNING_DISPATCH_UNVERIFIED or SCHEDULER_RUNNING_DISPATCH_BLOCKED.
+Gate B: Use only disposable owner-only 0700 synthetic project/worker/journal roots and separate 0600 approvals, no real registered project. Exercise new orphan-lock tests for synthetic apply and rollback; both must return a stable path-free human-reconciliation error, preserve orphan lock, preserve source bytes/full POSIX mode, create no new write and never retry. Exercise hardlink alias refusals before apply and before rollback with identical inode aliases: leave both paths unchanged and preserve prior applied journal. Exercise special POSIX modes where filesystem supports them; if unsupported explicitly mark SKIPPED_UNSUPPORTED or NOT_COVERED, not PASS. Re-run normal C6B1 single-file synthetic add/modify/delete/mode-only, C6B2 staged evidence, audit, recovery and synthetic coordinator tests, including one-shot/no-replay behavior. Verify no Runtime, Weixin, Outbox, original DSH or Worker production caller.
 
-## Gate 1: C6B2B4B static design review
+Gate C: Explicitly distinguish partial conservative hardening from actual OS path safety. Remaining risks include symlink/ancestor TOCTOU, non-cooperating external writer race, ACL/xattrs, APFS normalization, authenticated approvals, power-loss durability and non-atomic batch writes. Do not claim production readiness or authorization. Mac DSH timer-to-existing-session dispatch and old launchd removal were previously reported; no scheduler, service, model or credential modifications are in scope.
 
-1. Read latest branch agent-handoff/README.md, PROJECT_CONTEXT.md, WORK_QUEUE.md, CURRENT_STATE.md, SECURITY.md, MESSAGE_PROTOCOL.md, LOCAL_WATCHER_SPEC.md, LOCAL_AGENT_PROTOCOL.md, this task and docs/C6B2B4B-source-apply-safety.md.
-2. Before substantive work, create append-only local claimed receipt for OL-20261110-003. If an existing claimed-but-not-done receipt exists, DO NOT REPLAY; reconcile and report blocker.
-3. In a clean review worktree inspect original C6A/C6B1/C6B2A/B1/B2/B3/B4A source and tests, read-only, no production project inspection or write. Identify at least 15 concrete adversarial negatives, each with currently supported evidence, missing safety guarantee and macOS-compatible test/mitigation.
-4. Analyze OS path races, symlinks, hardlinks, APFS case/Unicode alias, ACL/xattrs, external writers, partial batch and fsync/journal crash boundaries, untrusted GitHub grants, one-use receipt, and cross-process fencing. Distinguish design review from a production-capable executor.
-5. If needed run EXISTING synthetic tests only in new private disposable fixture; never run any real source file Apply, 3080 Session prompt, native Weixin, 3083, 8123, model/provider changes, DB writes or service restarts.
-6. Determine next safe C6B2B4C scope: synthetic-only adversarial harness, and identify what WOULD require a future separate human approval. Do not implement a native writer.
+Gate D: Before substantive work append a local claim receipt OL-20261110-004-claimed.md under agent-handoff/receipts/local/. Do not replay already claimed work. On true completion publish ONE sanitized report agent-reports/REPORT-c6b2b4c-offline-file-adversarial-hardening.md, one new agent-handoff/messages/to-online/ result and a local OL-20261110-004-done.md receipt. Use normal non-force push and sender-owned paths only; never publish credentials, absolute paths, host names, original sessions/messages, raw dumps. Report source SHA, CI, exact test counts, negative evidence and clear REAL PROJECT APPLY / REAL HOST WRITE / REAL WEIXIN E2E: NOT RUN.
 
-## Gate 2: report and handoff
-
-Publish sanitized agent-reports/REPORT-c6b2b4b-offline-source-apply-safety-design.md and one unique agent-handoff/messages/to-online/<id>.md plus claimed/done receipts under receipts/local/ for OL-20261110-003. Preserve messages as append-only, use normal non-force push and no product code changes. Report actual scheduler verification status (not claimed automatic on timer alone), no raw paths, credentials, real task IDs or private logs.
-
-Final line: ALL_OFFLINE_DESIGN_REVIEW_PASS or BLOCKED_DESIGN/BLOCKED_INFRA + report URL + commit SHA + SCHEDULER_DISPATCH_VERIFIED/SCHEDULER_RUNNING_DISPATCH_UNVERIFIED/SCHEDULER_RUNNING_DISPATCH_BLOCKED/DUAL_SCHEDULER_RISK. STOP.
-
-**No new live-host authorization.** Real project Apply/rollback, model/service changes, historical grants and native Weixin remain prohibited.
+End with ALL_OFFLINE_PASS or precise BLOCKED_CODE/BLOCKED_DESIGN/BLOCKED_INFRA_MACOS and report URL/commit SHA; STOP. Remote hourly project driver will pick up result and progress the next SAFE offline stage.

@@ -16,3 +16,9 @@ Ancestor-symlink TOCTOU, non-cooperating external writers, inode aliasing, full 
 
 ## Release/acceptance criteria
 Remote code commit with all relevant CI jobs green, exact SHA, sanitized tests and negative evidence; only then update `LOCAL_AGENT_TASK.md` and issue one unique `type: task` / `OFFLINE_SYNTHETIC_ONLY` local message. Claimed-but-not-done tasks are not replayed.
+
+## Remote code increment completed — default OFF only
+
+- ad7a741: orphaned single-file apply/rollback lock EEXIST is converted to a path-free human-reconciliation error; two synthetic cases prove no lock steal or source rewrite.
+- c955892: conservative nlink != 1 and special POSIX mode bit refusals, with second checks before mutating source and four synthetic cases. These do not address kernel path races, owner-only approval authentication, ACLs/xattrs or external writer quiescence.
+- Exact code CI #250 must pass all three jobs before independent local OL-004 acceptance. Unsupported special modes must be marked SKIPPED, never falsely passed.

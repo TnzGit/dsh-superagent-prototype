@@ -93,9 +93,11 @@ C6B2B3 was independently accepted on code SHA `5a4f560`; baseline CI #234 and re
 
 Independently accepted at local report commit 210cc3e. Old OL-20261110-001 done and LO-20261110-001 acknowledged. OL-20261110-002 is an ACK/standby only, NOT a task.
 
-## Current authorization: C6B2B4B OFFLINE DESIGN REVIEW + READ-ONLY DSH SCHEDULER CHECK
+## C6B2B4B offline design review — CLOSED
+The independently reviewed local report fcc8a0b passed CI #247 and was accepted by online LO-003 ACK. It was DESIGN-only, not Apply authorization.
 
-Only static/offline synthetic review of docs/C6B2B4B-source-apply-safety.md, existing project code, and existing DSH scheduler status, plus sanitized GitHub report and receipts. Local scheduled task's real unattended dispatch is unverified; inspect prior launchd status read-only. Do not modify services, provider credentials, historical Workspaces/Sessions, live project, production DB/Weixin, original 3080 Prompt, 3083/8123 or model defaults. Do not reuse C5 one-shot grants. Real host mutation requires separate fresh operator approval.
+## Current authorization: C6B2B4C SYNTHETIC-ONLY FILE SYSTEM ADVERSARIAL TESTS
+The active LOCAL_AGENT_TASK.md and OL-20261110-004 permit only new private disposable synthetic file fixtures, independent test acceptance, read-only code review, and one sanitized local report/receipt push. The remote hardened default-OFF single-file lock error handling, known hardlink aliases and special POSIX bits. Do not infer race-free paths, ACL/xattr fidelity or production safety. No real registered source writes, original 3080 Prompt, native Weixin, 3083/8123 changes, production DB, model default/provider/credential changes or old grant reuse.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
