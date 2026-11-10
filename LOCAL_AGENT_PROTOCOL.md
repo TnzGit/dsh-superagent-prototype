@@ -76,9 +76,13 @@ Independent local synthetic acceptance and baseline CI #223 attempt 2, plus repo
 
 The C6B2B2 offline report passed with 23 adversarial refusals; baseline CI #231 and final report CI #232 were 3/3 green. No real host writes or new live DSH/Weixin operations were authorized or performed. The report identified F1 (staged Worker after-image drift before issuing an audit step) and F2 (raw orphan-lock path in error).
 
-## Current authorization: C6B2B3 OFFLINE STAGED-IMAGE/LOCK GUARD TESTS ONLY
+## C6B2B3 sealed Worker guard and lock-redaction acceptance — complete
 
-`LOCAL_AGENT_TASK.md` authorizes synthetic throwaway project tests and ONE sanitized report-only commit to validate the remote's F1/F2 fixes. F1 performs private staged image + Worker source-independent verification before `issued`; F2 redacts an orphan audit lock EEXIST. **No real registered project Apply, multi-file execution, 3080/3083/8123 change, real Weixin message, original Session Prompt, historical receipt/grant reuse, model default/profile write or live host mutation is authorized.** All earlier human live grants including C5.5B remain permanently consumed. A separate explicit operator authorization is mandatory before any future real project write.
+C6B2B3 was independently accepted on code SHA `5a4f560`; baseline CI #234 and report CI #235 three jobs all green. The F1 and F2 corrections preserve source-read-only checkpoint safety and error privacy.
+
+## Current authorization: C6B2B4A OFFLINE SYNTHETIC-ONLY ACTOR TESTS
+
+`LOCAL_AGENT_TASK.md` now permits independent synthetic fixture tests for a newly added single-step experimental batch orchestrator and ONE sanitized report-only push. It requires its own synthetic-only marker and a third independent 0600 one-use per-step grant. The actor callback MUST be supplied by the disposable synthetic test fixture; it is NOT a production sandbox or authorization for real source mutation. No Runtime/Worker/Weixin/Outbox/DSH callers, production Apply/Rollback, real project write, 3080/3083/8123 change, original Session Prompt, model/default change or reuse of any prior live grant are permitted. C5.5B remains closed. Real host file mutation demands a fresh human authorization and a distinct design and task.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
