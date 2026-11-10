@@ -218,8 +218,9 @@ async function existingAudits(root:string,grant:BatchAuditGrant):Promise<void>{
       throw Error('Unreconciled prior batch execution audit')
     if(record.approvalId===grant.approvalId)
       throw Error('Batch audit approval was already consumed')
-    if(record.projectId===grant.projectId&&
-      (record.status==='awaiting-human'||record.status==='review-required'))
+    // Even a 'ready' receipt is unfinished work. Never permit two separately
+    // granted executions for the same project to diverge concurrently.
+    if(record.projectId===grant.projectId&&record.status!=='complete')
       throw Error('Prior batch execution needs human reconciliation')
   }
 }

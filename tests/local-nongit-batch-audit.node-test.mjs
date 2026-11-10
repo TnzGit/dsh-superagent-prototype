@@ -153,11 +153,10 @@ test('same approval/execution cannot be rearmed, even after an audit has already
   await assert.rejects(beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,
     auditRoot,approvalFile:file}),/already consumed/)
   const other=approve()
-  // Distinct approval for same project is allowed while the prior audit is only ready;
-  // it never grants a file write. The exact old transaction remains reserved.
-  const r=await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,
-    auditRoot,approvalFile:other.file})
-  assert.equal(r.status,'ready')
+  // A separate approval must NOT create a concurrent active ledger, even when
+  // the first ledger is still 'ready' (before the first checkpoint).
+  await assert.rejects(beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,
+    auditRoot,approvalFile:other.file}),/needs human reconciliation/)
 }))
 test('corrupt audit journal and orphaned lock fail closed without touching the source',async()=>fixture(async({input,seal,stagedRoot,auditRoot,approve,source})=>{
   const first=approve()
