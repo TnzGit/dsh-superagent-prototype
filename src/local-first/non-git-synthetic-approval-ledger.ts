@@ -32,6 +32,9 @@ export async function reserveSyntheticApproval(
   if(!stat.isDirectory()||stat.isSymbolicLink()||(stat.mode&0o077)!==0)
     throw Error('Unsafe synthetic ledger root')
   const root=await realpath(ledgerRoot)
+  const journalStat=await lstat(reservation.journalRoot)
+  if(!journalStat.isDirectory()||journalStat.isSymbolicLink()||(journalStat.mode&0o077)!==0)
+    throw Error('Unsafe synthetic journal root')
   const journal=await realpath(reservation.journalRoot)
   // Reject ancestor/descendant roots as well as equality; both directions matter.
   const overlaps=(a:string,b:string)=>{

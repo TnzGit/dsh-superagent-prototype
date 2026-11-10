@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {mkdtempSync,mkdirSync,rmSync,writeFileSync,chmodSync} from 'node:fs'
+import {mkdtempSync,mkdirSync,rmSync,writeFileSync,chmodSync,symlinkSync,readdirSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {reserveSyntheticApproval,inspectSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
@@ -47,4 +47,11 @@ test('ancestor and descendant ledger/journal roots fail closed before creating e
  await assert.rejects(reserveSyntheticApproval(childLedger,grant(journal)),/overlaps journal/)
  assert.equal((await import('node:fs')).readdirSync(root).filter(x=>x.endsWith('.json')).length,0)
  assert.equal((await import('node:fs')).readdirSync(childLedger).length,0)
+}))
+
+test('symlinked journal root fails closed without reserving an ID',()=>fixture(async({root,journal})=>{
+ const alias=join(root,'journal-alias')
+ symlinkSync(journal,alias,'dir')
+ await assert.rejects(reserveSyntheticApproval(root,grant(alias)),/Unsafe synthetic journal root/)
+ assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,0)
 }))
