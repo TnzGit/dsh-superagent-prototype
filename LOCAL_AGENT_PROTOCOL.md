@@ -68,9 +68,13 @@ C6B1 passed synthetic-only safety tests and GitHub CI; its default-OFF module re
 
 C6B2A was independently accepted on code SHA `fbf0a8f`, with complete offline synthetic evidence and green CI #220. The report-only commit #221 experienced macOS runner allocation cancellation while Linux and build passed; this is CI infrastructure status, not grounds to overwrite the report or repeat its complete test sequence.
 
-## Current authorization: C6B2B1 OFFLINE READ-ONLY RECOVERY CLASSIFIER ONLY
+## C6B2B1 read-only recovery inspection — completed
 
-The active `LOCAL_AGENT_TASK.md` now covers independent offline testing of the sealed batch recovery classifier, existing C6B2A stage fixes and one sanitized report push using only synthetic disposable projects. The classifier is read-only and CANNOT apply/rollback files, auto-retry, repair, change real projects, or issue a live DSH/Weixin action. C5.5B and all former live grants are permanently consumed. New real host writes require a fresh explicit operator approval and a separate new task.
+Independent local synthetic acceptance and baseline CI #223 attempt 2, plus report CI, passed 3/3. The report commit documented an incomplete sealed-batch missing-`seal.json` ENOENT diagnostic that the remote owner corrected with a new negative regression test.
+
+## Current authorization: C6B2B2 OFFLINE PER-FILE AUDIT ONLY
+
+The current `LOCAL_AGENT_TASK.md` permits **only synthetic temporary project tests**, code audit, local CI and ONE sanitized report push. The new C6B2B2 ledger stores private, durable `issued` (human checkpoint) and `confirmed` (read-only observed source state) events. It DOES NOT mutate any project source, call DSH/Weixin, authorize external file mutation, auto-resume, auto-rollback or repair. C5.5B and all previous live one-shot grants remain consumed. Any future real host file mutation requires new explicit human authorization and a separately published scope.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
