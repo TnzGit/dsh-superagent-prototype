@@ -63,7 +63,7 @@ async function fixture(run){
     await run({source,input,seal,stagedRoot,auditRoot,approve,simulateHumanFileChange,base})
   }finally{rmSync(base,{recursive:true,force:true})}
 }
-const opts=(root,id)=>({auditRoot:root,executionId:id})
+const opts=(root,id,stageRoot)=>({auditRoot:root,executionId:id,stageRoot})
 test('audit creates durable no-write intent, then each manual file is confirmed in sorted order',async()=>fixture(async({source,input,seal,stagedRoot,auditRoot,approve,simulateHumanFileChange})=>{
   const {file,fields}=approve()
   const baseline=readFileSync(join(source,'modify.txt'))
@@ -74,7 +74,7 @@ test('audit creates durable no-write intent, then each manual file is confirmed 
   assert.deepEqual(row.events,[])
   assert.deepEqual(readFileSync(join(source,'modify.txt')),baseline)
   for(let i=0;i<seal.changes.length;i++){
-    const p=opts(auditRoot,fields.executionId)
+    const p=opts(auditRoot,fields.executionId,stagedRoot)
     const pending=await issueNextNonGitBatchReviewStep(input,seal,p)
     assert.equal(pending.status,'awaiting-human')
     assert.equal(pending.pendingIndex,i)
@@ -92,12 +92,12 @@ test('audit creates durable no-write intent, then each manual file is confirmed 
   assert.equal(readFileSync(join(source,'modify.txt'),'utf8'),'after')
   assert.equal(existsSync(join(source,'delete.txt')),false)
   assert.deepEqual(readFileSync(join(source,'new.txt')),Buffer.from([1,255,0,7]))
-  await assert.rejects(issueNextNonGitBatchReviewStep(input,seal,opts(auditRoot,fields.executionId)),/cannot issue/)
+  await assert.rejects(issueNextNonGitBatchReviewStep(input,seal,opts(auditRoot,fields.executionId,stagedRoot)),/cannot issue/)
 }))
 test('crash after durable issue never reissues; later human evidence confirms without retrying a write',async()=>fixture(async({input,seal,stagedRoot,auditRoot,approve,simulateHumanFileChange})=>{
   const {file,fields}=approve()
   await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,auditRoot,approvalFile:file})
-  const p=opts(auditRoot,fields.executionId)
+  const p=opts(auditRoot,fields.executionId,stagedRoot)
   const issued=await issueNextNonGitBatchReviewStep(input,seal,p)
   assert.equal(issued.status,'awaiting-human')
   // Simulate killing the caller and reopening persisted state:
@@ -112,7 +112,7 @@ test('crash after durable issue never reissues; later human evidence confirms wi
 test('missing manual after-image freezes the attempt in review-required without automatic retry',async()=>fixture(async({source,input,seal,stagedRoot,auditRoot,approve})=>{
   const {file,fields}=approve()
   await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,auditRoot,approvalFile:file})
-  const p=opts(auditRoot,fields.executionId)
+  const p=opts(auditRoot,fields.executionId,stagedRoot)
   await issueNextNonGitBatchReviewStep(input,seal,p)
   await assert.rejects(confirmNonGitBatchReviewStep(input,seal,p),/human review required/)
   const row=await readNonGitBatchAudit(input,seal,p)
@@ -126,7 +126,7 @@ test('missing manual after-image freezes the attempt in review-required without 
 test('an external change to a future file before the expected step freezes the batch',async()=>fixture(async({source,input,seal,stagedRoot,auditRoot,approve,simulateHumanFileChange})=>{
   const {file,fields}=approve()
   await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,auditRoot,approvalFile:file})
-  const p=opts(auditRoot,fields.executionId)
+  const p=opts(auditRoot,fields.executionId,stagedRoot)
   await issueNextNonGitBatchReviewStep(input,seal,p)
   simulateHumanFileChange(0)
   // The future planned modify has been changed prematurely by a foreign writer.
@@ -165,7 +165,7 @@ test('corrupt audit journal and orphaned lock fail closed without touching the s
   const data=JSON.parse(readFileSync(journal,'utf8'))
   data.nextIndex=2
   writeFileSync(journal,JSON.stringify(data))
-  await assert.rejects(readNonGitBatchAudit(input,seal,opts(auditRoot,first.fields.executionId)),/integrity/)
+  await assert.rejects(readNonGitBatchAudit(input,seal,opts(auditRoot,first.fields.executionId,stagedRoot)),/integrity/)
   const later=approve()
   await assert.rejects(beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,
     auditRoot,approvalFile:later.file}),/Unreconciled/)
@@ -174,7 +174,7 @@ test('corrupt audit journal and orphaned lock fail closed without touching the s
 test('historical awaiting-human audit blocks new attempt for same project',async()=>fixture(async({input,seal,stagedRoot,auditRoot,approve})=>{
   const first=approve()
   await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,auditRoot,approvalFile:first.file})
-  await issueNextNonGitBatchReviewStep(input,seal,opts(auditRoot,first.fields.executionId))
+  await issueNextNonGitBatchReviewStep(input,seal,opts(auditRoot,first.fields.executionId,stagedRoot))
   const other=approve()
   await assert.rejects(beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,
     auditRoot,approvalFile:other.file}),/needs human reconciliation/)
@@ -185,5 +185,72 @@ test('audit root may not overlap project source, worker or staging; neither sour
     auditRoot:source,approvalFile:file}),/separate from source/)
   await assert.rejects(beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,
     auditRoot:stagedRoot,approvalFile:file}),/not overlap/)
+  assert.equal(readFileSync(join(source,'modify.txt'),'utf8'),'before')
+}))
+
+test('F1: worker content drift after begin rejects issue before recording intent',async()=>fixture(async({source,input,seal,stagedRoot,auditRoot,approve})=>{
+  const {file,fields}=approve()
+  await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,auditRoot,approvalFile:file})
+  writeFileSync(join(input.directory,'modify.txt'),'tampered after image')
+  const p=opts(auditRoot,fields.executionId,stagedRoot)
+  await assert.rejects(issueNextNonGitBatchReviewStep(input,seal,p),
+    /Staged worker after-image content\/mode drift before issue/)
+  const state=await readNonGitBatchAudit(input,seal,p)
+  assert.equal(state.status,'ready')
+  assert.equal(state.events.length,0)
+  assert.equal(readFileSync(join(source,'modify.txt'),'utf8'),'before')
+}))
+test('F1: later issue also detects worker drift after first confirmed synthetic step',async()=>fixture(async({source,input,seal,stagedRoot,auditRoot,approve,simulateHumanFileChange})=>{
+  const {file,fields}=approve()
+  await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,auditRoot,approvalFile:file})
+  const p=opts(auditRoot,fields.executionId,stagedRoot)
+  await issueNextNonGitBatchReviewStep(input,seal,p)
+  simulateHumanFileChange(0)
+  await confirmNonGitBatchReviewStep(input,seal,p)
+  chmodSync(join(input.directory,'modify.txt'),0o700)
+  await assert.rejects(issueNextNonGitBatchReviewStep(input,seal,p),
+    /Staged worker after-image content\/mode drift before issue/)
+  const row=await readNonGitBatchAudit(input,seal,p)
+  assert.equal(row.status,'ready')
+  assert.equal(row.nextIndex,1)
+  assert.deepEqual(row.events.map(x=>x.action),['issued','confirmed'])
+  assert.equal(readFileSync(join(source,'modify.txt'),'utf8'),'before')
+}))
+test('F1: corrupt private sealed after image blocks a pending checkpoint',async()=>fixture(async({source,input,seal,stagedRoot,auditRoot,approve})=>{
+  const {file,fields}=approve()
+  await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,auditRoot,approvalFile:file})
+  const changed=seal.changes.find(x=>x.afterImage)
+  assert.ok(changed)
+  const privateImage=join(stagedRoot,'batch-'+seal.batchId,changed.afterImage)
+  writeFileSync(privateImage,'corrupt staged content')
+  const p=opts(auditRoot,fields.executionId,stagedRoot)
+  await assert.rejects(issueNextNonGitBatchReviewStep(input,seal,p),
+    /Staged worker evidence image changed since sealing/)
+  assert.equal((await readNonGitBatchAudit(input,seal,p)).status,'ready')
+  assert.equal(readFileSync(join(source,'modify.txt'),'utf8'),'before')
+}))
+test('F1: reintroduced deleted worker file is detected before issue',async()=>fixture(async({source,input,seal,stagedRoot,auditRoot,approve})=>{
+  const {file,fields}=approve()
+  await beginNonGitBatchAudit(input,seal,{stageRoot:stagedRoot,auditRoot,approvalFile:file})
+  writeFileSync(join(input.directory,'delete.txt'),'reintroduced')
+  const p=opts(auditRoot,fields.executionId,stagedRoot)
+  await assert.rejects(issueNextNonGitBatchReviewStep(input,seal,p),
+    /Staged worker deleted path reappeared before issue/)
+  assert.equal((await readNonGitBatchAudit(input,seal,p)).events.length,0)
+  assert.equal(readFileSync(join(source,'delete.txt'),'utf8'),'delete me')
+}))
+test('F2: orphan lock error is sanitized and leaves the original source untouched',async()=>fixture(async({source,input,seal,stagedRoot,auditRoot,approve})=>{
+  const {file}=approve()
+  const lock=join(auditRoot,'.batch-audit.lock')
+  writeFileSync(lock,'orphan',{mode:0o600})
+  await assert.rejects(beginNonGitBatchAudit(input,seal,{
+    stageRoot:stagedRoot,auditRoot,approvalFile:file
+  }),error=>{
+    assert.equal(error.message,'Batch audit lock exists; human reconciliation required')
+    assert.equal(error.message.includes(auditRoot),false)
+    assert.equal(error.message.includes(source),false)
+    return true
+  })
+  assert.equal(existsSync(lock),true,'no automatic lock stealing')
   assert.equal(readFileSync(join(source,'modify.txt'),'utf8'),'before')
 }))

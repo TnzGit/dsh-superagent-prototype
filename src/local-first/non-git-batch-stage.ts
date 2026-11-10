@@ -366,3 +366,109 @@ export async function verifyNonGitStagedBatch(input:SnapshotRequest,opts:{
   }
   return sealed
 }
+
+/** Read-only, source-independent pre-issue attestation of an EXISTING sealed
+ * batch. Unlike verifyNonGitStagedBatch this can run after earlier human
+ * steps have changed the original source. It checks EVERY private evidence
+ * image and EVERY worker after-image, not merely the next file. No seal digest
+ * is a signature or authorization to mutate registered source files.
+ */
+export async function verifyNonGitStagedWorkerAfterImages(input:SnapshotRequest,opts:{
+  journalRoot:string;seal:NonGitBatchSeal
+}):Promise<void>{
+  const requested=opts.seal
+  if(!requested||requested.version!==1||requested.status!=='sealed'||
+    !ID.test(requested.batchId)||!HEX64.test(requested.digest)||
+    requested.projectId!==input.projectId||requested.rootFingerprint!==input.fingerprint||
+    !Array.isArray(requested.changes)||!requested.changes.length||
+    requested.changes.length>MAX_FILES)
+    throw Error('Invalid staged worker verification scope')
+  const project=input.registry.get(input.projectId)
+  if(project.kind!=='local'||projectFingerprint(project)!==input.fingerprint)
+    throw Error('Staged worker project identity drift')
+  const root=privateRoot(input,opts.journalRoot)
+  const folder=join(root,'batch-'+requested.batchId)
+  try{
+    const info=await lstat(folder)
+    if(!info.isDirectory()||info.isSymbolicLink()||(info.mode&0o077)!==0)
+      throw Error('Unsafe staged worker journal')
+    const intent=await readPrivateJson(join(folder,'intent.json')) as NonGitBatchStageGrant
+    const persisted=await readPrivateJson(join(folder,'seal.json')) as NonGitBatchSeal
+    if(!intent||!persisted||persisted.status!=='sealed'||
+      intent.batchId!==requested.batchId||
+      persisted.batchId!==requested.batchId||
+      persisted.approvalId!==intent.approvalId||
+      persisted.projectId!==intent.projectId||
+      persisted.previewDigest!==intent.previewDigest||
+      persisted.rootFingerprint!==intent.rootFingerprint||
+      JSON.stringify(persisted)!==JSON.stringify(requested))
+      throw Error('Staged worker seal no longer matches private evidence')
+    const {digest:proof,...fields}=persisted
+    if(proof!==digest(fields))
+      throw Error('Staged worker seal integrity mismatch')
+    const worker=realpathSync(input.directory)
+    let total=0
+    const allowed=new Set(['intent.json','seal.json'])
+    for(const [i,change] of persisted.changes.entries()){
+      if(!change||!validRel(change.path)||!['add','modify','delete'].includes(change.action)||
+        change.before===undefined&&change.after===undefined)
+        throw Error('Invalid staged worker change metadata')
+      const parts=change.path.split('/')
+      let parent=worker
+      for(const component of parts.slice(0,-1)){
+        parent=join(parent,component)
+        const ancestor=await lstat(parent)
+        if(!ancestor.isDirectory()||ancestor.isSymbolicLink())
+          throw Error('Unsafe staged worker path ancestor')
+      }
+      const workerFile=join(parent,parts[parts.length-1]!)
+      for(const [which,oid] of [['before',change.before],['after',change.after]] as const){
+        const key=which==='before'?'beforeImage':'afterImage'
+        const image=change[key]
+        if(!oid){
+          if(image!==undefined)throw Error('Unexpected staged worker evidence image')
+          continue
+        }
+        if(!/^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(oid)||
+          image!==imageName(i,which))
+          throw Error('Invalid staged worker image metadata')
+        allowed.add(image)
+        const path=join(folder,image)
+        const info=await lstat(path)
+        if(!info.isFile()||info.isSymbolicLink()||(info.mode&0o777)!==0o600)
+          throw Error('Unsafe staged worker evidence image')
+        const actual=await hashedFile(path,MAX_COPY_BYTES-total,oid.length as 40|64)
+        if(actual.oid!==oid||actual.mode!==0o600)
+          throw Error('Staged worker evidence image changed since sealing')
+        total+=actual.size
+      }
+      if(change.after){
+        if(typeof change.afterMode!=='number'||change.afterMode<0||
+          change.afterMode>0o777||!Number.isInteger(change.afterMode)||
+          change.afterExecutable!==((change.afterMode&0o111)!==0))
+          throw Error('Invalid staged worker after-mode metadata')
+        const actual=await hashedFile(workerFile,MAX_COPY_BYTES,change.after.length as 40|64)
+        if(actual.oid!==change.after||actual.mode!==change.afterMode)
+          throw Error('Staged worker after-image content/mode drift before issue')
+      }else{
+        try{
+          await lstat(workerFile)
+        }catch(error){
+          if((error as NodeJS.ErrnoException).code==='ENOENT')continue
+          throw error
+        }
+        throw Error('Staged worker deleted path reappeared before issue')
+      }
+    }
+    for(const item of await readdir(folder)){
+      if(!allowed.has(item))
+        throw Error('Unexpected private file in staged worker evidence')
+    }
+  }catch(error){
+    // Do not leak absolute worker/staged paths in raw Node errors.
+    if(['ENOENT','ENOTDIR','EACCES','EPERM'].includes(
+      (error as NodeJS.ErrnoException).code??''))
+      throw Error('Staged worker evidence is missing or inaccessible')
+    throw error
+  }
+}

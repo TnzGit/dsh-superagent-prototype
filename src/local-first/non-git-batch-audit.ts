@@ -11,7 +11,7 @@ import {lstatSync,readFileSync,realpathSync} from 'node:fs'
 import {lstat,open,readFile,readdir,rename,rm,unlink,mkdir} from 'node:fs/promises'
 import {isAbsolute,join,relative,sep} from 'node:path'
 import {projectFingerprint,type SnapshotRequest} from './project-workspaces.ts'
-import {verifyNonGitStagedBatch,type NonGitBatchSeal} from './non-git-batch-stage.ts'
+import {verifyNonGitStagedBatch,verifyNonGitStagedWorkerAfterImages,type NonGitBatchSeal} from './non-git-batch-stage.ts'
 import {inspectNonGitBatchRecovery} from './non-git-batch-recovery.ts'
 
 const ID=/^[a-z0-9][a-z0-9-]{7,79}$/
@@ -133,7 +133,13 @@ async function persist(folder:string,row:Omit<NonGitBatchAudit,'digest'>):Promis
 /** No lock stealing or retries: an orphaned lock requires human intervention. */
 async function locked<T>(root:string,cb:()=>Promise<T>):Promise<T>{
   const lock=join(root,'.batch-audit.lock')
-  const handle=await open(lock,'wx',0o600)
+  let handle:Awaited<ReturnType<typeof open>>
+  try{handle=await open(lock,'wx',0o600)}
+  catch(error){
+    if((error as NodeJS.ErrnoException).code==='EEXIST')
+      throw Error('Batch audit lock exists; human reconciliation required')
+    throw error
+  }
   try{await handle.sync();await syncDir(root);return await cb()}
   finally{await handle.close();await unlink(lock);await syncDir(root)}
 }
@@ -267,10 +273,11 @@ export async function beginNonGitBatchAudit(
 }
 async function withAudit<T>(input:SnapshotRequest,seal:NonGitBatchSeal,
   rootPath:string,executionId:string,
-  cb:(folder:string,row:NonGitBatchAudit)=>Promise<T>):Promise<T>{
+  cb:(folder:string,row:NonGitBatchAudit)=>Promise<T>,
+  stageRoot?:string):Promise<T>{
   if(!ID.test(executionId))throw Error('Invalid batch audit execution ID')
   safeSeal(input,seal)
-  const root=privateAuditRoot(input,rootPath)
+  const root=privateAuditRoot(input,rootPath,stageRoot)
   return locked(root,async()=>{
     const folder=join(root,'execution-'+executionId),row=await readRow(folder,seal)
     validateScope(row,input,seal)
@@ -285,7 +292,7 @@ function nextRow(row:NonGitBatchAudit,status:BatchAuditStatus,
 }
 /** Records a checkpoint BEFORE any external/manual action. It performs none. */
 export async function issueNextNonGitBatchReviewStep(
-  input:SnapshotRequest,seal:NonGitBatchSeal,opts:{auditRoot:string;executionId:string}
+  input:SnapshotRequest,seal:NonGitBatchSeal,opts:{auditRoot:string;executionId:string;stageRoot:string}
 ):Promise<NonGitBatchAudit>{
   return withAudit(input,seal,opts.auditRoot,opts.executionId,async(folder,row)=>{
     if(row.status!=='ready'||row.pendingIndex!==null||
@@ -293,10 +300,16 @@ export async function issueNextNonGitBatchReviewStep(
     const snapshot=await inspectNonGitBatchRecovery(input,seal)
     if(snapshot.files.some((f,i)=>f.position!==(i<row.nextIndex?'after':'before')))
       throw Error('Batch source no longer matches audited per-file boundary')
+    // The original source has already diverged from its baseline on confirmed
+    // steps. Check the worker/staged AFTER images independently, not via
+    // verifyNonGitStagedBatch (which requires the original source baseline).
+    await verifyNonGitStagedWorkerAfterImages(input,{
+      journalRoot:opts.stageRoot,seal
+    })
     const index=row.nextIndex
     return persist(folder,nextRow(row,'awaiting-human',index,index,
       {index,action:'issued',path:seal.changes[index]!.path}))
-  })
+  },opts.stageRoot)
 }
 /** Verify observed result AFTER a separate manual external step.
  * If any file is foreign or wrongly sequenced, terminalize as review-required.
