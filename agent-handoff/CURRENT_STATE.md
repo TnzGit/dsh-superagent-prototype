@@ -1,27 +1,13 @@
-# Current handoff state — 2026-11-10
+# Current handoff state — 2026-11-11
 
-- C6B2B4B local design report fcc8a0b accepted; CI #247 and online ACK CI #248 green.
-- C6B2B4C remote default-OFF code baseline c955892055b916f2d37edf4d8f8f2d06e21fafb5, CI #250: three jobs must succeed before local acceptance. First commit ad7a741 fixed orphan single-file lock diagnostic with regression tests; second c955892 refuses hardlink aliases and special POSIX modes in synthetic tests. Neither yields race-free production guarantees.
-- New incoming task for local: OL-20261110-004 is TYPE TASK and scope OFFLINE_SYNTHETIC_ONLY, whereas OL-002 was ACK and OL-003 is completed; pin to c955892 and CI #250. Do not launch tests or claim PASS until CI is fully green.
-- Online recurring automation schedule changed to exact hourly, and prompt demands a nonempty safe remote work increment or a precise pending CI / human approval blocker. Scheduled runs are individually time-bounded; this is not a continuously running cloud worker.
-- Local DSH timer-to-existing-session dispatch was reported verified on the previous local review; independent headless CLI route still not verified. No scheduler or credentials changes permitted.
-- **Operator standing intent (current chat, 2026-11-10):** operator broadly approved *reasonable* real registered-project Apply. This is approval **in principle**, not a scoped, private, machine-verifiable transaction grant. Read `agent-handoff/REAL_APPLY_GATES.md` before proposing any execution. Currently no specific real project/file change plan and no verified OS quiescence/path-race solution, so no real Apply has been executed or automatically enabled. Other live host actions (3080 Prompt, Weixin, 3083/8123 changes, production DB/defaults) remain unapproved; all historical one-shot grants remain consumed.
+- **Last independently accepted local milestone:** C6B2B4C ALL_OFFLINE_PASS under documented GitHub-hosted Mac infrastructure exception; sanitized local report/LO-004 ACK already verified. Do not replay OL-004.
+- **Current remote code milestone:** C6B2B4D source + tests delivered and GitHub CI **#264 3/3 SUCCESS** (run https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42905966465) at exact code SHA **3833c89a8e3ae5efb240498baf96cde15753d7f1**.
+- C6B2B4D initial CI failure was `tests/docs.spec.ts` missing module index, NOT a TypeScript diagnostic. Fixed at 1272884. CI #263 was 3/3 but did not run the new standalone ledger suite. CI #264 explicitly added the suite on both Linux and Mac: Linux Node 192/192, independent proxy 5/5, Vitest 1208/1208. Do not confuse general green CI with actual coverage.
+- **New unique local task:** OL-20261111-005, type:task, OFFLINE_SYNTHETIC_ONLY, code SHA 3833c89..., CI #264. Full task in LOCAL_AGENT_TASK.md; local should claim once, run independent Mac acceptance, and publish sanitized report and to-online result/receipt. No local task was pending after OL-004, so this is a fresh handoff.
+- The test-only synthetic approval ledger now rejects owner-unsafe roots/symlinks, overlapping ledger/journal and same ID reuse, and offers fixture-limited root binding. It demonstrates one-winner independent child-process arbitration and ambiguous partially written receipt refusal. It is NOT a registry-bound, authenticated real-project write permission or production executor.
+- User previously gave standing **in-principle** approval for reasonable real registered-project Apply, but no exact real target/diff and no proven OS-level no-follow/quiescence have been supplied. See REAL_APPLY_GATES.md. No real project source write or Weixin/DSH/3083/8123 action is authorized by this offline task.
+- Online hourly task owns roadmap, CI coverage and next code milestone after valid local report. It cannot execute perpetually between runs. It must not send standby and stop if safe remote work remains.
 
-Next: after exact CI #250 3/3 green, local process OL-004 once and report. Online validate local report and CI, ACK, continue next safe remote task; never send standby as permanent project stop.
+## Next action
 
-## Delivery and macOS CI infrastructure note
-
-The complete online handoff chain, including OL-004 and `REAL_APPLY_GATES.md`, was actually pushed at `d423ea1a2ac86f6c5de2e6bdcaedf5fddc5a87a0`. The original code CI #250 had Linux core/build SUCCESS, macOS cancelled with no runner on both attempts; the follow-up documentation CI #251 rechecks the same code tree. An actual Mac offline synthetic acceptance may substitute for unavailable *GitHub-hosted macOS coverage*, but must flag `GH_MACOS_CI_INFRA_NOT_COVERED` and cannot claim GitHub 3/3 or justify real-project mutation. See current `LOCAL_AGENT_TASK.md` gate update.
-
-## 2026-11-11 online acceptance and next remote unit
-
-- Received valid local `LO-20261110-004` at report commit `1c8cc71703ec5c631f2cadaf2300730ef3bc129c`, with prior local claim `adf7b64a00e525dda183ebe0fcbcf3a32ddc8754` and local done receipt. Accepted C6B2B4C `ALL_OFFLINE_PASS` under the documented independent-Mac exception; **GH_MACOS_CI_INFRA_NOT_COVERED** remains. Exact source `c955892055b916f2d37edf4d8f8f2d06e21fafb5`: #250/#251 Linux/build pass, hosted macOS cancelled; #253 3/3 green on claim commit, #254 Linux/build pass but hosted macOS cancelled on report commit. Local report asserts 1208 Vitest, 187 Node/proxy and 35 adversarial checks; not independently rerun by online.
-- Online ACK `LO-20261110-004-done.md` recorded. No pending local task, and **no new local task dispatched** in this increment.
-- Remote C6B2B4D source review delivered as `docs/C6B2B4D-approval-ledger-synthetic-design.md`. Next owner: **remote** to implement default-OFF synthetic-only approval consumption/fencing tests and verify CI; no production readiness claim. Actual registered-project Apply remains gated by `REAL_APPLY_GATES.md` and exact private per-transaction approval.
-
-## 2026-11-11 C6B2B4D remote implementation increment
-
-- Online committed an **isolated, default-OFF synthetic approval reservation scaffold** and four Node regression cases (duplicate ID, alternate journal under same ledger, concurrent same ID, unsafe/corrupt state). It is intentionally NOT connected to the single-file executor and is NOT a real host permission or cross-root global fence. Next owner: remote; review exact commit CI, then add owner-controlled per-project ledger-root binding, crash/symlink and process-isolation regressions before any local task.
-- Current CI #255 on previous online handoff commit was marked failure; exact job breakdown must be checked before attributing it to code. New commit CI is pending at publication, not assumed green.
-- No new inbound unacknowledged local messages; LO-004 already ACKed, OL-004 locally done. No new local task sent.
-- Real Apply per-transaction gates remain unmet; no real writes, Weixin/DSH Prompt, 3083/8123 or production configuration changes.
+Local DSH scheduled Agent: process OL-005 once, verify code+CI/test commands and independent Mac adversarial matrix; report results through GitHub. Online ChatGPT: verify report, post LO-005 ACK, continue safe remote work on **C6B2B4E** (design/read-only registered-project root binding; no real writes) without waiting for another human reminder.

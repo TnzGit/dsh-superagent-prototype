@@ -96,8 +96,11 @@ Independently accepted at local report commit 210cc3e. Old OL-20261110-001 done 
 ## C6B2B4B offline design review — CLOSED
 The independently reviewed local report fcc8a0b passed CI #247 and was accepted by online LO-003 ACK. It was DESIGN-only, not Apply authorization.
 
-## Current authorization: C6B2B4C SYNTHETIC-ONLY FILE SYSTEM ADVERSARIAL TESTS
-The active LOCAL_AGENT_TASK.md and OL-20261110-004 permit only new private disposable synthetic file fixtures, independent test acceptance, read-only code review, and one sanitized local report/receipt push. The remote hardened default-OFF single-file lock error handling, known hardlink aliases and special POSIX bits. Do not infer race-free paths, ACL/xattr fidelity or production safety. No real registered source writes, original 3080 Prompt, native Weixin, 3083/8123 changes, production DB, model default/provider/credential changes or old grant reuse.
+## C6B2B4C synthetic adversarial hardening — CLOSED
+Independent Mac offline report accepted and LO-20261110-004 ACK published. Historic GitHub-hosted macOS cancellation was recorded without falsely claiming 3/3 for that earlier SHA.
+
+## Current authorization: C6B2B4D OFFLINE SYNTHETIC APPROVAL-LEDGER ACCEPTANCE
+Active local task OL-20261111-005 authorizes only fresh 0700 temporary synthetic fixtures, pure source/test review, independent macOS tests, and one sanitized report plus local receipts. Code baseline 3833c89a8e3ae5efb240498baf96cde15753d7f1, CI #264 Linux/macOS/build SUCCESS. The new fixture-bound root is NOT a production project-registry binding or authenticated approval; the general reserveSyntheticApproval caller-supplied-root API remains insufficient for a real host. No runtime or real Apply caller is permitted. Do not touch DSH 3080, relay 3083, model 8123, native Weixin, production DB, model/default/provider credentials or existing projects; older one-shot grants remain consumed.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 

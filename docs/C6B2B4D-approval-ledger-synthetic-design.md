@@ -1,6 +1,6 @@
 # C6B2B4D — single-file approval reuse and cross-root fencing: source-only safety design
 
-Status: REMOTE SOURCE REVIEW COMPLETE / IMPLEMENTATION AND SYNTHETIC TESTS PENDING. No production Apply enabled. Reviewed source: `src/local-first/non-git-apply.ts` at code SHA `c955892055b916f2d37edf4d8f8f2d06e21fafb5`; local C6B2B4C acceptance is synthetic-only.
+Status: REMOTE SYNTHETIC CODE COMPLETE / INDEPENDENT LOCAL OFFLINE ACCEPTANCE PENDING. No production Apply enabled. Reviewed source: `src/local-first/non-git-apply.ts` at code SHA `c955892055b916f2d37edf4d8f8f2d06e21fafb5`; local C6B2B4C acceptance is synthetic-only.
 
 ## Confirmed source behavior and limits
 
@@ -24,3 +24,12 @@ A real writer needs an OS-level no-follow descriptor-relative mutation API, stab
 ## Acceptance and next owner
 
 Remote owner: implement the bounded synthetic ledger and regression tests in a later source-only increment; obtain CI for the exact code SHA. Local owner: **no new task dispatched** while this remote implementation is pending. A subsequent uniquely identified local offline acceptance may be issued only after the remote code and CI gate are reviewed. C6B2B4C OL-004 is closed and must not be replayed.
+
+## Actually delivered C6B2B4D evidence
+
+- At 1272884, registered the new source module in `docs/007-architecture.md`, correcting the actual #261 `tests/docs.spec.ts` failure (it was **not** a TypeScript compiler diagnostic); CI #262 3/3 green.
+- At 23ce39a, added `reserveFixtureBoundSyntheticApproval` with a tightly named disposable OS-temp fixture root, private binding marker, fixed ledger/journal children, and project fingerprint equality; tests reject a second journal and mismatched/unsafe marker. **This does not globally bind real project registries; the old caller-root API still cannot fence alternate ledgers.**
+- Added synthetic partial-reservation crash evidence (existing incomplete file is never overwritten), independent child-process competition for the same approval ID (one successful exclusive reservation), and adversarial fixture binding cases. No real source apply/rollback is wired.
+- At 3833c89, added the complete ledger suite to BOTH Linux and macOS Node commands in `.github/workflows/local-first-core.yml`. CI #264 run 42905966465: all 3 jobs passed; Linux Node 192/192, proxy 5/5, Vitest 1208/1208. Unlike #263, the new ledger suite actually ran.
+
+Remaining unsolved: global registry-root fencing across arbitrary independent roots, malicious same-user tampering, genuine crash/power-loss durability, path TOCTOU and external writer quiescence, authenticated real approval, metadata fidelity, real multi-file atomicity. All production Apply remains gated by `agent-handoff/REAL_APPLY_GATES.md` despite operator standing intent.
