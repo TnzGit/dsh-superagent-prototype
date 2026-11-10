@@ -198,3 +198,26 @@ test('registry preflight rejects a project root swapped for symlink after regist
     assert.equal(readdirSync(root).length,0)
   }finally{rmSync(external,{recursive:true,force:true})}
 }))
+
+
+test('registry preflight refuses a symlinked ancestor after registry creation',()=>fixture(async({root,journal})=>{
+  const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const parent=join(external,'parent'),project=join(parent,'registered')
+    mkdirSync(parent,{mode:0o700});mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([external],[{id:'synthetic-ancestor',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-ancestor'))
+    const base=join(root,'..')
+    writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    const replacement=join(external,'replacement')
+    // Move the original directory, then introduce an alias at its old parent.
+    ;(await import('node:fs')).renameSync(parent,replacement)
+    symlinkSync(replacement,parent,'dir')
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-ancestor',base,{
+      ...grant(journal),projectFingerprint:fp
+    }),/ancestor identity changed/)
+    assert.equal(readdirSync(root).length,0)
+  }finally{rmSync(external,{recursive:true,force:true})}
+}))
