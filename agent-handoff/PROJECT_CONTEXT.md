@@ -31,7 +31,7 @@ Repository `TnzGit/dsh-superagent-prototype`. Development branch `feat/local-fir
 | C6B2B3 | Sealed Worker/evidence re-attestation before issue and orphan-lock error sanitization accepted | Read-only F1/F2 remediation with offline report and green CI |
 | C6B2B4A | **Local ALL_OFFLINE_PASS accepted, remote ACK published** | Synthetic-fixture-only single-step callback coordinator; one-use third 0600 approval and durable receipt; original services untouched |
 | C6B2B4B/C | **Design review and synthetic hardening accepted** | Local synthetic reports and ACKs closed; no production path safety or multi-file atomicity proof |
-| C6B2B4D | **Remote code + actual Linux/macOS CI 3/3 PASS; local acceptance PENDING** | Disconnected synthetic one-use reservation ledger; fixture-limited root binding, OS-process arbitration and partial-record fail-closed tests; no real approval integration |
+| C6B2B4D | **Local ALL_OFFLINE_PASS accepted; online ACK delivered** | Synthetic ledger tests: Mac 192/192 Node, Vitest 1208/1208, proxy 5/5, independent 34/34 adversarial checks; same-user forged marker and cross-ledger replay UNSOLVED |
 
 ## Current code and delivery anchors
 

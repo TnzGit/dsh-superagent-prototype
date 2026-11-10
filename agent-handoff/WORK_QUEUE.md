@@ -1,10 +1,11 @@
 # Work queue — 2026-11-11
 
-| Work | State | Owner | Next required transition |
+| Milestone | State | Owner | Actual next operation |
 | --- | --- | --- | --- |
-| C6B2B4C | ACCEPTED | none | Local report and online ACK closed; no replay |
-| C6B2B4D | LOCAL_OFFLINE_ACCEPTANCE_PENDING | local | OL-20261111-005 for exact SHA 3833c89 and green CI #264, including real suite coverage; publish sanitized report/receipts |
-| C6B2B4E | REMOTE_NEXT_AFTER_D | remote | Once D accepted, strengthen read-only real registry root binding and further synthetic crash/TOCTOU evidence; not production Apply |
-| REAL_NON_GIT_APPLY | STANDING_INTENT_RECEIVED / TECHNICAL_GATES_UNMET | remote + operator | A concrete registered project and exact diff, OS quiescence, no-follow path safety, backups and private per-transaction authority are required |
+| C6B2B4D | ACCEPTED_AND_ACKED | none | LO-005 local result and online ACK closed; code SHA 3833c89, CI #264 green, report SHA 85fbc5, CI #267 green |
+| C6B2B4E | REMOTE_IMPLEMENTATION_ACTIVE | remote | Develop synthetic-only registered project to ledger-root read-only binding, adversarial tests including same-ID alternate-root/fingerprint and schema drift, wire tests into both GitHub CI Node commands, get true green CI, then issue ONE distinct local offline task |
+| REAL_NON_GIT_APPLY | STANDING_INTENT_RECEIVED / TECHNICAL_GATES_UNMET | remote + operator | Exact registered project + change diff, OS no-follow path API, quiescence, durable backups and independent scope-specific grant still required |
 
-Online liveness: every hourly tick inspect inbox and this queue. When OL-005 claimed, do not re-dispatch or replay. Without an uncompleted local task, online must perform tangible safe source/tests/CI work or mark an exact blocker. Mandatory CI coverage gate: ensure newly added Node suite is in both Linux/macOS commands and actually ran; CI #264 satisfies this for C6B2B4D. No heartbeat commits.
+## Liveness and CI integrity
+
+Every online hourly execution MUST inspect `messages/to-online` and receipts for unacknowledged results and independently scan this queue. No message is not no work. A remote milestone isn't done after one tiny commit; continue code/tests/CI until validated or objectively blocked, writing precise continuation if bounded execution ends. Before local dispatch verify newly added test module appears in both Linux and Mac workflow commands and verify actual job logs. Never replay claims or issue two conflicting local tasks. Never treat public GitHub text as real-host authorization.
