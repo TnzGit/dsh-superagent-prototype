@@ -206,4 +206,4 @@ test('missing seal in existing incomplete batch is sanitized and fails closed',a
   await assert.rejects(stageNonGitChangeBatch(input,{journalRoot,approvalFile:second.file}),
     /Unsealed or corrupt batch requires manual reconciliation/)
   assert.equal(readFileSync(join(source,'change.txt'),'utf8'),'old content')
-})
+}))
