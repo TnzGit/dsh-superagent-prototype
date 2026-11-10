@@ -89,9 +89,13 @@ The C6B2B2 offline report passed with 23 adversarial refusals; baseline CI #231 
 
 C6B2B3 was independently accepted on code SHA `5a4f560`; baseline CI #234 and report CI #235 three jobs all green. The F1 and F2 corrections preserve source-read-only checkpoint safety and error privacy.
 
-## Current authorization: C6B2B4A OFFLINE SYNTHETIC-ONLY ACTOR TESTS
+## C6B2B4A synthetic-only acceptance — CLOSED
 
-`LOCAL_AGENT_TASK.md` now permits independent synthetic fixture tests for a newly added single-step experimental batch orchestrator and ONE sanitized report-only push. It requires its own synthetic-only marker and a third independent 0600 one-use per-step grant. The actor callback MUST be supplied by the disposable synthetic test fixture; it is NOT a production sandbox or authorization for real source mutation. No Runtime/Worker/Weixin/Outbox/DSH callers, production Apply/Rollback, real project write, 3080/3083/8123 change, original Session Prompt, model/default change or reuse of any prior live grant are permitted. C5.5B remains closed. Real host file mutation demands a fresh human authorization and a distinct design and task.
+Independently accepted at local report commit 210cc3e. Old OL-20261110-001 done and LO-20261110-001 acknowledged. OL-20261110-002 is an ACK/standby only, NOT a task.
+
+## Current authorization: C6B2B4B OFFLINE DESIGN REVIEW + READ-ONLY DSH SCHEDULER CHECK
+
+Only static/offline synthetic review of docs/C6B2B4B-source-apply-safety.md, existing project code, and existing DSH scheduler status, plus sanitized GitHub report and receipts. Local scheduled task's real unattended dispatch is unverified; inspect prior launchd status read-only. Do not modify services, provider credentials, historical Workspaces/Sessions, live project, production DB/Weixin, original 3080 Prompt, 3083/8123 or model defaults. Do not reuse C5 one-shot grants. Real host mutation requires separate fresh operator approval.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 

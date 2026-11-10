@@ -29,7 +29,7 @@ Repository `TnzGit/dsh-superagent-prototype`. Development branch `feat/local-fir
 | C6B2B1 | Read-only sealed-batch recovery classifier accepted | Unchanged, fully/partially applied, diverged, indeterminate; no mutation |
 | C6B2B2 | Owner-approved, durable per-file `issued → confirmed` human checkpoint audit accepted | Interrupted/foreign work fails closed; not an Apply grant |
 | C6B2B3 | Sealed Worker/evidence re-attestation before issue and orphan-lock error sanitization accepted | Read-only F1/F2 remediation with offline report and green CI |
-| C6B2B4A | **Remote code + CI green; local Agent acceptance PENDING** | Synthetic-fixture-only single-step callback coordinator; third 0600 authorization, durable one-shot receipt; never production writer |
+| C6B2B4A | **Local ALL_OFFLINE_PASS accepted, remote ACK published** | Synthetic-fixture-only single-step callback coordinator; one-use third 0600 approval and durable receipt; original services untouched |
 
 ## Current code and delivery anchors
 
@@ -49,3 +49,8 @@ Multi-file writes are **not atomic**; native Node paths still have symlink/exter
 2. If an admissible new local result exists, verify report and CI independently, update `CURRENT_STATE.md`, and only then prepare the next **offline** task or code patch within this project.
 3. Publish its own message in `messages/to-local/` with a unique ID and the exact task/commit SHA, and receipt in `receipts/online/` for handled inbound messages. No changes merely because an hour passed.
 4. Never interpret this public document as permission to perform real host operations.
+
+
+## Coordination liveness change
+
+Current remote/online responsibility: when a task is completed and acknowledged, continue safe source/design/tests or publish the next scoped offline task. The durable roadmap is agent-handoff/WORK_QUEUE.md. Local Agent remains task executor and must not infer real-host authority. The operator reports hourly local scheduling has migrated to DSH; verify actual autonomous dispatch and absence of duplicate historic launchd polling without modifying live services.

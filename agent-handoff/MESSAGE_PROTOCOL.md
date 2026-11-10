@@ -36,3 +36,12 @@ Remote: a ChatGPT Automation scheduled `RRULE:FREQ=HOURLY`, conditional watch, G
 Local: a user-owned `launchd` LaunchAgent `StartInterval=3600` and `RunAtLoad=true`. Reference `LOCAL_WATCHER_SPEC.md`. It must poll read-only and compare message IDs/receipts. Automatic CLI invocation is allowed **only if the installed Agent exposes a verified noninteractive entry point and the incoming task is already bounded/authorized**; otherwise notify-only, NOT pretend fully autonomous execution.
 
 **Messages are at-least-once visible; execution is deliberately at-most-once.** Neither side should make a commit merely to announce that a poll occurred.
+
+
+## Proactive work ownership / no-deadlock amendment (2026-11-10)
+
+The remote ChatGPT owns the ongoing roadmap in agent-handoff/WORK_QUEUE.md. EVERY hourly remote scheduled run first checks inbound results and receipts, THEN checks WORK_QUEUE even if no inbound message. When the previous local task is closed and a safe remote/offline milestone exists, remote must do work and may issue ONE new scoped type: task message. A type: result standby/ACK is not permission to permanently cease work. If all remaining steps need real-host approval, mark BLOCKED_NEEDS_HUMAN_APPROVAL and ask the operator rather than silently claiming completion.
+
+Local Agent owns execution of the currently scoped task and must NOT invent real-host authority or execute a type: result ACK. The operator reports the local hourly poller has moved from launchd to a DSH scheduled task. Actual timer-to-Agent dispatch must be confirmed with a real unattended run, not inferred from a configured schedule. Verify the old launchd listener is not also acting; any dual scheduler is a fail-closed condition. Preserve unique message claims, no replay or overlapping jobs.
+
+Always read GitHub at the feature branch, validate message_id, full code_sha and CI, only write sender-owned files, fast-forward pushes. No heartbeat commits. A new offline task can authorize review/synthetic tests only within LOCAL_AGENT_TASK.md; no real Apply, DSH Session, Weixin send, service restart, model/default change or historical authorization reuse.

@@ -5,7 +5,7 @@
 ## Stateless bootstrap (in this order)
 
 1. Read `agent-handoff/PROJECT_CONTEXT.md` for the full *sanitized* project's timeline, design and immutable invariants.
-2. Read `agent-handoff/CURRENT_STATE.md` for completed milestones, exact code baseline, newest report and next approved scope.
+2. Read `agent-handoff/CURRENT_STATE.md` and `agent-handoff/WORK_QUEUE.md` for current milestones, explicit next-owner and the durable backlog. No inbound message is not proof that the project is finished.
 3. Read `agent-handoff/SECURITY.md` for public-repo, access and live-host safety rules.
 4. Read `agent-handoff/MESSAGE_PROTOCOL.md` for sender-owned append-only messages, receipts and deduplication.
 5. Read `LOCAL_AGENT_PROTOCOL.md` (permanent host requirements) and `LOCAL_AGENT_TASK.md` (operator-scoped task) before acting.
@@ -31,3 +31,10 @@
 For new chat: paste this exact URL and say *“Read the latest feature branch `agent-handoff/README.md` and continue the approved offline task. Do not assume a live grant.”*
 
 https://github.com/TnzGit/dsh-superagent-prototype/blob/feat/local-first-wechat-foundation/agent-handoff/README.md
+
+
+## Liveness correction (2026-11-10)
+
+Remote ChatGPT is the **proactive project driver**, not merely a message receiver. After accepting an offline phase, it must continue the next safe remote-only source/design/test task or issue exactly one new scoped offline task to the local Agent. No-message is a reason to check WORK_QUEUE, not to stop project progress. Never create duplicate tasks while an existing task is pending/claimed.
+
+The operator reports local scheduling was moved from launchd to a DSH scheduled task. This is not verified evidence of headless task execution yet. The local Agent must check the actual DSH task and disabled state of the old launchd read-only; no changes to live DSH settings or provider keys are authorized.

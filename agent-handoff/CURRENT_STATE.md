@@ -1,15 +1,17 @@
 # Current handoff state (remote-owned, 2026-11-10)
 
-- **Phase:** C6B2B4A **ALL_OFFLINE_PASS accepted** from local sanitized report, code SHA `a63f6a266256b624a0922fa71d354ca3719b0591`; CI #238 and report commit CI #241 are 3/3 green. No real project Apply, real Weixin or production host write was run.
-- **Code-under-test:** `a63f6a266256b624a0922fa71d354ca3719b0591`, [CI #238 3/3 success](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42784807127). The initial coordination-bootstrap commit `53eebb3aa74e7b311251a850b6c1ac23928a44b1` also passed [CI #239 3/3](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42804567489); it did not modify product code.
-- **Most recent independently reviewed local phase:** C6B2B4A `ALL_OFFLINE_PASS`, report `agent-reports/REPORT-c6b2b4a-offline-synthetic-step-executor.md`, local result commit `210cc3e8881bd5ef5437be457420a30bfb6b3471`, [CI #241 3/3](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42821813969). Report: 1208 Vitest + 181 Node/proxy, 24 positive and 42 fail-closed scenario checks; local actor remains synthetic fixture only. Prior C6B2B3 accepted report commit `a060dcae6dae40d6469955f24d95a6fba3ee3aa7`.
-- **Active task:** `LOCAL_AGENT_TASK.md` (C6B2B4A). Read current content; a SHA or CI can change from documentation-only coordination commits.
-- **First local bootstrap message:** `OL-20261110-001` completed and has local claimed/done receipts; online ACK `LO-20261110-001-done.md` published. No new real-host authority exists.
-- **No active real-project Apply, 3080 Session Prompt, real Weixin send or service restart permission.** All old live grants consumed. 3083 remains default OFF.
-- **Online hourly watcher:** **ENABLED**. A ChatGPT hourly condition-watch Automation was successfully created on 2026-11-10 (Asia/Singapore). It will check only new to-online items and useful CI changes; no incoming work means no notice or GitHub commit. Its first actual scheduled execution and GitHub access are NOT yet independently demonstrated. Do not publish the private Automation ID.
-- **Local hourly watcher:** local report confirms user-level launchd `StartInterval=3600` active, lock/quiet behavior tested, but **WATCHER_ACTIVE_DISPATCH_UNAVAILABLE**: notification-only. Local CLI headless capability probe failed before inference due to missing DeepSeek provider credential; do not add credentials or change default/provider to bypass this. Hourly checking works; fully automatic local Agent continuation does NOT yet work.
-- **Next safe action:** remote may perform source-only design and synthetic tests for the future production executor, but **C6B2B4B real project Apply remains NOT AUTHORIZED**. Do not send a new local execution task without a separately scoped task. A future operator-approved local task may investigate safe headless dispatch without credentials/model changes. The next online→local message is ACK/standby only.
+- Last accepted phase: **C6B2B4A ALL_OFFLINE_PASS**, local report commit 210cc3e8881bd5ef5437be457420a30bfb6b3471; report CI #243 and online ACK CI #244 all 3/3 success.
+- Most recent accepted product-code SHA: a63f6a266256b624a0922fa71d354ca3719b0591; CI #238 all green.
+- New phase: **C6B2B4B OFFLINE SOURCE-APPLY SAFETY DESIGN REVIEW**. This is documentation/design/static inspection only, NOT a production Apply executor and NOT permission to perform real file writes.
+- Active task: LOCAL_AGENT_TASK.md plus new online-to-local task OL-20261110-003. The older OL-20261110-002 remains type: result ACK/standby, not executable. Do not duplicate OL-003 while claimed/pending.
+- Online hourly automation: updated to proactively scan WORK_QUEUE.md even with no incoming messages; enabled. Its future write-capable execution requires independent observation.
+- Local hourly scheduler: operator reports migration to DSH scheduled task. **Actual timer-triggered local Agent execution unverified** until new report. Last report described historic launchd in notify-only mode; check old launchd is disabled, read-only, and stop on dual scheduling.
+- No live host authorization: no actual registered project Apply, 3080 DSH Prompt, native Weixin, 3083 restart, 8123 change, production config/DB, or model default change. All C5 live approvals consumed.
 
-## Update policy
+## Liveness rules
 
-Remote ChatGPT updates this file **only for a real state transition**, never each hourly no-op. Prefer succinct factual evidence, exact current code SHA, current report/CI and live-authorization status. Never edit local Agent's inbound messages or receipts. Track pending/claimed/finished by append-only receipt IDs, not by mutating this file on every poll.
+Remote must act as PROJECT DRIVER: after ALL_OFFLINE_PASS and ACK, continue safe remote/offline work, publish at most one next local task if none pending, or explicitly report BLOCKED_NEEDS_HUMAN_APPROVAL. An empty inbound queue is NOT project completion.
+
+Local must accept only current authorized type: task messages, prove exact SHA/CI and existing state, and use private claimed/done receipts. If DSH scheduler cannot actually dispatch offline work, record a concrete blocker rather than claim it does.
+
+State updates occur only on significant transitions, never hourly heartbeat commits.

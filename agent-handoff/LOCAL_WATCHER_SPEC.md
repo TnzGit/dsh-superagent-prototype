@@ -1,20 +1,15 @@
-# Local Mac watcher — installation contract (operator approved)
+# Local hourly poller — current DSH migration verification
 
-This document specifies the **only** new host-side automation the operator requested: a read-only GitHub check once per hour. The local Mac Agent must implement and validate it against its actual installed Agent/CLI environment. Do NOT blindly copy a hypothetical executable name or assume the current chat can launch the Mac process.
+The operator reports the previous user-level launchd poller was replaced with a DSH scheduled task. This does NOT by itself verify unattended Agent execution.
 
-## macOS installation
+## Read-only inspection gates for the currently installed DSH scheduler
 
-1. Create an owner-only `0700` private directory under the current user's normal configuration area for `poll.sh`, state, lock and logs. No source/project/service subdirectory, no world-readable credentials.
-2. Poll script must use **read-only** GitHub operations against exactly `TnzGit/dsh-superagent-prototype` and branch `feat/local-first-wechat-foundation`: fetch current head, inspect only the `agent-handoff/messages/to-local/` directory, compare IDs against `agent-handoff/receipts/local/` and private claimed/done state. Validate message schema and active `LOCAL_AGENT_TASK.md`; no shell execution from downloaded content.
-3. Serialize with a local exclusive lock (`mkdir` or lockfile with safe no-steal semantics). Persist last inspected commit and per-ID claim to private state so jobs cannot double-start on reboots, failures or another hourly tick. Initial run should see the existing bootstrap message once; a `claimed` task after a crash needs manual review, not automatic replay.
-4. If a NEW valid message is an already authorized offline-only task, inspect whether the actual local Agent installation has a supported *noninteractive headless* invocation. If YES, spawn exactly one bounded invocation in an isolated clean worktree with explicit C6B2B4A instructions; no interactive Weixin, no session/prompt and no production project modifications. If NO, choose **notification-only** and report `WATCHER_ACTIVE_DISPATCH_UNAVAILABLE`; do not invent a CLI, run raw instructions as shell, or silently claim automatic continuation.
-5. Install a **user-level launchd LaunchAgent**, uniquely labeled for this repo (e.g. `local.dsh-superagent.handoff-watch`), with `ProgramArguments` to the absolute owner-only poller path, `StartInterval=3600` and `RunAtLoad=true`. Use `launchctl bootstrap gui/$(id -u) <plist>` only after inspecting the generated plist; no root/system daemon, no `sudo`, no launchctl changes affecting unrelated services. plist mode `0600` or `0644` and parent directory owner-only; secrets never in plist.
-6. Run one manual dry run, then confirm one `launchctl print gui/$(id -u)/local.dsh-superagent.handoff-watch` registration, hourly schedule, no duplicate process, private logs, empty-change quiet behavior and eventual checked head/queued item. Keep a one-line private disable/rollback procedure: `launchctl bootout gui/$(id -u)/local.dsh-superagent.handoff-watch`; remove only the user-level watcher files on instruction.
-7. If GitHub authentication is missing, API is rate-limited, source message is malformed, CI is not green or state is ambiguous, log/notify the reason and STOP without task execution. An eligible message can be retried on the next poll **only if it was never claimed or begun**. Never auto-retry after a recorded claim.
-8. No GitHub check can grant additional real host authority. Do not install a watcher on 3080/3083/8123, alter model default/profile, inspect private Weixin messages, or open production projects. All approval changes need a new human grant.
+1. Confirm the existing scheduled task is enabled, aimed at this repository and exact feature branch, has hourly recurrence, and has a recorded real invocation. Never create/edit/restart DSH task or service during inspection without separate operator approval.
+2. Confirm message schema, already-claimed/done dedup, no arbitrary message text executed as shell, and one-task-per-ID execution. Test quiet unchanged poll.
+3. Confirm an actual timer-triggered invocation successfully ran a bounded authorized offline Agent workflow; otherwise mark SCHEDULER_RUNNING_DISPATCH_UNVERIFIED or SCHEDULER_RUNNING_DISPATCH_BLOCKED. No silent credential/provider default repairs. A configured timer is not proof of a working headless model route.
+4. Inspect old launchd registration status read-only. If it and DSH both poll/dispatch, report DUAL_SCHEDULER_RISK, do NOT modify either without permission or claim safe at-most-once.
+5. Never publish private task IDs, home paths, tokens, provider configuration or raw logs in this public repository. Report only generalized status, successful scheduled-run evidence and precise blocked gate.
 
-## Mandatory report facts
+## Historical launchd procedure
 
-`WATCHER_ACTIVE_DISPATCH_READY` only if launchd is confirmed active and the Agent truly supports a safe tested headless invocation; else `WATCHER_ACTIVE_DISPATCH_UNAVAILABLE` if the hourly check works but only notifications can be delivered. Include exact `launchctl` result and a sanitized dry-run summary privately. In the PUBLIC report write only the mode and generalized success/blocked status, never home paths, usernames, tokens or logs.
-
-Watcher changes are explicitly permitted by the user's current request and `LOCAL_AGENT_TASK.md`. All other host-mutation prohibitions remain intact.
+The initial contract specified a user LaunchAgent with 3600-second StartInterval. This section is historical; do NOT reinstall it after reported DSH migration unless explicitly authorized.
