@@ -7,7 +7,7 @@
 - **First pending message to local Agent:** `messages/to-local/2026-11-10-ol001-bootstrap-c6b2b4a.md`. It authorizes a user-level 3600s GitHub watcher as newly requested by the operator, then the already-scoped **synthetic-only** offline tests.
 - **No active real-project Apply, 3080 Session Prompt, real Weixin send or service restart permission.** All old live grants consumed. 3083 remains default OFF.
 - **Online hourly watcher:** **ENABLED**. A ChatGPT hourly condition-watch Automation was successfully created on 2026-11-10 (Asia/Singapore). It will check only new to-online items and useful CI changes; no incoming work means no notice or GitHub commit. Its first actual scheduled execution and GitHub access are NOT yet independently demonstrated. Do not publish the private Automation ID.
-- **Local hourly watcher:** not yet installed; installation is assigned via bootstrap message and user-approved task. Do not claim it is active until the local Agent reports exact successful evidence.
+- **Local hourly watcher:** the operator confirmed sending the initial bootstrap Prompt to the Mac Agent on 2026-11-10. Installation and first actual hourly check remain **unverified** until a sanitized local completion report and receipt appear. Do not interpret prompt delivery as evidence that the watcher is running.
 - **Next safe action:** local Agent installs watcher with private state, verifies non-reentrant polling, then runs C6B2B4A offline test and publishes a sanitized report + to-online message. Remote Agent reviews new messages hourly and proceeds with remote-only/offline work if authorized.
 
 ## Update policy
