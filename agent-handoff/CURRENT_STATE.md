@@ -10,3 +10,9 @@
 ## Next owner
 
 Local Mac DSH scheduled task owns OL-006 independent offline acceptance and to-online result. Online ChatGPT owns next safe C6B2B4F code/OS-concurrency design after validating that report; do not stop the long-term project just because no inbound message arrives. No stale task replay.
+
+## 2026-11-11 remote checkpoint — LO-006 accepted; B4F regression repair pending CI
+
+- LO-20261111-006 valid local completion for OL-006, source ef370ba84567f1fa90f968acf2b2d01bce7f26e2; sanitized report and local done receipt verified; baseline CI #269 exact three jobs success. Online done ACK published in receipts/online/LO-20261111-006-done.md. No duplicate dispatch.
+- B4F branch CI #275 on 1692f693a16d26d97cb1c69a19285e8709e7b995: Linux 195/196 and macOS Node suite failure at the same expected error message assertion; build/typecheck SUCCESS. Added ancestor check returns 'Registered synthetic project ancestor identity changed' before older root-specific check; tests must accept either fail-closed diagnostic. This is a test expectation drift, not a TypeScript failure.
+- Online owner patched ONLY the assertion in the existing enrolled Node suite. The new commit's CI 3/3 and exact job counts remain UNVERIFIED until GitHub Actions completes; no new local task until a verified code gate. Source remains synthetic/read-only, not real Apply; no production caller or OS race-free guarantee.
