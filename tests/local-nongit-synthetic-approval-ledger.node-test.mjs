@@ -39,3 +39,12 @@ test('corrupt entry is never overwritten or silently recovered',()=>fixture(asyn
  await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt/)
  await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
 }))
+
+test('ancestor and descendant ledger/journal roots fail closed before creating entries',()=>fixture(async({root,journal})=>{
+ const nested=join(root,'nested');mkdirSync(nested,{mode:0o700})
+ await assert.rejects(reserveSyntheticApproval(root,grant(nested)),/overlaps journal/)
+ const childLedger=join(journal,'ledger');mkdirSync(childLedger,{mode:0o700})
+ await assert.rejects(reserveSyntheticApproval(childLedger,grant(journal)),/overlaps journal/)
+ assert.equal((await import('node:fs')).readdirSync(root).filter(x=>x.endsWith('.json')).length,0)
+ assert.equal((await import('node:fs')).readdirSync(childLedger).length,0)
+}))
