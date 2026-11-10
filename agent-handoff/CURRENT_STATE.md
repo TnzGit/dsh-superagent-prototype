@@ -8,3 +8,7 @@
 - **Operator standing intent (current chat, 2026-11-10):** operator broadly approved *reasonable* real registered-project Apply. This is approval **in principle**, not a scoped, private, machine-verifiable transaction grant. Read `agent-handoff/REAL_APPLY_GATES.md` before proposing any execution. Currently no specific real project/file change plan and no verified OS quiescence/path-race solution, so no real Apply has been executed or automatically enabled. Other live host actions (3080 Prompt, Weixin, 3083/8123 changes, production DB/defaults) remain unapproved; all historical one-shot grants remain consumed.
 
 Next: after exact CI #250 3/3 green, local process OL-004 once and report. Online validate local report and CI, ACK, continue next safe remote task; never send standby as permanent project stop.
+
+## Delivery and macOS CI infrastructure note
+
+The complete online handoff chain, including OL-004 and `REAL_APPLY_GATES.md`, was actually pushed at `d423ea1a2ac86f6c5de2e6bdcaedf5fddc5a87a0`. The original code CI #250 had Linux core/build SUCCESS, macOS cancelled with no runner on both attempts; the follow-up documentation CI #251 rechecks the same code tree. An actual Mac offline synthetic acceptance may substitute for unavailable *GitHub-hosted macOS coverage*, but must flag `GH_MACOS_CI_INFRA_NOT_COVERED` and cannot claim GitHub 3/3 or justify real-project mutation. See current `LOCAL_AGENT_TASK.md` gate update.

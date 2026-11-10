@@ -1,10 +1,14 @@
 # LOCAL_AGENT_TASK — CURRENT: C6B2B4C OFFLINE SYNTHETIC ADVERSARIAL ACCEPTANCE
 
+## Important CI infrastructure gate update (2026-11-10)
+
+CI #250 ended `failure` solely because the macOS job was cancelled without runner (Linux and build success); its retry also cancelled. CI #251 (docs-only, same product code tree) was created from the newly pushed handoff and must be checked live. Do not wait forever for a hosted macOS runner: if macOS GitHub CI cannot execute, use **independent local macOS synthetic-only acceptance**, with precise `GH_MACOS_CI_INFRA_NOT_COVERED` annotation and no false 3/3 success claim. This does not weaken any real-host safety gate.
+
 New task OL-20261110-004 (type:task, scope:OFFLINE_SYNTHETIC_ONLY). Previously completed OL-003 must not be replayed.
 Repository TnzGit/dsh-superagent-prototype, branch feat/local-first-wechat-foundation.
 EXACT code SHA c955892055b916f2d37edf4d8f8f2d06e21fafb5.
 Required code CI #250 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42844707509.
-MANDATORY preflight: confirm local-first-core, macos-portability and dsh-typecheck-and-build each SUCCESS for this exact code SHA. If macOS runner still queued or cancelled, report BLOCKED_INFRA_MACOS; never assert 3/3 success or run acceptance prematurely.
+MANDATORY preflight: Confirm Linux core and dsh-typecheck-and-build SUCCESS for exact code SHA. Review BOTH original GitHub code run #250 and newer docs-only run #251 (https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42851568782) which uses the same unchanged source tree. Prefer a completed successful GitHub macOS portability job from either run. **If both jobs are repeatedly cancelled/queued because no macOS runner was ever allocated, do NOT deadlock the local offline task**: proceed with independent actual Mac offline install/check + full Mac Node suite + proxy, record exact pass/fail and independent source SHA, and label `GH_MACOS_CI_INFRA_NOT_COVERED` explicitly. Do NOT claim GitHub 3/3 green. If any actual macOS test FAILS (rather than runner never executing), stop `BLOCKED_CODE`. Under NO circumstances run real source Apply; this alternate gate is for synthetic offline validation ONLY.
 
 Gate A: Use a new clean detached worktree at exact SHA. Read agent-handoff/README.md, PROJECT_CONTEXT.md, WORK_QUEUE.md, CURRENT_STATE.md, MESSAGE_PROTOCOL.md, SECURITY.md, this task, LOCAL_AGENT_PROTOCOL.md and docs/C6B2B4C-synthetic-adversarial-plan.md. Check full code SHA and CI; newer docs-only handoff HEAD does not change tested source. Run pnpm install --frozen-lockfile, pnpm check, all present Node and proxy tests, report exact counts and exits. If real test fails: BLOCKED_CODE, do not fix product source locally.
 
