@@ -149,10 +149,20 @@ function imageName(i:number,which:'before'|'after'):string {
   return which+'-'+String(i).padStart(3,'0')+'.bin'
 }
 async function readPrivateJson(file:string):Promise<unknown>{
-  const info=await lstat(file)
-  if(!info.isFile()||info.isSymbolicLink()||(info.mode&0o077)!==0)
-    throw Error('Unsafe batch journal file')
-  return JSON.parse(await readFile(file,'utf8')) as unknown
+  try {
+    const info=await lstat(file)
+    if(!info.isFile()||info.isSymbolicLink()||(info.mode&0o077)!==0)
+      throw Error('Unsafe batch journal file')
+    return JSON.parse(await readFile(file,'utf8')) as unknown
+  } catch(error) {
+    // Never expose private journal paths in ENOENT/ENOTDIR or JSON parsing
+    // diagnostics. A half-staged batch is evidence for manual review.
+    if(error instanceof SyntaxError||
+      (error as NodeJS.ErrnoException).code==='ENOENT'||
+      (error as NodeJS.ErrnoException).code==='ENOTDIR')
+      throw Error('Unsealed or corrupt batch requires manual reconciliation')
+    throw error
+  }
 }
 async function existingBatches(root:string,approvalId?:string):Promise<void>{
   for(const entry of await readdir(root,{withFileTypes:true})){

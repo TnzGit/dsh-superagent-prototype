@@ -188,3 +188,22 @@ test('sealed evidence images remain independently readable after stage returns',
   })
   assert.equal(readFileSync(join(source,'change.txt'),'utf8'),'old content')
 }))
+
+test('missing seal in existing incomplete batch is sanitized and fails closed',async()=>fixture(async({source,input,journalRoot,grant})=>{
+  const plan=await prepare(source,input)
+  const {file,value}=grant(plan.digest)
+  await stageNonGitChangeBatch(input,{journalRoot,approvalFile:file})
+  const folder=join(journalRoot,'batch-'+value.batchId)
+  rmSync(join(folder,'seal.json'))
+  await assert.rejects(verifyNonGitStagedBatch(input,{
+    journalRoot,batchId:value.batchId,expectedPreviewDigest:plan.digest
+  }),error=>{
+    assert.equal(error.message,'Unsealed or corrupt batch requires manual reconciliation')
+    assert.equal(error.message.includes(journalRoot),false)
+    return true
+  })
+  const second=grant(plan.digest)
+  await assert.rejects(stageNonGitChangeBatch(input,{journalRoot,approvalFile:second.file}),
+    /Unsealed or corrupt batch requires manual reconciliation/)
+  assert.equal(readFileSync(join(source,'change.txt'),'utf8'),'old content')
+})
