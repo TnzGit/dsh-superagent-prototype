@@ -4,7 +4,7 @@
  */
 import {createHash} from 'node:crypto'
 import {lstat,open,realpath,readFile} from 'node:fs/promises'
-import {join} from 'node:path'
+import {join,relative,isAbsolute} from 'node:path'
 
 const ID=/^[a-z0-9][a-z0-9-]{7,79}$/
 const SHA=/^[a-f0-9]{64}$/
@@ -33,7 +33,13 @@ export async function reserveSyntheticApproval(
     throw Error('Unsafe synthetic ledger root')
   const root=await realpath(ledgerRoot)
   const journal=await realpath(reservation.journalRoot)
-  if(root===journal)throw Error('Synthetic ledger overlaps journal')
+  // Reject ancestor/descendant roots as well as equality; both directions matter.
+  const overlaps=(a:string,b:string)=>{
+    const rel=relative(a,b)
+    return rel===''||(!rel.startsWith('..'+(process.platform==='win32'?'\\':'/'))&&rel!=='..'&&!isAbsolute(rel))
+  }
+  if(overlaps(root,journal)||overlaps(journal,root))
+    throw Error('Synthetic ledger overlaps journal')
   // Hash the ID to avoid private identifiers appearing in filesystem names.
   const name=createHash('sha256').update(reservation.approvalId).digest('hex')+'.json'
   const file=join(root,name)
