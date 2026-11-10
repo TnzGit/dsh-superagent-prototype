@@ -74,7 +74,7 @@ function fixtureOnly(input:SnapshotRequest):string{
   const fixture=dirname(dirname(source))
   const temp=realpathSync(tmpdir())
   if(!contained(temp,fixture)||fixture===temp||
-    !/^dsh-c6b2b4-synthetic-[a-z0-9_-]{6,70}$/.test(basename(fixture))||
+    !/^dsh-c6b2b4-synthetic-[A-Za-z0-9_-]{6,70}$/.test(basename(fixture))||
     projectFingerprint(input.registry.get(input.projectId))!==input.fingerprint||
     input.registry.get(input.projectId).kind!=='local'||
     input.registry.get(input.projectId).readOnly)
