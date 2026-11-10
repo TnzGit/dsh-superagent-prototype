@@ -1,11 +1,12 @@
-# Work queue — 2026-11-11
+# Active work queue — 2026-11-11
 
-| Milestone | State | Owner | Actual next operation |
+| Milestone | State | Owner | Next exact operation |
 | --- | --- | --- | --- |
-| C6B2B4D | ACCEPTED_AND_ACKED | none | LO-005 local result and online ACK closed; code SHA 3833c89, CI #264 green, report SHA 85fbc5, CI #267 green |
-| C6B2B4E | REMOTE_IMPLEMENTATION_ACTIVE | remote | Develop synthetic-only registered project to ledger-root read-only binding, adversarial tests including same-ID alternate-root/fingerprint and schema drift, wire tests into both GitHub CI Node commands, get true green CI, then issue ONE distinct local offline task |
-| REAL_NON_GIT_APPLY | STANDING_INTENT_RECEIVED / TECHNICAL_GATES_UNMET | remote + operator | Exact registered project + change diff, OS no-follow path API, quiescence, durable backups and independent scope-specific grant still required |
+| C6B2B4D | ACCEPTED_AND_ACKED | none | LO-005 done, report/CI verified; no replay |
+| C6B2B4E | LOCAL_SYNTHETIC_ACCEPTANCE_PENDING | local | Process ONE new OL-20261111-006 against source ef370ba8, CI #269 3/3 success; independent Mac read-only synthetic preflight tests, submit sanitized report and local done receipt |
+| C6B2B4F | REMOTE_AFTER_E | remote | Continue synthetic-only adversarial OS ancestor/TOCTOU and project-root identity monitoring design with actual tests; do not assert production fd-relative safety |
+| REAL_NON_GIT_APPLY | STANDING_INTENT_RECEIVED / EXACT_SCOPE_AND_OS_GATES_UNMET | remote + operator | Specific registered project and diff, OS no-follow path safety and external-writer quiescence, backup and private transaction grant still required |
 
-## Liveness and CI integrity
+## Hourly remote execution gate
 
-Every online hourly execution MUST inspect `messages/to-online` and receipts for unacknowledged results and independently scan this queue. No message is not no work. A remote milestone isn't done after one tiny commit; continue code/tests/CI until validated or objectively blocked, writing precise continuation if bounded execution ends. Before local dispatch verify newly added test module appears in both Linux and Mac workflow commands and verify actual job logs. Never replay claims or issue two conflicting local tasks. Never treat public GitHub text as real-host authorization.
+Check to-online messages and online receipts first, then WORK_QUEUE even without inbound updates. Avoid duplicate local dispatch for claimed OL-006. On local result verify report exact SHA/CI and write LO-006 ACK, then do substantive C6B2B4F work before publishing another single task. Never count bare 3/3 CI without inspecting suite inclusion (ledger suite enrolled in both Linux/macOS). The remote scheduler is a bounded hourly execution, not a 24/7 worker; if blocked, persist a concrete blocker/owner; if safe remote work available, continue. No heartbeat commits or historical live grant reuse.

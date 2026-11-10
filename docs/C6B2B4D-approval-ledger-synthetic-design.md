@@ -33,3 +33,10 @@ Remote owner: implement the bounded synthetic ledger and regression tests in a l
 - At 3833c89, added the complete ledger suite to BOTH Linux and macOS Node commands in `.github/workflows/local-first-core.yml`. CI #264 run 42905966465: all 3 jobs passed; Linux Node 192/192, proxy 5/5, Vitest 1208/1208. Unlike #263, the new ledger suite actually ran.
 
 Remaining unsolved: global registry-root fencing across arbitrary independent roots, malicious same-user tampering, genuine crash/power-loss durability, path TOCTOU and external writer quiescence, authenticated real approval, metadata fidelity, real multi-file atomicity. All production Apply remains gated by `agent-handoff/REAL_APPLY_GATES.md` despite operator standing intent.
+
+## C6B2B4E read-only preflight increment (2026-11-11)
+
+- Added `inspectRegistryBoundSyntheticApproval` in the existing isolated synthetic ledger module. It uses `LocalProjectRegistry.get(projectId)` and the existing `projectFingerprint` to compare an exact canonical synthetic project root against a **different** disposable owner-only fixture root with 0600 marker and fixed private ledger/journal children. It only reads metadata/marker and returns canonical facts. It does not reserve an ID or modify a project.
+- Three regression cases cover valid registered synthetic fixture, unknown ID/fingerprint drift, an alternate journal, 0644 marker, marker fingerprint drift, and project-root symlink replacement after registry construction. Synthetic fixtures only; no real registered project was accessed.
+- Source SHA `ef370ba84567f1fa90f968acf2b2d01bce7f26e2`, CI #269 run `42914176248` three jobs SUCCESS; Linux 195 Node tests, proxy 5, Vitest 1208; new tests were in the already-enrolled ledger suite on both Linux and macOS.
+- Still unresolved: caller-controlled registry instance and same-user marker are not authenticated credentials, general-purpose reserve in alternate ledger still allows duplicate use, normal Node lstat/realpath can race, external writers/quiescence, ACL/xattrs and true multi-file crash safety. No production caller or real Apply grant created.
