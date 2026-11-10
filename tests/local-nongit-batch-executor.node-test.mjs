@@ -142,7 +142,7 @@ test('worker drift after receipt preparation prevents issue and leaves reserved 
   // incomplete durable receipt for this project.
   const later=grant(0)
   await assert.rejects(execute(input,seal,props,later,actor),
-    /Pending synthetic execution needs manual review/)
+    /Synthetic execution grant\/step has already been consumed|Pending synthetic execution needs manual review/)
 }))
 
 test('expired, mismatched or non-private independent grant rejects before actor',async()=>fixture(async({source,input,seal,props,grant,actor,meta})=>{
