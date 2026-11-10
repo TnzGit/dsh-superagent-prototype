@@ -12,3 +12,9 @@ Next: after exact CI #250 3/3 green, local process OL-004 once and report. Onlin
 ## Delivery and macOS CI infrastructure note
 
 The complete online handoff chain, including OL-004 and `REAL_APPLY_GATES.md`, was actually pushed at `d423ea1a2ac86f6c5de2e6bdcaedf5fddc5a87a0`. The original code CI #250 had Linux core/build SUCCESS, macOS cancelled with no runner on both attempts; the follow-up documentation CI #251 rechecks the same code tree. An actual Mac offline synthetic acceptance may substitute for unavailable *GitHub-hosted macOS coverage*, but must flag `GH_MACOS_CI_INFRA_NOT_COVERED` and cannot claim GitHub 3/3 or justify real-project mutation. See current `LOCAL_AGENT_TASK.md` gate update.
+
+## 2026-11-11 online acceptance and next remote unit
+
+- Received valid local `LO-20261110-004` at report commit `1c8cc71703ec5c631f2cadaf2300730ef3bc129c`, with prior local claim `adf7b64a00e525dda183ebe0fcbcf3a32ddc8754` and local done receipt. Accepted C6B2B4C `ALL_OFFLINE_PASS` under the documented independent-Mac exception; **GH_MACOS_CI_INFRA_NOT_COVERED** remains. Exact source `c955892055b916f2d37edf4d8f8f2d06e21fafb5`: #250/#251 Linux/build pass, hosted macOS cancelled; #253 3/3 green on claim commit, #254 Linux/build pass but hosted macOS cancelled on report commit. Local report asserts 1208 Vitest, 187 Node/proxy and 35 adversarial checks; not independently rerun by online.
+- Online ACK `LO-20261110-004-done.md` recorded. No pending local task, and **no new local task dispatched** in this increment.
+- Remote C6B2B4D source review delivered as `docs/C6B2B4D-approval-ledger-synthetic-design.md`. Next owner: **remote** to implement default-OFF synthetic-only approval consumption/fencing tests and verify CI; no production readiness claim. Actual registered-project Apply remains gated by `REAL_APPLY_GATES.md` and exact private per-transaction approval.
