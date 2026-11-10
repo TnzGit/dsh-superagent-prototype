@@ -4,7 +4,8 @@
  */
 import {createHash} from 'node:crypto'
 import {lstat,open,realpath,readFile} from 'node:fs/promises'
-import {join,relative,isAbsolute} from 'node:path'
+import {join,relative,isAbsolute,dirname,basename} from 'node:path'
+import {tmpdir} from 'node:os'
 
 const ID=/^[a-z0-9][a-z0-9-]{7,79}$/
 const SHA=/^[a-f0-9]{64}$/
@@ -86,4 +87,56 @@ export async function inspectSyntheticApproval(
     typeof r.journalRoot!=='string'||!r.journalRoot)
     throw Error('Corrupt synthetic reservation; human reconciliation required')
   return r
+}
+
+
+/** Synthetic fixture-only *root binding* for process/crash adversarial tests.
+ *
+ * The fixture name, private marker and fixed child directories prevent a test
+ * caller from accidentally choosing a second ledger for the SAME fixture.
+ * The marker is NOT signed, a temporary directory is not an OS sandbox, and
+ * this is not registry-backed real-project approval or production fencing.
+ */
+export async function reserveFixtureBoundSyntheticApproval(
+  fixtureRoot:string,reservation:SyntheticApprovalReservation
+):Promise<'reserved'>{
+  const fixtureStat=await lstat(fixtureRoot)
+  if(!fixtureStat.isDirectory()||fixtureStat.isSymbolicLink()||
+    (fixtureStat.mode&0o077)!==0)
+    throw Error('Unsafe synthetic fixture root')
+  const fixture=await realpath(fixtureRoot)
+  const temp=await realpath(tmpdir())
+  if(dirname(fixture)!==temp||
+    !/^dsh-ledger-synthetic-[a-zA-Z0-9_-]{6,70}$/.test(basename(fixture)))
+    throw Error('Synthetic approval fixture is not a disposable temp root')
+  const marker=join(fixture,'.synthetic-ledger-binding.json')
+  let bound:unknown
+  try{
+    const st=await lstat(marker)
+    if(!st.isFile()||st.isSymbolicLink()||st.nlink!==1||
+      (st.mode&0o777)!==0o600)
+      throw Error('Untrusted synthetic fixture binding')
+    bound=JSON.parse(await readFile(marker,'utf8')) as unknown
+  }catch(error){
+    if(error instanceof SyntaxError||
+      ['ENOENT','ENOTDIR'].includes((error as NodeJS.ErrnoException).code??''))
+      throw Error('Missing or corrupt synthetic fixture binding')
+    throw error
+  }
+  if(!bound||typeof bound!=='object'||Array.isArray(bound)||
+    Object.keys(bound).length!==3)
+    throw Error('Untrusted synthetic fixture binding')
+  const b=bound as {version?:unknown;purpose?:unknown;projectFingerprint?:unknown}
+  if(b.version!==1||b.purpose!=='offline-synthetic-only'||
+    typeof b.projectFingerprint!=='string'||!SHA.test(b.projectFingerprint)||
+    b.projectFingerprint!==reservation.projectFingerprint)
+    throw Error('Synthetic fixture binding project mismatch')
+  const ledger=join(fixture,'ledger'),journal=join(fixture,'journal')
+  // Fail closed if a caller tries to reserve into an alternate journal
+  // directory, even when it is owner-only and outside the ledger.
+  const supplied=await realpath(reservation.journalRoot)
+  const fixed=await realpath(journal)
+  if(supplied!==fixed)
+    throw Error('Synthetic fixture journal root differs from owner binding')
+  return reserveSyntheticApproval(ledger,reservation)
 }
