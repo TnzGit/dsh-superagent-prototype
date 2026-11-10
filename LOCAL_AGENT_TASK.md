@@ -1,5 +1,13 @@
 # LOCAL_AGENT_TASK — CURRENT: C6B2B4A OFFLINE SYNTHETIC-ONLY SINGLE-STEP ACTOR ACCEPTANCE
 
+## New operator-approved coordination bootstrap (before C6B2B4A)
+
+The operator additionally **authorizes** a permanent **read-only GitHub handoff watcher** under the current Mac user's account: create private local script/state/log files and a user-level `launchd` LaunchAgent with `StartInterval=3600` and `RunAtLoad=true`. This is an explicit narrow exception to the ordinary no-host-configuration-change rule. Read `agent-handoff/README.md`, `PROJECT_CONTEXT.md`, `CURRENT_STATE.md`, `SECURITY.md`, `MESSAGE_PROTOCOL.md`, and `LOCAL_WATCHER_SPEC.md` first. Then process the initial message `agent-handoff/messages/to-local/2026-11-10-ol001-bootstrap-c6b2b4a.md` **once** using owner-only receipts.
+
+The watcher may read/fetch GitHub and enqueue a **bounded already-authorized offline** local Agent task if a supported local headless Agent entry point actually exists. If no reliable local Agent launcher is available, use **notification-only** mode and report that automatic continuation is not yet achieved; never guess an Agent command. The watcher must **never** directly evaluate GitHub messages as shell, give a new real-host approval, edit the running services or invoke real Prompt/Weixin. Use exclusive local locking and persistent per-message IDs to prevent duplicate starts. New incoming messages can only trigger work within an independently permitted scope. All watcher state and logs stay private and uncommitted.
+
+The Mac Agent is now also permitted to publish **sanitized handoff claim/done receipts and a single to-online completion message**, in addition to the already-authorized C6B2B4A report-only commit. Those are documentation-only commits; no product code/workflow change by the Mac Agent. This exception does not grant deployment, production writes or live operations.
+
 **Authority: synthetic disposable projects ONLY; no permission for real project Apply or production host writes.** C6B2B3 was independently accepted `ALL_OFFLINE_PASS`, tested at code SHA `5a4f560795d0a65cb947b78535bc6c3fee68029a`; report commit `a060dcae6dae40d6469955f24d95a6fba3ee3aa7` and CI #235 3/3 green. Report: `agent-reports/REPORT-c6b2b3-offline-staged-worker-issue-guard.md`. There is NO new live-human grant. C5.5B and all earlier one-shot approvals remain consumed.
 
 **This C6B2B4A task is an experimental orchestrator, NOT a real source-write adapter.** Source file `src/local-first/non-git-batch-executor.ts` coordinates exactly one independently approved synthetic step. It refuses non-fixture projects based on a private owner-only marker inside a specially named `mkdtemp` subtree and insists the Worker be inside the same fixture. Its own persistent writes ONLY go into an owner-only receipt root outside source/worker/stage/audit, with a durable `reserved` receipt BEFORE audit `issued` and BEFORE an injected synthetic test actor. The actor is supplied only by the Node TEST HARNESS. **An arbitrary injected callback is not a sandbox or real-world safety proof; only test-controlled callbacks are in scope.** This module MUST remain disconnected from Runtime, Worker, Weixin, Outbox and DSH production APIs.
@@ -16,15 +24,15 @@ Repository `TnzGit/dsh-superagent-prototype`; branch `feat/local-first-wechat-fo
 6. Explicitly review that test actor is arbitrary injected code and cannot be considered production file-safety isolation; confirm the coordinator itself has NO source write primitive, the synthetic fixture guard is not a substitute for OS-level quiescence/path-safe dirfd APIs, and sha256 receipt digests are not signatures. Multi-file operations remain **NON-ATOMIC**, no general transactional rollback. Only synthetic harness source writes are authorized.
 7. Confirm repo-wide ZERO production callers from Runtime, Worker, native Weixin, Outbox, DSH Session Prompt and server configuration. No real project or grant is ever used.
 
-## Gate B — no live operations
+## Gate B — no live operations (except the explicitly authorized user-level read-only watcher)
 
 Do NOT touch real operator project roots, 3080/3083/8123 services, original disposable or historical Workspaces/Sessions, native Weixin, production SQLite/journals, global model/provider/default, operator LAN config or any historical one-shot authorization. No real Session Prompt, service restart, deployment or production Apply. Only new disposable temporary fixtures and one sanitized report commit are permitted.
 
-## Gate C — ONE report-only commit, no product code writes
+## Gate C — sanitized report plus append-only handoff receipts; no product code writes
 
 Publish `agent-reports/REPORT-c6b2b4a-offline-synthetic-step-executor.md` as a single sanitized report-only commit in a new clean publishing worktree, normal non-force push. Include code SHA, exact CI 3-job status, local pnpm/Vitest/Node counts, one-use receipt lifecycle, positive/negative/crash matrix and source byte/mode evidence, zero callers, and explicit **REAL PROJECT APPLY / REAL HOST SOURCE WRITE / REAL WEIXIN E2E: NOT RUN**. Clearly distinguish the synthetic actor's intended fixture writes from prohibited REAL host writes. Keep private file paths, tokens, IDs, source content, PIDs and full hashes out of the public report. Stop `BLOCKED_CODE`/`BLOCKED_DESIGN` on actual issues; use `BLOCKED_INFRA_MACOS` only for runner infrastructure, with bounded checks. Mac Agent may not patch product code or workflow.
 
-Final response: one line `ALL_OFFLINE_PASS` or precise blocker + GitHub report URL and pushed SHA, then STOP.
+After the report is published, append a sanitized `messages/to-online/` completion item and a `receipts/local/` done record for the incoming message ID. Never edit `messages/to-local/` or online-owned state. Final response: one line `ALL_OFFLINE_PASS` or precise blocker + GitHub report URL and pushed SHA, then STOP.
 
 ## Future C6B2B4B — NOT AUTHORIZED
 
