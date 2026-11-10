@@ -72,9 +72,13 @@ C6B2A was independently accepted on code SHA `fbf0a8f`, with complete offline sy
 
 Independent local synthetic acceptance and baseline CI #223 attempt 2, plus report CI, passed 3/3. The report commit documented an incomplete sealed-batch missing-`seal.json` ENOENT diagnostic that the remote owner corrected with a new negative regression test.
 
-## Current authorization: C6B2B2 OFFLINE PER-FILE AUDIT ONLY
+## C6B2B2 multi-file step-audit acceptance — complete
 
-The current `LOCAL_AGENT_TASK.md` permits **only synthetic temporary project tests**, code audit, local CI and ONE sanitized report push. The new C6B2B2 ledger stores private, durable `issued` (human checkpoint) and `confirmed` (read-only observed source state) events. It DOES NOT mutate any project source, call DSH/Weixin, authorize external file mutation, auto-resume, auto-rollback or repair. C5.5B and all previous live one-shot grants remain consumed. Any future real host file mutation requires new explicit human authorization and a separately published scope.
+The C6B2B2 offline report passed with 23 adversarial refusals; baseline CI #231 and final report CI #232 were 3/3 green. No real host writes or new live DSH/Weixin operations were authorized or performed. The report identified F1 (staged Worker after-image drift before issuing an audit step) and F2 (raw orphan-lock path in error).
+
+## Current authorization: C6B2B3 OFFLINE STAGED-IMAGE/LOCK GUARD TESTS ONLY
+
+`LOCAL_AGENT_TASK.md` authorizes synthetic throwaway project tests and ONE sanitized report-only commit to validate the remote's F1/F2 fixes. F1 performs private staged image + Worker source-independent verification before `issued`; F2 redacts an orphan audit lock EEXIST. **No real registered project Apply, multi-file execution, 3080/3083/8123 change, real Weixin message, original Session Prompt, historical receipt/grant reuse, model default/profile write or live host mutation is authorized.** All earlier human live grants including C5.5B remain permanently consumed. A separate explicit operator authorization is mandatory before any future real project write.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 
