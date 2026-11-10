@@ -136,6 +136,24 @@ async function fileBlob(path:string,hashLength:number):Promise<string|undefined>
     throw Error('File changed during transaction')
   return digest.digest('hex')
 }
+/** Conservative preflight, not a race-free OS-level file descriptor guard.
+ * Reject known hardlink aliases and metadata that the single-file journal
+ * cannot restore. This remains strictly default-OFF and synthetic tested.
+ */
+async function refuseUnsupportedSourceMetadata(path:string):Promise<void>{
+  let info:Awaited<ReturnType<typeof lstat>>
+  try{info=await lstat(path)}
+  catch(e){
+    if((e as NodeJS.ErrnoException).code==='ENOENT')return
+    throw e
+  }
+  if(!info.isFile()||info.isSymbolicLink())
+    throw Error('Unsupported source file type requires manual review')
+  if(info.nlink!==1)
+    throw Error('Hardlinked source path requires manual review')
+  if((info.mode&0o7000)!==0)
+    throw Error('Special source mode bits require manual review')
+}
 function safeTarget(input:SnapshotRequest,change:NonGitChange):string {
   if(!change.path||change.path.includes('\\')||
     change.path.split('/').some(x=>!x||x==='.'||x==='..'))
@@ -180,6 +198,7 @@ export async function applyOneNonGitFile(input:SnapshotRequest,opts:{
       throw Error('Single-file plan digest mismatch or more than one change')
     const change=plan.changes[0]!,target=safeTarget(input,change),parent=dirname(target)
     if(!lstatSync(parent).isDirectory())throw Error('Apply requires an existing ordinary parent directory')
+    await refuseUnsupportedSourceMetadata(target)
     const dir=join(root,'tx-'+approval.transactionId)
     await mkdir(dir,{mode:0o700})
     await syncDir(root)
@@ -210,6 +229,7 @@ export async function applyOneNonGitFile(input:SnapshotRequest,opts:{
       // operator (our lock only serializes calls using this module).
       if(await fileBlob(target,change.before?.length??change.after?.length??40)!==change.before)
         throw Error('Source drift immediately before mutation')
+      await refuseUnsupportedSourceMetadata(target)
       if(change.before&&((await lstat(target)).mode&0o111)!==(beforeMode!&0o111))
         throw Error('Source executable mode drift')
       if(change.action==='add'){
@@ -269,6 +289,7 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
     })).digest('hex')
     if(expected!==row.previewDigest)
       throw Error('Transaction journal change no longer matches approved preview')
+    await refuseUnsupportedSourceMetadata(target)
     const actual=await fileBlob(target,row.change.after?.length??row.change.before?.length??40)
     const currentMode=actual===undefined?undefined:(await lstat(target)).mode&0o777
     const restored=actual===row.change.before&&
@@ -296,12 +317,14 @@ export async function rollbackOneNonGitFile(input:SnapshotRequest,opts:{
           await copyVerified(before,temp,row.change.before,row.beforeExecutable===true,row.beforeMode)
           if(await fileBlob(target,row.change.after?.length??40)!==row.change.after)
             throw Error('Source drift before rollback')
+          await refuseUnsupportedSourceMetadata(target)
           if(row.change.action==='delete'){
             await link(temp,target);await unlink(temp)
           }else await rename(temp,target)
         }else{
           if(await fileBlob(target,row.change.after?.length??40)!==row.change.after)
             throw Error('Source drift before rollback delete')
+          await refuseUnsupportedSourceMetadata(target)
           await unlink(target)
         }
         await syncDir(parent)

@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync,symlinkSync,chmodSync,realpathSync} from 'node:fs'
+import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,existsSync,rmSync,symlinkSync,chmodSync,realpathSync,linkSync,statSync} from 'node:fs'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
 import {LocalProjectRegistry} from '../src/local-first/project-registry.ts'
@@ -241,4 +241,81 @@ test('orphaned owner-only rollback lock redacts path and leaves applied syntheti
   assert.equal(readFileSync(lock,'utf8'),'orphaned synthetic rollback lock')
   assert.equal(readFileSync(join(source,'a.txt'),'utf8'),'after')
   assert.equal(readFileSync(join(journal,'tx-'+applied.transactionId,'journal.json'),'utf8').includes('"status":"applied"'),true)
+}))
+
+test('hardlink alias preflight rejects synthetic apply without changing either source path',async()=>fixture(async({source,request,journal,grant})=>{
+  const original=join(source,'a.txt'),alias=join(source,'alias.txt')
+  writeFileSync(original,'before',{mode:0o600})
+  linkSync(original,alias)
+  assert.equal(statSync(original).ino,statSync(alias).ino)
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const preview=await previewNonGitProjectChanges(request)
+  assert.equal(preview.changes.length,1)
+  await assert.rejects(applyOneNonGitFile(request,{
+    journalDirectory:journal,approvalFile:grant('apply',preview.digest)
+  }),/Hardlinked source path requires manual review/)
+  assert.equal(readFileSync(original,'utf8'),'before')
+  assert.equal(readFileSync(alias,'utf8'),'before')
+  assert.equal(statSync(original).ino,statSync(alias).ino)
+  assert.equal(existsSync(join(journal,'tx-apply-transaction-00001')),false)
+}))
+test('external hardlink alias after synthetic apply blocks rollback without consuming rollback journal',async()=>fixture(async({source,request,journal,grant})=>{
+  const original=join(source,'a.txt'),alias=join(source,'alias.txt')
+  writeFileSync(original,'before')
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const preview=await previewNonGitProjectChanges(request)
+  const applied=await applyOneNonGitFile(request,{
+    journalDirectory:journal,approvalFile:grant('apply',preview.digest)
+  })
+  linkSync(original,alias)
+  assert.equal(statSync(original).nlink,2)
+  await assert.rejects(rollbackOneNonGitFile(request,{
+    journalDirectory:journal,approvalFile:grant('rollback',preview.digest,{
+      rollbackOfTransactionId:applied.transactionId
+    })
+  }),/Hardlinked source path requires manual review/)
+  assert.equal(readFileSync(original,'utf8'),'after')
+  assert.equal(readFileSync(alias,'utf8'),'after')
+  assert.equal(statSync(original).nlink,2)
+  const journalRow=JSON.parse(readFileSync(join(journal,'tx-'+applied.transactionId,'journal.json'),'utf8'))
+  assert.equal(journalRow.status,'applied')
+  assert.equal(journalRow.rollbackApprovalId,undefined)
+}))
+test('special POSIX mode bits, where supported, refuse synthetic apply without metadata loss',async(t)=>fixture(async({source,request,journal,grant})=>{
+  const original=join(source,'a.txt')
+  writeFileSync(original,'before',{mode:0o600})
+  chmodSync(original,0o1644)
+  const mode=statSync(original).mode&0o7777
+  if((mode&0o7000)===0){t.skip('special POSIX mode not supported on fixture filesystem');return}
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const preview=await previewNonGitProjectChanges(request)
+  await assert.rejects(applyOneNonGitFile(request,{
+    journalDirectory:journal,approvalFile:grant('apply',preview.digest)
+  }),/Special source mode bits require manual review/)
+  assert.equal(readFileSync(original,'utf8'),'before')
+  assert.equal(statSync(original).mode&0o7777,mode)
+  assert.equal(existsSync(join(journal,'tx-apply-transaction-00001')),false)
+}))
+test('special POSIX mode added after synthetic apply blocks rollback, preserving external metadata',async(t)=>fixture(async({source,request,journal,grant})=>{
+  const original=join(source,'a.txt')
+  writeFileSync(original,'before')
+  await createProjectSnapshot(request)
+  writeFileSync(join(request.directory,'a.txt'),'after')
+  const preview=await previewNonGitProjectChanges(request)
+  const applied=await applyOneNonGitFile(request,{
+    journalDirectory:journal,approvalFile:grant('apply',preview.digest)
+  })
+  chmodSync(original,0o1644)
+  const mode=statSync(original).mode&0o7777
+  if((mode&0o7000)===0){t.skip('special POSIX mode not supported on fixture filesystem');return}
+  await assert.rejects(rollbackOneNonGitFile(request,{
+    journalDirectory:journal,approvalFile:grant('rollback',preview.digest,{rollbackOfTransactionId:applied.transactionId})
+  }),/Special source mode bits require manual review/)
+  assert.equal(readFileSync(original,'utf8'),'after')
+  assert.equal(statSync(original).mode&0o7777,mode)
+  const journalRow=JSON.parse(readFileSync(join(journal,'tx-'+applied.transactionId,'journal.json'),'utf8'))
+  assert.equal(journalRow.status,'applied')
 }))
