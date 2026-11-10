@@ -165,6 +165,17 @@ export async function inspectRegistryBoundSyntheticApproval(
   const project=registry.get(projectId)
   if(project.id!==projectId||project.kind!=='local'||project.readOnly)
     throw Error('Synthetic registry project is not eligible')
+  // C6B2B4F: reject a symlinked ancestor even when the final root is a directory.
+  // This is a best-effort read-only preflight, NOT an atomic no-follow fd walk.
+  let ancestor=project.root
+  while(true){
+    const ancestorStat=await lstat(ancestor)
+    if(ancestorStat.isSymbolicLink())
+      throw Error('Registered synthetic project ancestor identity changed')
+    const parent=dirname(ancestor)
+    if(parent===ancestor)break
+    ancestor=parent
+  }
   const projectStat=await lstat(project.root)
   const canonicalProject=await realpath(project.root)
   if(!projectStat.isDirectory()||projectStat.isSymbolicLink()||
