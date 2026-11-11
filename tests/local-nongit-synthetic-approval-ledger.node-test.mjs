@@ -401,3 +401,29 @@ test('two OS processes sharing synthetic project parent cannot reserve same ID i
       readdirSync(ledger2).filter(x=>x.endsWith('.json')).length,1)
   }finally{rmSync(external,{recursive:true,force:true});rmSync(second,{recursive:true,force:true})}
 }))
+
+test('same registry refuses deleted or replaced durable pin without issuing another receipt',()=>fixture(async({root,journal})=>{
+  const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([parent],[{id:'synthetic-pin-drift',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-pin-drift'))
+    const fixtureRoot=join(root,'..')
+    writeFileSync(join(fixtureRoot,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    const first={...grant(journal),projectFingerprint:fp}
+    assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-pin-drift',fixtureRoot,first),'reserved')
+    const pin=join(parent,'.dsh-synthetic-ledger-pin.json')
+    const original=(await import('node:fs')).readFileSync(pin,'utf8')
+    const next={...first,approvalId:'approval-synthetic-00002'}
+    rmSync(pin)
+    await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-pin-drift',fixtureRoot,next),
+      /pin disappeared/)
+    assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,1)
+    writeFileSync(pin,original,{mode:0o600})
+    await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-pin-drift',fixtureRoot,next),
+      /pin identity changed/)
+    assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,1)
+  }finally{rmSync(parent,{recursive:true,force:true})}
+}))
