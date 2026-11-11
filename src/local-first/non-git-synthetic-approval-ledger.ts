@@ -336,6 +336,14 @@ export async function reserveRegistryBoundSyntheticApproval(
   registry:Pick<LocalProjectRegistry,'get'|'assertRegisteredRootIdentity'>,
   projectId:string,fixtureRoot:string,reservation:SyntheticApprovalReservation
 ):Promise<'reserved'>{
+  if(!reservation||typeof reservation!=='object'||Array.isArray(reservation)||
+    Object.keys(reservation).sort().join(',')!==
+      'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version'||
+    reservation.version!==1||!ID.test(reservation.approvalId)||
+    !ID.test(reservation.transactionId)||!SHA.test(reservation.projectFingerprint)||
+    !SHA.test(reservation.previewDigest)||!['apply','rollback'].includes(reservation.operation)||
+    typeof reservation.journalRoot!=='string'||!reservation.journalRoot)
+    throw Error('Invalid synthetic reservation')
   const bound=await inspectRegistryBoundSyntheticApproval(
     registry,projectId,fixtureRoot,reservation)
   // Preserve cross-fixture rejection before checking same-path inode continuity.

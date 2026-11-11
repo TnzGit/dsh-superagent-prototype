@@ -331,6 +331,28 @@ test('registry-scoped synthetic reservation rejects cross-fixture same-ID replay
   }finally{rmSync(second,{recursive:true,force:true});rmSync(projectBase,{recursive:true,force:true})}
 }))
 
+test('registry-bound invalid reservation input leaves no durable pin or receipt',()=>fixture(async({root,journal})=>{
+ const projectBase=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+ try{
+  const project=join(projectBase,'registered');mkdirSync(project,{mode:0o700})
+  const registry=new LocalProjectRegistry([projectBase],[{id:'synthetic-early-guard',root:project,kind:'local'}])
+  const fp=projectFingerprint(registry.get('synthetic-early-guard'))
+  const fixtureRoot=join(root,'..')
+  writeFileSync(join(fixtureRoot,'.synthetic-ledger-binding.json'),JSON.stringify({
+   version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+  }),{mode:0o600})
+  const g={...grant(journal),projectFingerprint:fp}
+  await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-early-guard',fixtureRoot,{
+   ...g,unexpected:'not-authority'
+  }),/Invalid synthetic reservation/)
+  assert.equal(readdirSync(projectBase).includes('.dsh-synthetic-ledger-pin.json'),false,
+   'invalid input must not create a durable pin')
+  assert.equal(readdirSync(root).length,0,'invalid input must not create a receipt')
+  assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-early-guard',fixtureRoot,g),'reserved')
+  assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,1)
+ }finally{rmSync(projectBase,{recursive:true,force:true})}
+}))
+
 // Durable owner-private synthetic parent pin crosses registry instances, but
 // a distinct project parent or same-user deletion can still bypass it.
 test('registry-scoped durable fixture pin rejects alternate ledger in new registry instance',()=>fixture(async({root,journal})=>{
