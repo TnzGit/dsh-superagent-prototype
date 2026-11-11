@@ -50,7 +50,7 @@ test('read-only synthetic receipt inspection rejects unexpected fields without c
  const path=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
  const fs=await import('node:fs')
  const original=fs.readFileSync(path,'utf8')
- fs.writeFileSync(path,JSON.stringify({...g,unexpected:'not-authority'})+'\\n',{mode:0o600})
+ fs.writeFileSync(path,JSON.stringify({...g,unexpected:'not-authority'})+'\n',{mode:0o600})
  const tampered=fs.readFileSync(path,'utf8')
  await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
  assert.equal(fs.readFileSync(path,'utf8'),tampered,'inspection must be read-only')
