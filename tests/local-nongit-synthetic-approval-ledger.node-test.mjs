@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-import {reserveSyntheticApproval,inspectSyntheticApproval,reserveFixtureBoundSyntheticApproval,inspectRegistryBoundSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
+import {reserveSyntheticApproval,inspectSyntheticApproval,reserveFixtureBoundSyntheticApproval,inspectRegistryBoundSyntheticApproval,reserveRegistryBoundSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
 import {LocalProjectRegistry} from '../src/local-first/project-registry.ts'
 import {projectFingerprint} from '../src/local-first/project-workspaces.ts'
 const grant=(journalRoot)=>({version:1,approvalId:'approval-synthetic-00001',transactionId:'transaction-synthetic-00001',projectFingerprint:'a'.repeat(64),previewDigest:'b'.repeat(64),operation:'apply',journalRoot})
@@ -276,4 +276,64 @@ test('registry preflight rejects ordinary ancestor replacement preserving root i
     assert.equal(readdirSync(root).length,0,'failed preflight cannot reserve approval')
     assert.equal(readdirSync(journal).length,0)
   }finally{rmSync(external,{recursive:true,force:true})}
+}))
+
+// A *single* registry instance pins the first validated fixture's ledger; a
+// second equally private fixture cannot consume the same approval via this API.
+test('registry-scoped synthetic reservation rejects cross-fixture same-ID replay before writing',()=>fixture(async({root,journal})=>{
+  const projectBase=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  const second=mkdtempSync(join(tmpdir(),'dsh-ledger-synthetic-'))
+  try{
+    const project=join(projectBase,'registered')
+    mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([projectBase],[{id:'synthetic-pinned',root:project,kind:'local'}])
+    const fingerprint=projectFingerprint(registry.get('synthetic-pinned'))
+    const first=join(root,'..')
+    writeFileSync(join(first,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fingerprint
+    }),{mode:0o600})
+    const ledger2=join(second,'ledger'),journal2=join(second,'journal')
+    mkdirSync(ledger2,{mode:0o700});mkdirSync(journal2,{mode:0o700})
+    writeFileSync(join(second,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fingerprint
+    }),{mode:0o600})
+    const g={...grant(journal),projectFingerprint:fingerprint}
+    assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-pinned',first,g),'reserved')
+    await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-pinned',second,{
+      ...g,journalRoot:journal2
+    }),/conflicting fixture ledger binding/)
+    await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-pinned',first,g),/already reserved/)
+    assert.equal(readdirSync(root).filter(n=>n.endsWith('.json')).length,1)
+    assert.equal(readdirSync(ledger2).length,0,'alternate fixture must not get a receipt')
+    assert.equal(readdirSync(journal2).length,0)
+  }finally{rmSync(second,{recursive:true,force:true});rmSync(projectBase,{recursive:true,force:true})}
+}))
+
+// Explicit boundary proof: a second LocalProjectRegistry instance has no
+// shared process/durable pin. This is NOT a production global replay defense.
+test('registry-scoped fixture pin is not global across independent registry instances',()=>fixture(async({root,journal})=>{
+  const projectBase=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  const second=mkdtempSync(join(tmpdir(),'dsh-ledger-synthetic-'))
+  try{
+    const project=join(projectBase,'registered');mkdirSync(project,{mode:0o700})
+    const setup=()=>new LocalProjectRegistry([projectBase],[{id:'synthetic-unshared',root:project,kind:'local'}])
+    const r1=setup(),r2=setup(),fp=projectFingerprint(r1.get('synthetic-unshared'))
+    const first=join(root,'..')
+    writeFileSync(join(first,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    const ledger2=join(second,'ledger'),journal2=join(second,'journal')
+    mkdirSync(ledger2,{mode:0o700});mkdirSync(journal2,{mode:0o700})
+    writeFileSync(join(second,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    assert.equal(await reserveRegistryBoundSyntheticApproval(r1,'synthetic-unshared',first,{
+      ...grant(journal),projectFingerprint:fp
+    }),'reserved')
+    assert.equal(await reserveRegistryBoundSyntheticApproval(r2,'synthetic-unshared',second,{
+      ...grant(journal2),projectFingerprint:fp
+    }),'reserved','independent registry instances are not durably fenced')
+    assert.equal(readdirSync(root).filter(n=>n.endsWith('.json')).length,1)
+    assert.equal(readdirSync(ledger2).filter(n=>n.endsWith('.json')).length,1)
+  }finally{rmSync(second,{recursive:true,force:true});rmSync(projectBase,{recursive:true,force:true})}
 }))

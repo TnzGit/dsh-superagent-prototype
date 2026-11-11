@@ -144,6 +144,14 @@ export async function reserveFixtureBoundSyntheticApproval(
 }
 
 
+/** C6B2B5A: in-memory fixture ledger pin for one LocalProjectRegistry instance.
+ * No caller can select a second ledger root through reserveRegistryBound...
+ * after the first validated binding. This process-local WeakMap is NOT a durable
+ * global arbiter: a different registry instance/process or a same-user forged
+ * fixture may still reserve the SAME ID elsewhere. No real Apply permission.
+ */
+const syntheticRegistryLedgerPins=new WeakMap<object,Map<string,string>>()
+
 /** C6B2B4E source-only READ-ONLY synthetic registry/fixture binding gate.
  * Uses an operator-created LocalProjectRegistry identity and the already defined
  * projectFingerprint; no source or journal is created, consumed or modified.
@@ -238,4 +246,30 @@ export async function inspectRegistryBoundSyntheticApproval(
   // Return facts for read-only evidence. Never consume a grant in this gate.
   return Object.freeze({projectId,projectFingerprint:fingerprint,
     ledgerRoot:ledger,journalRoot:journal})
+}
+
+/** Registry-scoped fixture reservation for DISPOSABLE synthetic tests only.
+ *
+ * First validated fixture pins the ledger for this registry instance/project.
+ * A later caller choosing an alternate fixture/ledger is rejected BEFORE a
+ * second receipt can be created. The durable wx reservation arbitrates only
+ * attempts using that one ledger. This is NOT cross-process fencing, cannot
+ * authenticate the first fixture, and must NEVER be used for real project Apply.
+ */
+export async function reserveRegistryBoundSyntheticApproval(
+  registry:Pick<LocalProjectRegistry,'get'|'assertRegisteredRootIdentity'>,
+  projectId:string,fixtureRoot:string,reservation:SyntheticApprovalReservation
+):Promise<'reserved'>{
+  const bound=await inspectRegistryBoundSyntheticApproval(
+    registry,projectId,fixtureRoot,reservation)
+  let pins=syntheticRegistryLedgerPins.get(registry)
+  if(!pins){pins=new Map<string,string>();syntheticRegistryLedgerPins.set(registry,pins)}
+  const previous=pins.get(projectId)
+  if(previous!==undefined&&previous!==bound.ledgerRoot)
+    throw Error('Synthetic registry has a conflicting fixture ledger binding')
+  // No await between binding lookup and set: concurrent async callers sharing
+  // this JS registry instance cannot both choose different ledger roots.
+  if(previous===undefined)pins.set(projectId,bound.ledgerRoot)
+  registry.assertRegisteredRootIdentity(projectId)
+  return reserveFixtureBoundSyntheticApproval(fixtureRoot,reservation)
 }
