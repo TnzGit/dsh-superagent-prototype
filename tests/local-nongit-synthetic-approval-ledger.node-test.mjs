@@ -417,7 +417,10 @@ test('same registry refuses deleted or replaced durable pin without issuing anot
     const pin=join(parent,'.dsh-synthetic-ledger-pin.json')
     const original=(await import('node:fs')).readFileSync(pin,'utf8')
     const next={...first,approvalId:'approval-synthetic-00002'}
-    rmSync(pin)
+    // Keep the original inode alive under a different name: unlink+recreate
+    // may legitimately recycle its inode immediately on Linux.
+    const moved=pin+'.moved'
+    ;(await import('node:fs')).renameSync(pin,moved)
     await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-pin-drift',fixtureRoot,next),
       /pin disappeared/)
     assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,1)
