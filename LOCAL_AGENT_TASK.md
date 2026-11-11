@@ -1,9 +1,9 @@
-# LOCAL_AGENT_TASK — C6B2B5G OFFLINE SYNTHETIC PRE-PIN VALIDATION ACCEPTANCE
+# LOCAL_AGENT_TASK — C6B2B5H OFFLINE SYNTHETIC OWN-PROPERTY INPUT ACCEPTANCE
 
-**Unique active task:** OL-20261111-014; scope OFFLINE_SYNTHETIC_ONLY. OL-001..013 closed; never replay.
+**Unique active task:** OL-20261112-015, OFFLINE_SYNTHETIC_ONLY. OL-001..014 closed, never replay. Feature branch `feat/local-first-wechat-foundation`.
 
-**Exact tested source SHA:** `959f8346dd77505af432762c17428e21f505a45c`. **Source CI #329:** https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43039758160 — 3/3 SUCCESS; Linux/macOS Node 207/207, proxy 5/5; Vitest 1208/1208. Both OS job logs execute the new registry-bound pre-pin rejection test.
+**EXACT PINNED SOURCE SHA:** `6dff9f34e5fbd299b3774381aab12a99b31b0feb`. **Source CI #334:** https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43059414309 — 3/3 SUCCESS. Actual Linux/macOS logs each Node **209/209**, proxy **5/5**; typecheck/build Vitest **1208/1208**, 62 files, build complete. Both new own-property/hidden-key regressions executed in both OS ledger suites.
 
-Follow `agent-handoff/messages/to-local/2026-11-11-ol014-c6b2b5g-prepin-validation-acceptance.md` in full and standing `LOCAL_AGENT_PROTOCOL.md`, `agent-handoff/SECURITY.md`, `agent-handoff/REAL_APPLY_GATES.md`, `agent-handoff/MESSAGE_PROTOCOL.md`. Claim once before testing. Use clean detached pinned-source worktree and disposable synthetic fixtures only; run full CI-parity tests and independent adversarial pre-pin acceptance; report actual counts and residual limitations. Publish one sanitized report, LO-014 result and local done receipt, then STOP.
+Follow `agent-handoff/messages/to-local/2026-11-12-ol015-c6b2b5h-own-property-input-acceptance.md` in full, plus standing `LOCAL_AGENT_PROTOCOL.md`, `agent-handoff/SECURITY.md`, `agent-handoff/REAL_APPLY_GATES.md`, `agent-handoff/MESSAGE_PROTOCOL.md`. Claim ONCE before testing. Clean detached worktree at pinned source; disposable owner-only synthetic fixtures only. Run full CI-parity and adversarial validation. Publish one sanitized report, one LO-015 result, one local done receipt; then STOP.
 
-**Forbidden:** real Apply, original DSH Prompt, Weixin, services 3080/3083/8123, production DB, model/provider/default/credential changes, historical live grants and non-fixture writes. No production authority.
+**NO** real Apply, original DSH Prompt, Weixin, services 3080/3083/8123, production DB, provider/model/default/credential changes, historical grants or non-fixture writes. This task is NOT production authority.
