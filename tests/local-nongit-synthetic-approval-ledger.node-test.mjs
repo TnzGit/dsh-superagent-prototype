@@ -427,6 +427,28 @@ test('registry-bound accessor input cannot run getter or create durable pin',()=
  }finally{rmSync(parent,{recursive:true,force:true})}
 }))
 
+test('registry-bound Proxy input is refused before pin and without executing traps',()=>fixture(async({root,journal})=>{
+ const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+ try{
+  const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+  const registry=new LocalProjectRegistry([parent],[{id:'synthetic-proxy',root:project,kind:'local'}])
+  const fp=projectFingerprint(registry.get('synthetic-proxy'))
+  const base=join(root,'..')
+  writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:fp}),{mode:0o600})
+  const g={...grant(journal),projectFingerprint:fp};let traps=0
+  const proxy=new Proxy(g,{
+   getPrototypeOf(){traps++;throw Error('trap executed')},
+   ownKeys(){traps++;throw Error('trap executed')},
+   getOwnPropertyDescriptor(){traps++;throw Error('trap executed')}
+  })
+  await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-proxy',base,proxy),/Invalid synthetic reservation/)
+  assert.equal(traps,0)
+  assert.equal(readdirSync(parent).includes('.dsh-synthetic-ledger-pin.json'),false)
+  assert.equal(readdirSync(root).length,0)
+  assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-proxy',base,g),'reserved')
+ }finally{rmSync(parent,{recursive:true,force:true})}
+}))
+
 // Durable owner-private synthetic parent pin crosses registry instances, but
 // a distinct project parent or same-user deletion can still bypass it.
 test('registry-scoped durable fixture pin rejects alternate ledger in new registry instance',()=>fixture(async({root,journal})=>{
