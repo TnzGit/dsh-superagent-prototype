@@ -151,6 +151,9 @@ export async function reserveFixtureBoundSyntheticApproval(
  * authenticated global arbiter or production authorization.
  */
 const syntheticRegistryLedgerPins=new WeakMap<object,Map<string,string>>()
+// In-process inode evidence: deletion/replacement after a successful pin must
+// not be silently accepted as a fresh first-use fixture. Not cross-process auth.
+const syntheticPinFileIdentities=new WeakMap<object,Map<string,{dev:number;ino:number}>>()
 
 /** A private durable binding inside the *disposable parent*, never the
  * registered project source. An interrupted wx write is terminal and requires
@@ -173,6 +176,13 @@ async function pinDisposableSyntheticLedger(
   const file=join(fixture,'.dsh-synthetic-ledger-pin.json')
   const expected={version:1,purpose:'offline-synthetic-ledger-pin',
     projectId,projectFingerprint:projectFp,ledgerRoot}
+  const remembered=syntheticPinFileIdentities.get(registry)?.get(projectId)
+  if(remembered){
+    let current
+    try{current=await lstat(file)}catch{throw Error('Synthetic registry ledger pin disappeared; manual review required')}
+    if(current.dev!==remembered.dev||current.ino!==remembered.ino)
+      throw Error('Synthetic registry ledger pin identity changed; manual review required')
+  }
   let handle
   try{handle=await open(file,'wx',0o600)}
   catch(e){
@@ -201,6 +211,12 @@ async function pinDisposableSyntheticLedger(
     row.ledgerRoot!==ledgerRoot)
     throw Error('Synthetic registry has a conflicting fixture ledger binding')
   registry.assertRegisteredRootIdentity(projectId)
+  const finalEntry=await lstat(file)
+  if(finalEntry.dev!==entry.dev||finalEntry.ino!==entry.ino)
+    throw Error('Synthetic registry ledger pin identity changed; manual review required')
+  let identities=syntheticPinFileIdentities.get(registry)
+  if(!identities){identities=new Map();syntheticPinFileIdentities.set(registry,identities)}
+  identities.set(projectId,{dev:entry.dev,ino:entry.ino})
 }
 
 /** C6B2B4E source-only READ-ONLY synthetic registry/fixture binding gate.
