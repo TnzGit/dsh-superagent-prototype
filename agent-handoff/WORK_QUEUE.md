@@ -53,3 +53,9 @@ When tested code CI all required jobs pass, existing local tasks are completed a
 - LO-009 Mac report, claimed/done receipts and complete message headers accepted; online ACK `d47d152af260a5670270af313b8f0a57968b8d84`. Pinned code `06de7c16599dc348857a0b0548135e458d5964e5`, CI #292 actual 3/3 with Linux/macOS 202 Node + 5 proxy, Vitest 1208. Mac report independently asserts 207 combined, 20 ledger, 71 adversarial checks; no live operations.
 - **REMOTE_OWNED executable next:** inspect synthetic ledger pin and registry code for a bounded fail-closed hardening opportunity (for example same-user pin deletion/replacement detection within an existing process), implement source + adversarial regression in the existing ledger suite, verify both OS CI job commands and logs plus build/check 3/3. No new local task until source CI green. Do not claim cryptographic or OS race freedom from owner-private fixture checks. A future task must have a new ID and pinned source.
 - No pending local task after OL-009. Real Apply gates remain unmet; no production caller or real writes authorized.
+
+
+## C6B2B5C local acceptance transition — 2026-11-11
+
+- LO-010 independently reviewed and **ACCEPTED_ACKED** with one online done receipt; source `6461e03a50952c56c6b7ef6fdb89d7fa1ad3201c`, CI #302 actual 3/3, Linux/macOS 203 Node + 5 proxy, Vitest 1208. Local Mac 21 standalone ledger and 107/107 independent adversarial. Report commit `07d7b327d1703fcbe5b2bb2263a642d9771d6596`; report-commit CI not yet verified. OL-010 closed; do not replay or re-dispatch.
+- **REMOTE_OWNED executable next C6B2B5D:** select bounded synthetic-only hardening for process-local pin identity limitations or another testable fail-closed issue, implement code and adversarial test, prove actual Linux/macOS suite inclusion and three CI jobs before one new Mac task. No production Apply caller; OS race freedom and same-user cryptographic authenticity remain unsolved.
