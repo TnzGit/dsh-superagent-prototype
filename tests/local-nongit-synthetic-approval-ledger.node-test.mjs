@@ -23,6 +23,14 @@ test('one-use reservation is durable and rejects same ID across journal roots',(
  const other=join(journal,'other');mkdirSync(other,{mode:0o700})
  await assert.rejects(reserveSyntheticApproval(root,{...g,journalRoot:other}),/already reserved/)
 }))
+test('synthetic reservation rejects unexpected input keys before consuming approval',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ await assert.rejects(reserveSyntheticApproval(root,{...g,unexpected:'not-authority'}),/Invalid synthetic reservation/)
+ assert.equal(readdirSync(root).length,0,'invalid input must not create a receipt')
+ assert.equal(await reserveSyntheticApproval(root,g),'reserved')
+ assert.equal((await inspectSyntheticApproval(root,g.approvalId)).approvalId,g.approvalId)
+ await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+}))
 test('parallel same-ID reservation admits exactly one',()=>fixture(async({root,journal})=>{
  const outcomes=await Promise.allSettled(Array.from({length:8},()=>reserveSyntheticApproval(root,grant(journal))))
  assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1)
