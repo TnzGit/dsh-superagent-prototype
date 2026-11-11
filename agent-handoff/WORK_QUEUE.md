@@ -1,5 +1,19 @@
 # Active work queue — 2026-11-11 (remote-owned)
 
+| Milestone | Status | Owner | Exact next action |
+| --- | --- | --- | --- |
+| C6B2B4D/B4E/B4F/B4G | ACCEPTED_ACKED | none | All corresponding older local tasks and online ACKs closed |
+| C6B2B5 durable ledger pin (OL-009) | ACCEPTED_ACKED | none | LO-009 and receipt verified; do not replay |
+| C6B2B5C pin identity continuity | LOCAL_SYNTHETIC_ACCEPTANCE_PENDING | local | OL-20261111-010, exact code `6461e03a50952c56c6b7ef6fdb89d7fa1ad3201c`, CI #302 3/3. Independent Mac pin replacement tests, sanitized report, LO-010 and local done receipt |
+| C6B2B5D next bound synthetic safety step | REMOTE_AFTER_OL010 | remote | After local report ACK, select next source-only testable safety issue; CI evidence and dispatch new task only when fully verified |
+| REAL_NON_GIT_APPLY | PRINCIPLE_APPROVED / TECHNICAL_GATES_UNMET | remote + operator | Need exact registered target/diff and OS path/concurrency/recovery/private-capability proof before real source mutation |
+
+## Mandatory remote liveness transition
+
+When tested code CI all required jobs pass, existing local tasks are completed and a new local task ID is available, **the same remote scheduled execution MUST complete fresh `messages/to-local`, `LOCAL_AGENT_TASK.md` and status update in a guarded fast-forward commit, not stop after the CI/log review with 'next owner remote'.** An uncompleted prerequisite can cause a precise blocker; copying an unperformed 'full dedup check' into next-hour TODO when the GitHub connector is available is not an execution blocker. Do full message + receipts enumeration before dispatch. Once OL-010 is dispatched, do not issue another conflicting local task or replay claims. No heartbeat commits.
+
+# Active work queue — 2026-11-11 (remote-owned)
+
 | Milestone | State | Owner | Next operation |
 | --- | --- | --- | --- |
 | C6B2B4D | ACCEPTED_ACKED | none | LO-005 closed, no replay |

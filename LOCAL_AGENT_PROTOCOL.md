@@ -102,8 +102,13 @@ Independent Mac offline report accepted and LO-20261110-004 ACK published. Histo
 ## C6B2B4D offline synthetic approval-ledger acceptance — CLOSED
 Mac Agent ALL_OFFLINE_PASS report `85fbc5c868c3ed23308f15bcf0e5759d58e777ad` received and acknowledged at `agent-handoff/receipts/online/LO-20261111-005-done.md`; source CI #264 and report CI #267 both three green jobs. No real project/DSH/Weixin operation.
 
-## Current authorization: C6B2B4E READ-ONLY SYNTHETIC REGISTRY/LEDGER-BINDING ACCEPTANCE
-The active `LOCAL_AGENT_TASK.md` and OL-20261111-006 grant only disposable synthetic temporary project roots, read-only inspection of synthetic registry identities, local Mac tests, and one sanitized report plus local receipts. Source exact SHA ef370ba84567f1fa90f968acf2b2d01bce7f26e2; CI #269 true 3/3 success, Linux 195 Node tests, proxy 5, Vitest 1208. New `inspectRegistryBoundSyntheticApproval` is a **read-only preflight**, not an authenticated/cross-process binding or real-Apply writer. All old C5 live grants consumed; no real registered source write, DSH original Session Prompt, native Weixin, 3080/3083/8123 service/provider/model/default, production DB or actual multi-file Apply authorized by this task.
+## Completed synthetic acceptance through C6B2B5
+
+The OL-006/007/008/009 local results have been accepted with online LO-006/007/008/009 done receipts. The durable synthetic ledger pin initial acceptance is complete (CI #292; exact code 06de7c16599dc348857a0b0548135e458d5964e5). No real Apply, DSH Prompt or Weixin was authorized.
+
+## Current authorization: C6B2B5C SYNTHETIC PIN IDENTITY CONTINUITY ACCEPTANCE
+
+Only the NEW OL-20261111-010 `OFFLINE_SYNTHETIC_ONLY` Mac independent acceptance in `LOCAL_AGENT_TASK.md` is active. Exact tested code `6461e03a50952c56c6b7ef6fdb89d7fa1ad3201c` / CI #302 three jobs success. Evaluate in-memory dev/ino evidence of disposable synthetic pin deletion/replacement and the corrected deterministic rename-holds-inode regression. This is NOT security against an external same-user attacker, cross-registry/process forgery or global pin replay. NO real project Apply, original DSH Prompt, Weixin, 3080/3083/8123 changes, model/provider/production DB modifications, or old live grant reuse.
 
 The current running host state and GitHub report must still be proven; a user approval is not proof an action ran. Technical guard failures require STOP + owner-only rollback evidence, not escalating privileges or bypassing safeguards. LAN anonymous access and historical 3080 session preservation remain nonnegotiable.
 

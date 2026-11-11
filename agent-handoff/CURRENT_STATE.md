@@ -1,3 +1,12 @@
+## Current actionable handoff (remote-owned, 2026-11-11)
+
+- **C6B2B5 initial durable ledger pin:** `OL-20261111-009` accepted / online `LO-20261111-009` ACK exists. Do not replay.
+- **C6B2B5C synthetic same-registry pin identity hardening:** code SHA `6461e03a50952c56c6b7ef6fdb89d7fa1ad3201c`, CI #302 run `42967199576` verified **3/3 success** (Linux Node 203/203, macOS Node 203/203, proxy 5/5 on each, build/check Vitest 1208/1208). Actual job logs show ledger suite and new deleted/replaced pin regression on both platforms. Earlier #301 failed on fixture inode recycling and was repaired by holding old inode alive during `rename`; do not treat #301 as a passing gate.
+- **Local offline acceptance NEW pending:** single `OL-20261111-010` `type: task`, `OFFLINE_SYNTHETIC_ONLY`; exact code SHA pinned above; current `LOCAL_AGENT_TASK.md` details. No earlier task remains outstanding; previous result receipts were checked.
+- **Online next:** when local LO-010 arrives, independently verify report, exact code/CI, claim/done and privacy; publish one online ACK, then continue a new safe source-only milestone instead of merely writing a design plan. Do not issue another task while OL-010 is pending.
+- **Risk not resolved:** same-user forgery of disposable pin, fresh process lacking registry memory identity, different synthetic project-parent roots, OS path ABA/TOCTOU, uncooperative external writers, authentication, backup/power loss and non-atomic multi-file Apply. This remains synthetic-only and has ZERO production Apply caller.
+- Broad operator standing intent for reasonable real registered-project Apply is on file, but no specific registered target/diff, OS path-safety, quiescence, backup and independent private transaction grant have been proven. No real project or host live operation in this stage.
+
 # Current handoff state — 2026-11-11 (remote-owned)
 
 ## Latest verified facts
