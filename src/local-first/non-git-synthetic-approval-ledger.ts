@@ -83,7 +83,10 @@ export async function inspectSyntheticApproval(
   try {value=JSON.parse(await readFile(file,'utf8'))}
   catch {throw Error('Corrupt synthetic reservation; human reconciliation required')}
   const r=value as SyntheticApprovalReservation
-  if(!r||r.version!==1||r.approvalId!==approvalId||
+  if(!r||typeof r!=='object'||Array.isArray(r)||
+    Object.keys(r).sort().join(',')!==
+      'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version'||
+    r.version!==1||r.approvalId!==approvalId||
     !ID.test(r.transactionId)||!SHA.test(r.projectFingerprint)||
     !SHA.test(r.previewDigest)||!['apply','rollback'].includes(r.operation)||
     typeof r.journalRoot!=='string'||!r.journalRoot)
