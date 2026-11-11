@@ -430,3 +430,27 @@ test('same registry refuses deleted or replaced durable pin without issuing anot
     assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,1)
   }finally{rmSync(parent,{recursive:true,force:true})}
 }))
+
+// Preserve the original directory inode under a new name to avoid inode reuse.
+test('same registry refuses ledger directory replacement before issuing a new receipt',()=>fixture(async({root,journal})=>{
+  const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([parent],[{id:'synthetic-ledger-drift',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-ledger-drift'))
+    const fixtureRoot=join(root,'..')
+    writeFileSync(join(fixtureRoot,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    const first={...grant(journal),projectFingerprint:fp}
+    assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-ledger-drift',fixtureRoot,first),'reserved')
+    const retained=join(fixtureRoot,'ledger-retained')
+    renameSync(root,retained)
+    mkdirSync(root,{mode:0o700})
+    await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-ledger-drift',fixtureRoot,{
+      ...first,approvalId:'approval-synthetic-00002'
+    }),/ledger directory identity changed/)
+    assert.equal(readdirSync(root).length,0)
+    assert.equal(readdirSync(retained).filter(x=>x.endsWith('.json')).length,1)
+  }finally{rmSync(parent,{recursive:true,force:true})}
+}))
