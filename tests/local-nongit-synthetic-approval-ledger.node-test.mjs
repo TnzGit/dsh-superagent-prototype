@@ -383,7 +383,7 @@ test('two OS processes sharing synthetic project parent cannot reserve same ID i
       'try{await reserveRegistryBoundSyntheticApproval(registry,id,fixture,JSON.parse(approval));process.stdout.write("WIN")}',
       'catch(e){if(/conflicting fixture ledger binding|Corrupt synthetic registry ledger pin/.test(String(e.message)))process.stdout.write("DENIED");',
       'else {process.stderr.write(String(e.message));process.exitCode=2}}'
-    ].join('\\n')
+    ].join('\n')
     const run=(fixtureRoot,journalRoot)=>new Promise((resolve,reject)=>{
       const child=spawn(process.execPath,['--experimental-strip-types','--input-type=module','-e',
         script,external,fixtureRoot,'synthetic-process-pin',JSON.stringify({...grant(journalRoot),projectFingerprint:fp})

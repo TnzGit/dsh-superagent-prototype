@@ -179,7 +179,7 @@ async function pinDisposableSyntheticLedger(
     if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e
   }
   if(handle){
-    try{await handle.writeFile(JSON.stringify(expected)+'\\n');await handle.sync()}
+    try{await handle.writeFile(JSON.stringify(expected)+'\n');await handle.sync()}
     finally{await handle.close()}
     const directory=await open(fixture,'r')
     try{await directory.sync()}finally{await directory.close()}
