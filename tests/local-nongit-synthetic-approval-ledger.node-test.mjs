@@ -51,6 +51,21 @@ test('synthetic accessor values are rejected without getter invocation or receip
  assert.equal(readdirSync(root).length,0)
  assert.equal(await reserveSyntheticApproval(root,grant(journal)),'reserved')
 }))
+test('synthetic reservation rejects Proxy inputs without invoking traps or writing receipt',()=>fixture(async({root,journal})=>{
+ const g=grant(journal);let traps=0
+ const proxy=new Proxy(g,{
+  getPrototypeOf(){traps++;throw Error('proxy trap executed')},
+  ownKeys(){traps++;throw Error('proxy trap executed')},
+  getOwnPropertyDescriptor(){traps++;throw Error('proxy trap executed')}
+ })
+ await assert.rejects(reserveSyntheticApproval(root,proxy),/Invalid synthetic reservation/)
+ assert.equal(traps,0,'proxy traps must not run')
+ assert.equal(readdirSync(root).length,0)
+ const revoked=Proxy.revocable(g,{});revoked.revoke()
+ await assert.rejects(reserveSyntheticApproval(root,revoked.proxy),/Invalid synthetic reservation/)
+ assert.equal(readdirSync(root).length,0)
+ assert.equal(await reserveSyntheticApproval(root,g),'reserved')
+}))
 test('parallel same-ID reservation admits exactly one',()=>fixture(async({root,journal})=>{
  const outcomes=await Promise.allSettled(Array.from({length:8},()=>reserveSyntheticApproval(root,grant(journal))))
  assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1)

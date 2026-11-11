@@ -6,6 +6,7 @@ import {createHash} from 'node:crypto'
 import {lstat,open,realpath,readFile} from 'node:fs/promises'
 import {join,relative,isAbsolute,dirname,basename} from 'node:path'
 import {tmpdir} from 'node:os'
+import {types as utilTypes} from 'node:util'
 import {projectFingerprint} from './project-workspaces.ts'
 import type {LocalProjectRegistry} from './project-registry.ts'
 
@@ -27,7 +28,9 @@ export interface SyntheticApprovalReservation {
  */
 function normalizeSyntheticReservation(input:SyntheticApprovalReservation):SyntheticApprovalReservation {
   try {
-    if(!input||typeof input!=='object'||Array.isArray(input)||
+    // Native proxy detection runs without invoking user-controlled reflection traps.
+    // Reject even revoked proxies before Object.getPrototypeOf or descriptors.
+    if(!input||typeof input!=='object'||utilTypes.isProxy(input)||Array.isArray(input)||
       Object.getPrototypeOf(input)!==Object.prototype)
       throw Error('Invalid synthetic reservation')
     const descriptors=Object.getOwnPropertyDescriptors(input)
