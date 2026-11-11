@@ -144,13 +144,64 @@ export async function reserveFixtureBoundSyntheticApproval(
 }
 
 
-/** C6B2B5A: in-memory fixture ledger pin for one LocalProjectRegistry instance.
- * No caller can select a second ledger root through reserveRegistryBound...
- * after the first validated binding. This process-local WeakMap is NOT a durable
- * global arbiter: a different registry instance/process or a same-user forged
- * fixture may still reserve the SAME ID elsewhere. No real Apply permission.
+/** C6B2B5A: process-local fixture ledger pin for a registry instance.
+ * C6B2B5B also uses an owner-private, exclusive-create binding file under the
+ * disposable synthetic project parent so separate instances/processes that
+ * share that fixture reject a second ledger root. Neither mechanism is an
+ * authenticated global arbiter or production authorization.
  */
 const syntheticRegistryLedgerPins=new WeakMap<object,Map<string,string>>()
+
+/** A private durable binding inside the *disposable parent*, never the
+ * registered project source. An interrupted wx write is terminal and requires
+ * manual fixture disposal; never auto-repair or switch to another ledger.
+ * This file is same-user mutable and NOT an authenticated external lock.
+ */
+async function pinDisposableSyntheticLedger(
+  registry:Pick<LocalProjectRegistry,'get'|'assertRegisteredRootIdentity'>,
+  projectId:string,ledgerRoot:string,projectFp:string
+):Promise<void>{
+  const sourceRoot=registry.get(projectId).root
+  const fixture=dirname(sourceRoot),temp=await realpath(tmpdir())
+  const stat=await lstat(fixture)
+  if(dirname(fixture)!==temp||
+    !/^dsh-project-synthetic-[A-Za-z0-9_-]{6,70}$/.test(basename(fixture))||
+    !stat.isDirectory()||stat.isSymbolicLink()||(stat.mode&0o077)!==0||
+    await realpath(fixture)!==fixture)
+    throw Error('Synthetic registry ledger pin requires private disposable project parent')
+  registry.assertRegisteredRootIdentity(projectId)
+  const file=join(fixture,'.dsh-synthetic-ledger-pin.json')
+  const expected={version:1,purpose:'offline-synthetic-ledger-pin',
+    projectId,projectFingerprint:projectFp,ledgerRoot}
+  let handle
+  try{handle=await open(file,'wx',0o600)}
+  catch(e){
+    if((e as NodeJS.ErrnoException).code!=='EEXIST')throw e
+  }
+  if(handle){
+    try{await handle.writeFile(JSON.stringify(expected)+'\\n');await handle.sync()}
+    finally{await handle.close()}
+    const directory=await open(fixture,'r')
+    try{await directory.sync()}finally{await directory.close()}
+  }
+  const entry=await lstat(file)
+  if(!entry.isFile()||entry.isSymbolicLink()||entry.nlink!==1||
+    (entry.mode&0o777)!==0o600)
+    throw Error('Unsafe synthetic registry ledger pin')
+  let parsed:unknown
+  try{parsed=JSON.parse(await readFile(file,'utf8'))}
+  catch{throw Error('Corrupt synthetic registry ledger pin; manual review required')}
+  if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||
+    Object.keys(parsed).sort().join(',')!==
+    'ledgerRoot,projectFingerprint,projectId,purpose,version')
+    throw Error('Corrupt synthetic registry ledger pin; manual review required')
+  const row=parsed as Record<string,unknown>
+  if(row.version!==1||row.purpose!=='offline-synthetic-ledger-pin'||
+    row.projectId!==projectId||row.projectFingerprint!==projectFp||
+    row.ledgerRoot!==ledgerRoot)
+    throw Error('Synthetic registry has a conflicting fixture ledger binding')
+  registry.assertRegisteredRootIdentity(projectId)
+}
 
 /** C6B2B4E source-only READ-ONLY synthetic registry/fixture binding gate.
  * Uses an operator-created LocalProjectRegistry identity and the already defined
@@ -250,11 +301,11 @@ export async function inspectRegistryBoundSyntheticApproval(
 
 /** Registry-scoped fixture reservation for DISPOSABLE synthetic tests only.
  *
- * First validated fixture pins the ledger for this registry instance/project.
- * A later caller choosing an alternate fixture/ledger is rejected BEFORE a
- * second receipt can be created. The durable wx reservation arbitrates only
- * attempts using that one ledger. This is NOT cross-process fencing, cannot
- * authenticate the first fixture, and must NEVER be used for real project Apply.
+ * A private persistent pin within the disposable project parent rejects a
+ * different fixture/ledger even from new registry instances or OS processes.
+ * The in-memory pin also rejects changes within one registry instance.
+ * This does NOT fence arbitrary independent project parents, authenticate an
+ * initial binding or defeat external writers/ABA. NEVER use for real Apply.
  */
 export async function reserveRegistryBoundSyntheticApproval(
   registry:Pick<LocalProjectRegistry,'get'|'assertRegisteredRootIdentity'>,
@@ -262,6 +313,8 @@ export async function reserveRegistryBoundSyntheticApproval(
 ):Promise<'reserved'>{
   const bound=await inspectRegistryBoundSyntheticApproval(
     registry,projectId,fixtureRoot,reservation)
+  await pinDisposableSyntheticLedger(
+    registry,projectId,bound.ledgerRoot,bound.projectFingerprint)
   let pins=syntheticRegistryLedgerPins.get(registry)
   if(!pins){pins=new Map<string,string>();syntheticRegistryLedgerPins.set(registry,pins)}
   const previous=pins.get(projectId)

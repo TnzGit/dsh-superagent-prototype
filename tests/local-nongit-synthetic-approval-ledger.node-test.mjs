@@ -309,9 +309,9 @@ test('registry-scoped synthetic reservation rejects cross-fixture same-ID replay
   }finally{rmSync(second,{recursive:true,force:true});rmSync(projectBase,{recursive:true,force:true})}
 }))
 
-// Explicit boundary proof: a second LocalProjectRegistry instance has no
-// shared process/durable pin. This is NOT a production global replay defense.
-test('registry-scoped fixture pin is not global across independent registry instances',()=>fixture(async({root,journal})=>{
+// Durable owner-private synthetic parent pin crosses registry instances, but
+// a distinct project parent or same-user deletion can still bypass it.
+test('registry-scoped durable fixture pin rejects alternate ledger in new registry instance',()=>fixture(async({root,journal})=>{
   const projectBase=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
   const second=mkdtempSync(join(tmpdir(),'dsh-ledger-synthetic-'))
   try{
@@ -330,10 +330,74 @@ test('registry-scoped fixture pin is not global across independent registry inst
     assert.equal(await reserveRegistryBoundSyntheticApproval(r1,'synthetic-unshared',first,{
       ...grant(journal),projectFingerprint:fp
     }),'reserved')
-    assert.equal(await reserveRegistryBoundSyntheticApproval(r2,'synthetic-unshared',second,{
+    await assert.rejects(reserveRegistryBoundSyntheticApproval(r2,'synthetic-unshared',second,{
       ...grant(journal2),projectFingerprint:fp
-    }),'reserved','independent registry instances are not durably fenced')
+    }),/conflicting fixture ledger binding/)
     assert.equal(readdirSync(root).filter(n=>n.endsWith('.json')).length,1)
-    assert.equal(readdirSync(ledger2).filter(n=>n.endsWith('.json')).length,1)
+    assert.equal(readdirSync(ledger2).filter(n=>n.endsWith('.json')).length,0)
   }finally{rmSync(second,{recursive:true,force:true});rmSync(projectBase,{recursive:true,force:true})}
+}))
+
+// A power loss while writing the owner-private pin must never be treated as
+// permission to choose a different ledger or to auto-repair the torn file.
+test('corrupt durable project-fixture pin refuses synthetic reservation without any ledger receipt',()=>fixture(async({root,journal})=>{
+  const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const project=join(external,'registered');mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([external],[{id:'synthetic-corrupt-pin',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-corrupt-pin'))
+    writeFileSync(join(root,'..','.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    const pin=join(external,'.dsh-synthetic-ledger-pin.json')
+    writeFileSync(pin,'{incomplete',{mode:0o600})
+    await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-corrupt-pin',join(root,'..'),{
+      ...grant(journal),projectFingerprint:fp
+    }),/Corrupt synthetic registry ledger pin/)
+    assert.equal(readdirSync(root).length,0)
+    assert.equal(readdirSync(journal).length,0)
+    assert.equal((await import('node:fs')).readFileSync(pin,'utf8'),'{incomplete')
+  }finally{rmSync(external,{recursive:true,force:true})}
+}))
+
+test('two OS processes sharing synthetic project parent cannot reserve same ID into two ledgers',()=>fixture(async({root,journal})=>{
+  const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  const second=mkdtempSync(join(tmpdir(),'dsh-ledger-synthetic-'))
+  try{
+    const project=join(external,'registered');mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([external],[{id:'synthetic-process-pin',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-process-pin'))
+    const fixture1=join(root,'..'),ledger2=join(second,'ledger'),journal2=join(second,'journal')
+    mkdirSync(ledger2,{mode:0o700});mkdirSync(journal2,{mode:0o700})
+    for(const fixtureRoot of [fixture1,second])
+      writeFileSync(join(fixtureRoot,'.synthetic-ledger-binding.json'),JSON.stringify({
+        version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+      }),{mode:0o600})
+    const url=new URL('../src/local-first/non-git-synthetic-approval-ledger.ts',import.meta.url).href
+    const regUrl=new URL('../src/local-first/project-registry.ts',import.meta.url).href
+    const script=[
+      'import {reserveRegistryBoundSyntheticApproval} from '+JSON.stringify(url),
+      'import {LocalProjectRegistry} from '+JSON.stringify(regUrl),
+      'const [base,fixture,id,approval]=process.argv.slice(1)',
+      'const registry=new LocalProjectRegistry([base],[{id,root:base+"/registered",kind:"local"}])',
+      'try{await reserveRegistryBoundSyntheticApproval(registry,id,fixture,JSON.parse(approval));process.stdout.write("WIN")}',
+      'catch(e){if(/conflicting fixture ledger binding|Corrupt synthetic registry ledger pin/.test(String(e.message)))process.stdout.write("DENIED");',
+      'else {process.stderr.write(String(e.message));process.exitCode=2}}'
+    ].join('\\n')
+    const run=(fixtureRoot,journalRoot)=>new Promise((resolve,reject)=>{
+      const child=spawn(process.execPath,['--experimental-strip-types','--input-type=module','-e',
+        script,external,fixtureRoot,'synthetic-process-pin',JSON.stringify({...grant(journalRoot),projectFingerprint:fp})
+      ],{stdio:['ignore','pipe','pipe']})
+      let stdout='',stderr=''
+      child.stdout.setEncoding('utf8');child.stderr.setEncoding('utf8')
+      child.stdout.on('data',chunk=>{stdout+=chunk});child.stderr.on('data',chunk=>{stderr+=chunk})
+      child.once('error',reject);child.once('close',code=>resolve({code,stdout,stderr}))
+    })
+    const results=await Promise.all([run(fixture1,journal),run(second,journal2)])
+    assert.deepEqual(results.map(x=>x.code),[0,0],JSON.stringify(results))
+    assert.equal(results.filter(x=>x.stdout==='WIN').length,1,JSON.stringify(results))
+    assert.equal(results.filter(x=>x.stdout==='DENIED').length,1,JSON.stringify(results))
+    assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length+
+      readdirSync(ledger2).filter(x=>x.endsWith('.json')).length,1)
+  }finally{rmSync(external,{recursive:true,force:true});rmSync(second,{recursive:true,force:true})}
 }))
