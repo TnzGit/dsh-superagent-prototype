@@ -194,7 +194,7 @@ test('registry preflight rejects a project root swapped for symlink after regist
     symlinkSync(alias,project,'dir')
     await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-gamma',base,{
       ...grant(journal),projectFingerprint:fp
-    }),/Registered synthetic project (?:root|ancestor) identity changed/)
+    }),/Registered synthetic project (?:root|ancestor|directory) identity changed/)
     assert.equal(readdirSync(root).length,0)
   }finally{rmSync(external,{recursive:true,force:true})}
 }))
