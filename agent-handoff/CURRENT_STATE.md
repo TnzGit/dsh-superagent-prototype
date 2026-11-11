@@ -12,7 +12,7 @@
 
 ## Next owner
 
-**Local Mac Agent:** one fresh C6B2B4G task OL-20261111-008 at exact code SHA f2dc421926d808c04147a4e8fcc1dccf944bca02, synthetic-only independent offline acceptance. Remote then reviews report/CI, ACKs once, and advances next safe source-only milestone. OL-007 is closed; no replay or conflicting dispatch. No heartbeat commits.
+**Local Mac Agent:** current unique synthetic-only OL-20261111-009 accepts C6B2B5 at pinned source 06de7c16599dc348857a0b0548135e458d5964e5, CI #292. OL-008/B4G was accepted and ACKed; do not replay. Remote verifies incoming result and then continues next safe milestone. No heartbeat commits.
 
 ## Independent C6B2B4F receipt acceptance — 2026-11-11
 
@@ -33,3 +33,12 @@
 - **ACCEPTED_ACKED**: LO-20261111-008 schema-complete result, OL-20261111-008 claimed/done local receipts and sanitized `agent-reports/REPORT-c6b2b4g-offline-ancestor-inode-acceptance.md` verified at HEAD `ac1b7b1bfb4dac90163ad389e8f79794ee15bbcc`; unique online done receipt committed `97fb460eb55963e33964053e2394babb356267f0`. No replay.
 - Exact source `f2dc421926d808c04147a4e8fcc1dccf944bca02`, CI #283 actual 3/3 and inspected logs: Linux/macOS each 198 Node + 5 proxy, both run the ancestor replacement test; Vitest 1208. Independent Mac report: 203 combined, 16 ledger standalone, 54 adversarial checks, ALL_OFFLINE_PASS. This is synthetic read-only evidence only.
 - **NEXT OWNER remote online**: implement next safe source-only milestone, add enrolled tests, prove full three-job CI and only then consider one distinct local task. No pending local task; do not issue a task without new tested code. Remaining same-user marker forgery, alternate-ledger replay, ABA and non-cooperating writers remain unresolved. Real Apply gates unchanged.
+
+## C6B2B5 synthetic ledger root pin — remote source CI gate (2026-11-11)
+
+- **C6B2B4G ACCEPTED_ACKED** independently confirmed; LO-008 result and online done receipt are already present. No duplicate ACK or OL-008 replay.
+- **C6B2B5 REMOTE SOURCE 3/3 GREEN / INDEPENDENT MAC OFFLINE ACCEPTANCE PENDING**. Exact source SHA `06de7c16599dc348857a0b0548135e458d5964e5`. [CI #292](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42942799009) three jobs completed **SUCCESS**. Inspected actual jobs/logs: Linux and hosted macOS each Node **202/202**, proxy **5/5**, each executing the enrolled `tests/local-nongit-synthetic-approval-ledger.node-test.mjs` and four new cross-fixture/durable-pin cases; `pnpm check` Vitest **1208/1208** and build SUCCESS. Earlier in-progress CI #291 was cancelled after the follow-up newline correction, not a completed code pass/failure.
+- Implementation: `reserveRegistryBoundSyntheticApproval` first validates synthetic project/fixture read-only, then pins the selected ledger root in a process-local registry map and via `wx` 0600 + fsync durable binding under the **disposable synthetic project parent**, separate from the registered source. Independent registry instances and competing OS processes sharing that exact project fixture cannot silently reserve the same approval into an alternate ledger root. Corrupt/incomplete durable pin fails closed with no auto-repair. First invalid/partial pin may remain and require manual fixture disposal.
+- **Limited guarantee:** only within ONE disposable synthetic project parent. Separate project-parent roots, same-user marker deletion/forgery, external writers, OS path ABA/TOCTOU and real-project authorization are NOT solved. This is not a secure global arbiter and has no production Apply caller.
+- **NEW UNIQUE OFFLINE TASK**: `OL-20261111-009`, fixed to the above source SHA/CI. Local Mac Agent owns one independent synthetic-only acceptance; do not issue another local task or retry a claimed-but-not-done task. Remote online owns report verification and one done ACK after it arrives.
+- Real Apply standing principle consent remains separate from transaction approval: no specific registered target/diff, OS-level no-follow/quiescence, backup/recovery or private one-use grant. No Weixin/DSH Prompt/service/model/provider/production DB operations.
