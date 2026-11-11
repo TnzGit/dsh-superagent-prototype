@@ -59,3 +59,7 @@ When tested code CI all required jobs pass, existing local tasks are completed a
 
 - LO-010 independently reviewed and **ACCEPTED_ACKED** with one online done receipt; source `6461e03a50952c56c6b7ef6fdb89d7fa1ad3201c`, CI #302 actual 3/3, Linux/macOS 203 Node + 5 proxy, Vitest 1208. Local Mac 21 standalone ledger and 107/107 independent adversarial. Report commit `07d7b327d1703fcbe5b2bb2263a642d9771d6596`; report-commit CI not yet verified. OL-010 closed; do not replay or re-dispatch.
 - **REMOTE_OWNED executable next C6B2B5D:** select bounded synthetic-only hardening for process-local pin identity limitations or another testable fail-closed issue, implement code and adversarial test, prove actual Linux/macOS suite inclusion and three CI jobs before one new Mac task. No production Apply caller; OS race freedom and same-user cryptographic authenticity remain unsolved.
+
+## C6B2B5D CI failure and repair (2026-11-11)
+
+- CI #309 (run `42981030875`) Linux/macOS Node **203/204**, failing cross-fixture expected-error assertion; build/check **1208/1208** passed. Repair restores cross-fixture conflict precedence ahead of same-path inode check. **WAITING_CI**, source SHA is this repair commit (verify HEAD); next owner remote online validates new push run and 3/3 before any distinct OL task. No live authority.

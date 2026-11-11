@@ -331,6 +331,10 @@ export async function reserveRegistryBoundSyntheticApproval(
 ):Promise<'reserved'>{
   const bound=await inspectRegistryBoundSyntheticApproval(
     registry,projectId,fixtureRoot,reservation)
+  // Preserve cross-fixture rejection before checking same-path inode continuity.
+  const priorFixture=syntheticRegistryLedgerPins.get(registry)?.get(projectId)
+  if(priorFixture!==undefined&&priorFixture!==bound.ledgerRoot)
+    throw Error('Synthetic registry has a conflicting fixture ledger binding')
   const ledgerEntry=await lstat(bound.ledgerRoot)
   const rememberedLedger=syntheticLedgerDirIdentities.get(registry)?.get(projectId)
   if(rememberedLedger&&(ledgerEntry.dev!==rememberedLedger.dev||ledgerEntry.ino!==rememberedLedger.ino))
