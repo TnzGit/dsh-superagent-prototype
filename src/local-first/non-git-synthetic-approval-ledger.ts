@@ -27,7 +27,9 @@ export async function reserveSyntheticApproval(
   ledgerRoot:string, reservation:SyntheticApprovalReservation
 ):Promise<'reserved'> {
   if(!reservation||typeof reservation!=='object'||Array.isArray(reservation)||
-    Object.keys(reservation).sort().join(',')!==
+    (Object.getPrototypeOf(reservation)===Object.prototype&&
+    Reflect.ownKeys(reservation).every(key=>typeof key==='string')?
+    Reflect.ownKeys(reservation).sort().join(','):'')!==
       'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version')
     throw Error('Invalid synthetic reservation')
   if(reservation.version!==1||!ID.test(reservation.approvalId)||
@@ -337,7 +339,9 @@ export async function reserveRegistryBoundSyntheticApproval(
   projectId:string,fixtureRoot:string,reservation:SyntheticApprovalReservation
 ):Promise<'reserved'>{
   if(!reservation||typeof reservation!=='object'||Array.isArray(reservation)||
-    Object.keys(reservation).sort().join(',')!==
+    (Object.getPrototypeOf(reservation)===Object.prototype&&
+    Reflect.ownKeys(reservation).every(key=>typeof key==='string')?
+    Reflect.ownKeys(reservation).sort().join(','):'')!==
       'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version'||
     reservation.version!==1||!ID.test(reservation.approvalId)||
     !ID.test(reservation.transactionId)||!SHA.test(reservation.projectFingerprint)||

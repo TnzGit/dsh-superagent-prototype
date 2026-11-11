@@ -31,6 +31,17 @@ test('synthetic reservation rejects unexpected input keys before consuming appro
  assert.equal((await inspectSyntheticApproval(root,g.approvalId)).approvalId,g.approvalId)
  await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
 }))
+test('synthetic reservation rejects inherited, nonenumerable and symbol keys before receipt',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ const inherited=Object.assign(Object.create({inherited:'not-authority'}),g)
+ const hidden={...g};Object.defineProperty(hidden,'hidden',{value:'not-authority'})
+ const symbol={...g,[Symbol('hidden')]:'not-authority'}
+ for(const input of [inherited,hidden,symbol]){
+  await assert.rejects(reserveSyntheticApproval(root,input),/Invalid synthetic reservation/)
+  assert.equal(readdirSync(root).length,0)
+ }
+ assert.equal(await reserveSyntheticApproval(root,g),'reserved')
+}))
 test('parallel same-ID reservation admits exactly one',()=>fixture(async({root,journal})=>{
  const outcomes=await Promise.allSettled(Array.from({length:8},()=>reserveSyntheticApproval(root,grant(journal))))
  assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1)
@@ -351,6 +362,26 @@ test('registry-bound invalid reservation input leaves no durable pin or receipt'
   assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-early-guard',fixtureRoot,g),'reserved')
   assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,1)
  }finally{rmSync(projectBase,{recursive:true,force:true})}
+}))
+
+test('registry-bound inherited and hidden input keys cannot create durable pin',()=>fixture(async({root,journal})=>{
+ const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+ try{
+  const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+  const registry=new LocalProjectRegistry([parent],[{id:'synthetic-hidden-keys',root:project,kind:'local'}])
+  const fp=projectFingerprint(registry.get('synthetic-hidden-keys'))
+  const base=join(root,'..')
+  writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:fp}),{mode:0o600})
+  const g={...grant(journal),projectFingerprint:fp}
+  const inherited=Object.assign(Object.create({extra:true}),g)
+  const hidden={...g};Object.defineProperty(hidden,'extra',{value:true})
+  for(const input of [inherited,hidden]){
+   await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-hidden-keys',base,input),/Invalid synthetic reservation/)
+   assert.equal(readdirSync(parent).includes('.dsh-synthetic-ledger-pin.json'),false)
+   assert.equal(readdirSync(root).length,0)
+  }
+  assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-hidden-keys',base,g),'reserved')
+ }finally{rmSync(parent,{recursive:true,force:true})}
 }))
 
 // Durable owner-private synthetic parent pin crosses registry instances, but
