@@ -35,9 +35,9 @@ function normalizeSyntheticReservation(input:SyntheticApprovalReservation):Synth
     if(keys.length!==7||keys.some(key=>typeof key!=='string')||
       keys.sort().join(',')!==
         'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version'||
-      keys.some(key=>!Object.hasOwn(descriptors[key as string],'value')))
+      keys.some(key=>!Object.hasOwn(descriptors[key as string]!,'value')))
       throw Error('Invalid synthetic reservation')
-    const value=Object.fromEntries(keys.map(key=>[key,descriptors[key as string].value])) as SyntheticApprovalReservation
+    const value=Object.fromEntries(keys.map(key=>[key,descriptors[key as string]!.value])) as SyntheticApprovalReservation
     if(value.version!==1||typeof value.approvalId!=='string'||!ID.test(value.approvalId)||
       typeof value.transactionId!=='string'||!ID.test(value.transactionId)||
       typeof value.projectFingerprint!=='string'||!SHA.test(value.projectFingerprint)||
