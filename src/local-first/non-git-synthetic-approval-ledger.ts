@@ -154,6 +154,8 @@ const syntheticRegistryLedgerPins=new WeakMap<object,Map<string,string>>()
 // In-process inode evidence: deletion/replacement after a successful pin must
 // not be silently accepted as a fresh first-use fixture. Not cross-process auth.
 const syntheticPinFileIdentities=new WeakMap<object,Map<string,{dev:number;ino:number}>>()
+// Best-effort same-process identity continuity for the selected ledger directory.
+const syntheticLedgerDirIdentities=new WeakMap<object,Map<string,{dev:number;ino:number}>>()
 
 /** A private durable binding inside the *disposable parent*, never the
  * registered project source. An interrupted wx write is terminal and requires
@@ -329,8 +331,15 @@ export async function reserveRegistryBoundSyntheticApproval(
 ):Promise<'reserved'>{
   const bound=await inspectRegistryBoundSyntheticApproval(
     registry,projectId,fixtureRoot,reservation)
+  const ledgerEntry=await lstat(bound.ledgerRoot)
+  const rememberedLedger=syntheticLedgerDirIdentities.get(registry)?.get(projectId)
+  if(rememberedLedger&&(ledgerEntry.dev!==rememberedLedger.dev||ledgerEntry.ino!==rememberedLedger.ino))
+    throw Error('Synthetic registry ledger directory identity changed; manual review required')
   await pinDisposableSyntheticLedger(
     registry,projectId,bound.ledgerRoot,bound.projectFingerprint)
+  const checkedLedger=await lstat(bound.ledgerRoot)
+  if(checkedLedger.dev!==ledgerEntry.dev||checkedLedger.ino!==ledgerEntry.ino)
+    throw Error('Synthetic registry ledger directory identity changed; manual review required')
   let pins=syntheticRegistryLedgerPins.get(registry)
   if(!pins){pins=new Map<string,string>();syntheticRegistryLedgerPins.set(registry,pins)}
   const previous=pins.get(projectId)
@@ -340,5 +349,8 @@ export async function reserveRegistryBoundSyntheticApproval(
   // this JS registry instance cannot both choose different ledger roots.
   if(previous===undefined)pins.set(projectId,bound.ledgerRoot)
   registry.assertRegisteredRootIdentity(projectId)
+  let ledgerIdentities=syntheticLedgerDirIdentities.get(registry)
+  if(!ledgerIdentities){ledgerIdentities=new Map();syntheticLedgerDirIdentities.set(registry,ledgerIdentities)}
+  if(!ledgerIdentities.has(projectId))ledgerIdentities.set(projectId,{dev:ledgerEntry.dev,ino:ledgerEntry.ino})
   return reserveFixtureBoundSyntheticApproval(fixtureRoot,reservation)
 }
