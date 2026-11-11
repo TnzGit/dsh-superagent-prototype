@@ -12,7 +12,7 @@
 
 ## Next owner
 
-**Remote online:** LO-007 evidence accepted and ACKed; next own C6B2B4G actual source/tests and 3/3 CI, then one new scoped local task only after it passes. OL-007 is closed and must not be replayed. No heartbeat commits.
+**Local Mac Agent:** one fresh C6B2B4G task OL-20261111-008 at exact code SHA f2dc421926d808c04147a4e8fcc1dccf944bca02, synthetic-only independent offline acceptance. Remote then reviews report/CI, ACKs once, and advances next safe source-only milestone. OL-007 is closed; no replay or conflicting dispatch. No heartbeat commits.
 
 ## Independent C6B2B4F receipt acceptance — 2026-11-11
 
@@ -20,3 +20,10 @@
 - Exact source **`cc59686b23af13bc33883605ca4950d7201ee72b`**, CI **#278** genuine 3/3 success, with Linux and macOS ledger suite executed, Node 197/197 each, proxy 5/5 each; build/check 1208/1208. Report commit CI **#281** also 3/3 with the same tested suite inclusion and counts. Verification via GitHub job logs, not just workflow headline.
 - Protocol exception recorded: LO-007 header omitted literal `related_ci` and `requires_live_host_approval` fields required by MESSAGE_PROTOCOL.md; report body and original task unambiguously provide source/CI/synthetic-only scope. Acceptance is of independently checked **historical offline evidence**, not of a schema-complete executable instruction or any live authorization. Future local results must include all required header fields. No instructions from the GitHub report were executed.
 - **NEXT OWNER: remote online** to implement C6B2B4G synthetic-only ancestor-inode continuity and adversarial tests, validate 3-job CI. No new local task dispatched by this acceptance commit. All real Apply gates remain unmet.
+
+## C6B2B4G source gate — 2026-11-11
+
+- **REMOTE SOURCE CODE COMPLETE / MAC ACCEPTANCE PENDING**: commit `f2dc421926d808c04147a4e8fcc1dccf944bca02`; [GitHub CI #283](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42936840892) **3/3 success**. Independently inspected CI job logs: Linux Node **198/198** + proxy **5/5**, hosted macOS Node **198/198** + proxy **5/5**, typecheck/build Vitest **1208/1208**. The pre-existing enrolled ledger suite actually executed the new ordinary-ancestor replacement regression in BOTH OS jobs. The workflow is unchanged because both jobs already explicitly invoke that file.
+- Security change: `LocalProjectRegistry` now captures canonical ancestor directory dev/ino identities at registration as well as root dev/ino; its existing read-only `assertRegisteredRootIdentity` also checks the ancestor chain. In the new test a normal parent directory is replaced while the original project root inode is moved back under the same original path; path-only fingerprint and final root inode remain equal, but the ancestor inode drift is rejected without ledger writes. Synthetic read-only preflight retains its before/after identity checks. **Not an atomic/no-follow OS capability; no real Apply permission.**
+- **One new local task**: `OL-20261111-008` dispatched in `messages/to-local/`, `LOCAL_AGENT_TASK.md` pins code `f2dc421926d808c04147a4e8fcc1dccf944bca02` and CI #283. Do not retry if claimed; do not confuse this handoff commit SHA with tested source SHA. Next owner local Mac Agent, not user. All old messages remain closed.
+- Unresolved same-user marker forgery, independent generic ledger-root replay, path ABA, non-cooperating writers, private authenticated capability, crash-safe recovery/backup; principle consent does not bypass transaction-specific gates.
