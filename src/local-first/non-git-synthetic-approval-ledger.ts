@@ -20,23 +20,42 @@ export interface SyntheticApprovalReservation {
   operation:'apply'|'rollback'
   journalRoot:string
 }
+/** Snapshot canonical data properties before ANY filesystem mutation.
+ * Accessors are rejected without invoking their getters; the snapshot prevents
+ * a caller from mutating the original values during later awaits. Proxy traps
+ * remain untrusted and this is not an authentication or race-free boundary.
+ */
+function normalizeSyntheticReservation(input:SyntheticApprovalReservation):SyntheticApprovalReservation {
+  try {
+    if(!input||typeof input!=='object'||Array.isArray(input)||
+      Object.getPrototypeOf(input)!==Object.prototype)
+      throw Error('Invalid synthetic reservation')
+    const descriptors=Object.getOwnPropertyDescriptors(input)
+    const keys=Reflect.ownKeys(descriptors)
+    if(keys.length!==7||keys.some(key=>typeof key!=='string')||
+      keys.sort().join(',')!==
+        'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version'||
+      keys.some(key=>!Object.hasOwn(descriptors[key as string],'value')))
+      throw Error('Invalid synthetic reservation')
+    const value=Object.fromEntries(keys.map(key=>[key,descriptors[key as string].value])) as SyntheticApprovalReservation
+    if(value.version!==1||typeof value.approvalId!=='string'||!ID.test(value.approvalId)||
+      typeof value.transactionId!=='string'||!ID.test(value.transactionId)||
+      typeof value.projectFingerprint!=='string'||!SHA.test(value.projectFingerprint)||
+      typeof value.previewDigest!=='string'||!SHA.test(value.previewDigest)||
+      !['apply','rollback'].includes(value.operation)||
+      typeof value.journalRoot!=='string'||!value.journalRoot)
+      throw Error('Invalid synthetic reservation')
+    return Object.freeze(value)
+  }catch {throw Error('Invalid synthetic reservation')}
+}
+
 /** Owner-created canonical ledger root; the caller must supply ONE root per fixture.
  * A different root cannot be detected here: registry-level binding is still required.
  */
 export async function reserveSyntheticApproval(
   ledgerRoot:string, reservation:SyntheticApprovalReservation
 ):Promise<'reserved'> {
-  if(!reservation||typeof reservation!=='object'||Array.isArray(reservation)||
-    (Object.getPrototypeOf(reservation)===Object.prototype&&
-    Reflect.ownKeys(reservation).every(key=>typeof key==='string')?
-    Reflect.ownKeys(reservation).sort().join(','):'')!==
-      'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version')
-    throw Error('Invalid synthetic reservation')
-  if(reservation.version!==1||!ID.test(reservation.approvalId)||
-    !ID.test(reservation.transactionId)||!SHA.test(reservation.projectFingerprint)||
-    !SHA.test(reservation.previewDigest)||!['apply','rollback'].includes(reservation.operation)||
-    typeof reservation.journalRoot!=='string'||!reservation.journalRoot)
-    throw Error('Invalid synthetic reservation')
+  reservation=normalizeSyntheticReservation(reservation)
   const stat=await lstat(ledgerRoot)
   if(!stat.isDirectory()||stat.isSymbolicLink()||(stat.mode&0o077)!==0)
     throw Error('Unsafe synthetic ledger root')
@@ -338,16 +357,7 @@ export async function reserveRegistryBoundSyntheticApproval(
   registry:Pick<LocalProjectRegistry,'get'|'assertRegisteredRootIdentity'>,
   projectId:string,fixtureRoot:string,reservation:SyntheticApprovalReservation
 ):Promise<'reserved'>{
-  if(!reservation||typeof reservation!=='object'||Array.isArray(reservation)||
-    (Object.getPrototypeOf(reservation)===Object.prototype&&
-    Reflect.ownKeys(reservation).every(key=>typeof key==='string')?
-    Reflect.ownKeys(reservation).sort().join(','):'')!==
-      'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version'||
-    reservation.version!==1||!ID.test(reservation.approvalId)||
-    !ID.test(reservation.transactionId)||!SHA.test(reservation.projectFingerprint)||
-    !SHA.test(reservation.previewDigest)||!['apply','rollback'].includes(reservation.operation)||
-    typeof reservation.journalRoot!=='string'||!reservation.journalRoot)
-    throw Error('Invalid synthetic reservation')
+  reservation=normalizeSyntheticReservation(reservation)
   const bound=await inspectRegistryBoundSyntheticApproval(
     registry,projectId,fixtureRoot,reservation)
   // Preserve cross-fixture rejection before checking same-path inode continuity.

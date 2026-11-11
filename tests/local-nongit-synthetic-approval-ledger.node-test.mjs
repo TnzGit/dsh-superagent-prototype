@@ -42,6 +42,15 @@ test('synthetic reservation rejects inherited, nonenumerable and symbol keys bef
  }
  assert.equal(await reserveSyntheticApproval(root,g),'reserved')
 }))
+test('synthetic accessor values are rejected without getter invocation or receipt',()=>fixture(async({root,journal})=>{
+ let calls=0
+ const g={...grant(journal)}
+ Object.defineProperty(g,'approvalId',{enumerable:true,configurable:true,get(){calls++;throw Error('getter executed')}})
+ await assert.rejects(reserveSyntheticApproval(root,g),/Invalid synthetic reservation/)
+ assert.equal(calls,0)
+ assert.equal(readdirSync(root).length,0)
+ assert.equal(await reserveSyntheticApproval(root,grant(journal)),'reserved')
+}))
 test('parallel same-ID reservation admits exactly one',()=>fixture(async({root,journal})=>{
  const outcomes=await Promise.allSettled(Array.from({length:8},()=>reserveSyntheticApproval(root,grant(journal))))
  assert.equal(outcomes.filter(x=>x.status==='fulfilled').length,1)
@@ -381,6 +390,25 @@ test('registry-bound inherited and hidden input keys cannot create durable pin',
    assert.equal(readdirSync(root).length,0)
   }
   assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-hidden-keys',base,g),'reserved')
+ }finally{rmSync(parent,{recursive:true,force:true})}
+}))
+
+test('registry-bound accessor input cannot run getter or create durable pin',()=>fixture(async({root,journal})=>{
+ const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+ try{
+  const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+  const registry=new LocalProjectRegistry([parent],[{id:'synthetic-accessor',root:project,kind:'local'}])
+  const fp=projectFingerprint(registry.get('synthetic-accessor'))
+  const base=join(root,'..')
+  writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:fp}),{mode:0o600})
+  let calls=0
+  const g={...grant(journal),projectFingerprint:fp}
+  Object.defineProperty(g,'journalRoot',{enumerable:true,get(){calls++;throw Error('getter executed')}})
+  await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-accessor',base,g),/Invalid synthetic reservation/)
+  assert.equal(calls,0)
+  assert.equal(readdirSync(parent).includes('.dsh-synthetic-ledger-pin.json'),false)
+  assert.equal(readdirSync(root).length,0)
+  assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-accessor',base,{...grant(journal),projectFingerprint:fp}),'reserved')
  }finally{rmSync(parent,{recursive:true,force:true})}
 }))
 
