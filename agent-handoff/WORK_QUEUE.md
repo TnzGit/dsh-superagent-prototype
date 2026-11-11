@@ -77,3 +77,8 @@ When tested code CI all required jobs pass, existing local tasks are completed a
 ## C6B2B5E active remote CI gate — 2026-11-11
 
 - **REMOTE_OWNED / WAITING_CI**: strict read-only synthetic reservation receipt schema plus adversarial extra-field JSON test, exact source `1daea219cc1187fb0d8ed1a798828a7645166a5e`. Existing ledger Node suite is in BOTH OS workflow commands; execution of the NEW test is not yet verified. Commit-associated workflow endpoint returned no push runs, combined statuses empty; run ID currently unknown. **NEXT remote** discover actual push CI, inspect three jobs/logs and counts, fix failures if any; after 3/3 and complete message/receipt enumeration, atomically issue one new unique synthetic-only local task. No task dispatched now, no live Apply.
+
+## C6B2B5E verified CI / one local handoff — 2026-11-11
+
+- **REMOTE CODE GATE PASSED:** `1daea219cc1187fb0d8ed1a798828a7645166a5e`, CI #317 run `43004625428`, three jobs SUCCESS; Linux/macOS **205/205 Node + 5/5 proxy**, build/check **1208/1208 Vitest**. New strict receipt-schema regression executed in both OS logs within existing ledger suite. Cancelled #315/#316 are not passes.
+- **LOCAL_OWNED / PENDING:** one unique OL-20261111-012, exact source above, OFFLINE_SYNTHETIC_ONLY. No concurrent task; prior LO-011 ACKed. **NEXT OWNER local Mac Agent:** claim once, independent tests, sanitized LO-012 result and done. Online on receipt verifies report/CI and ACKs exactly once; may independently plan nonconflicting remote work. Do not re-dispatch claimed task. Real Apply gates remain unmet.
