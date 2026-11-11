@@ -63,3 +63,8 @@ When tested code CI all required jobs pass, existing local tasks are completed a
 ## C6B2B5D CI failure and repair (2026-11-11)
 
 - CI #309 (run `42981030875`) Linux/macOS Node **203/204**, failing cross-fixture expected-error assertion; build/check **1208/1208** passed. Repair restores cross-fixture conflict precedence ahead of same-path inode check. **WAITING_CI**, source SHA is this repair commit (verify HEAD); next owner remote online validates new push run and 3/3 before any distinct OL task. No live authority.
+
+## C6B2B5D verified CI and OL-011 handoff (2026-11-11)
+
+- Repair source `ec02969523f49cd9f8c1f44bbe2c417865e8ccd4` restores cross-fixture error precedence. CI #310 (run `42988522928`) **3/3 SUCCESS**: Linux/macOS **204/204 Node** and **5/5 proxy** each; both execute existing ledger suite with replacement and cross-fixture regressions; `pnpm check` **1208/1208 Vitest** and build passed. Earlier #309 failed Linux/macOS 203/204; #307/#308 cancelled.
+- **NEXT OWNER local Mac Agent:** OL-20261111-011, pinned exact source above, independent synthetic-only C6B2B5D acceptance. Online must verify unique local result and ACK once. No concurrent second local task, no real Apply.
