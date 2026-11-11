@@ -44,6 +44,20 @@ test('corrupt entry is never overwritten or silently recovered',()=>fixture(asyn
  await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
 }))
 
+test('read-only synthetic receipt inspection rejects unexpected fields without consuming or rewriting receipt',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ await reserveSyntheticApproval(root,g)
+ const path=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const fs=await import('node:fs')
+ const original=fs.readFileSync(path,'utf8')
+ fs.writeFileSync(path,JSON.stringify({...g,unexpected:'not-authority'})+'\\n',{mode:0o600})
+ const tampered=fs.readFileSync(path,'utf8')
+ await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
+ assert.equal(fs.readFileSync(path,'utf8'),tampered,'inspection must be read-only')
+ await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+ assert.notEqual(tampered,original)
+}))
+
 test('ancestor and descendant ledger/journal roots fail closed before creating entries',()=>fixture(async({root,journal})=>{
  const nested=join(root,'nested');mkdirSync(nested,{mode:0o700})
  await assert.rejects(reserveSyntheticApproval(root,grant(nested)),/overlaps journal/)
