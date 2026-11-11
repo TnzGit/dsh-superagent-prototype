@@ -1,6 +1,6 @@
 /** Operator-registered projects: remote chat may select IDs, never supply arbitrary paths. */
 import { lstatSync, realpathSync } from 'node:fs'
-import { isAbsolute, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, relative, resolve, sep } from 'node:path'
 import { ModelEndpointQueue } from './model-queue.ts'
 export interface ProjectSpec { id: string; root: string; kind: 'local' | 'git'; readOnly?: boolean }
 export interface Project { id: string; root: string; kind: 'local' | 'git'; readOnly: boolean }
@@ -20,7 +20,10 @@ function canonicalDir(dir: string): string {
 export class LocalProjectRegistry {
   private readonly projects = new Map<string, Project>()
   // Read-only registration-time identity evidence. Not an authenticated OS capability.
-  private readonly rootIdentities = new Map<string, {root:string;dev:number;ino:number}>()
+  private readonly rootIdentities = new Map<string, {
+    root:string;dev:number;ino:number
+    ancestors:ReadonlyArray<{path:string;dev:number;ino:number}>
+  }>()
   private readonly writers = new Map<string, ModelEndpointQueue>()
   constructor(allowedRoots: readonly string[], specs: readonly ProjectSpec[]) {
     if (!allowedRoots.length) throw new Error('Configure at least one allowed root')
@@ -33,7 +36,21 @@ export class LocalProjectRegistry {
       const identity=lstatSync(root)
       if(!identity.isDirectory()||identity.isSymbolicLink())
         throw new Error('Registered project root identity unavailable')
-      this.rootIdentities.set(spec.id,{root,dev:identity.dev,ino:identity.ino})
+      // Preserve canonical ancestor identities, not only the final directory.
+      // Otherwise an ancestor could be replaced by a different ordinary
+      // directory while the original project inode is moved back into it.
+      const ancestors:Array<{path:string;dev:number;ino:number}>=[]
+      let parent=dirname(root)
+      while(true){
+        const stat=lstatSync(parent)
+        if(!stat.isDirectory()||stat.isSymbolicLink())
+          throw new Error('Registered project ancestor identity unavailable')
+        ancestors.push({path:parent,dev:stat.dev,ino:stat.ino})
+        const next=dirname(parent)
+        if(next===parent)break
+        parent=next
+      }
+      this.rootIdentities.set(spec.id,{root,dev:identity.dev,ino:identity.ino,ancestors})
       this.projects.set(spec.id, { id: spec.id, root, kind: spec.kind, readOnly: !!spec.readOnly })
     }
   }
@@ -57,6 +74,14 @@ export class LocalProjectRegistry {
     if(!actual.isDirectory()||actual.isSymbolicLink()||
       actual.dev!==expected.dev||actual.ino!==expected.ino)
       throw new Error('Registered synthetic project directory identity changed')
+    for(const prior of expected.ancestors){
+      let current
+      try{current=lstatSync(prior.path)}
+      catch{throw new Error('Registered synthetic project ancestor identity changed')}
+      if(!current.isDirectory()||current.isSymbolicLink()||
+        current.dev!==prior.dev||current.ino!==prior.ino)
+        throw new Error('Registered synthetic project ancestor identity changed')
+    }
   }
   /** Path may not exist yet, but all existing ancestors are checked without following symlinks. */
   path(id: string, input: string, access: 'read' | 'write' = 'read'): string {

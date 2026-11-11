@@ -165,8 +165,9 @@ export async function inspectRegistryBoundSyntheticApproval(
   const project=registry.get(projectId)
   if(project.id!==projectId||project.kind!=='local'||project.readOnly)
     throw Error('Synthetic registry project is not eligible')
-  // Registration-time inode binding detects replacement by a DIFFERENT normal
-  // directory at the same path. This remains a read-only, non-atomic check.
+  // Registration-time inode binding detects replacement of the root OR an
+  // ordinary ancestor while the final root inode is unchanged. Best-effort,
+  // read-only evidence: not a race-free descriptor-relative capability.
   registry.assertRegisteredRootIdentity(projectId)
   // Reject a symlinked ancestor even when the final root is a directory.
   const checkAncestors=async()=>{

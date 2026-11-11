@@ -245,3 +245,35 @@ test('registry preflight detects ordinary directory replacement at the identical
     assert.equal(readdirSync(journal).length,0)
   }finally{rmSync(external,{recursive:true,force:true})}
 }))
+
+// The root inode can remain exactly the same while an ordinary (non-symlink)
+// ancestor is replaced and the root directory is moved back into the new tree.
+// The path-only fingerprint and root dev/ino both stay equal; the ancestor's
+// captured inode must independently fail closed with no approval reservation.
+test('registry preflight rejects ordinary ancestor replacement preserving root inode',()=>fixture(async({root,journal})=>{
+  const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const parent=join(external,'parent'),project=join(parent,'registered')
+    const moved=join(external,'moved-parent')
+    mkdirSync(parent,{mode:0o700});mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([external],[{id:'synthetic-parent-inode',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-parent-inode'))
+    const rootBefore=statSync(project)
+    const base=join(root,'..')
+    writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    renameSync(parent,moved)
+    mkdirSync(parent,{mode:0o700})
+    renameSync(join(moved,'registered'),project)
+    const rootAfter=statSync(project)
+    assert.equal(rootAfter.dev,rootBefore.dev)
+    assert.equal(rootAfter.ino,rootBefore.ino,'the original project inode is preserved')
+    assert.equal(projectFingerprint(registry.get('synthetic-parent-inode')),fp)
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-parent-inode',base,{
+      ...grant(journal),projectFingerprint:fp
+    }),/Registered synthetic project ancestor identity changed/)
+    assert.equal(readdirSync(root).length,0,'failed preflight cannot reserve approval')
+    assert.equal(readdirSync(journal).length,0)
+  }finally{rmSync(external,{recursive:true,force:true})}
+}))
