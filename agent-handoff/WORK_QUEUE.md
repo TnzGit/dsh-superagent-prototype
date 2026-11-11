@@ -6,7 +6,7 @@
 | C6B2B4E | ACCEPTED_ACKED | none | LO-006 closed, no replay |
 | C6B2B4F | ACCEPTED_ACKED / ALL_OFFLINE_PASS | none | LO-007 accepted, source CI #278 3/3 and report CI #281 3/3; no replay |
 | C6B2B4G | ACCEPTED_ACKED | none | LO-008 report and done receipt accepted, source CI #283 3/3; no replay |
-| C6B2B5 | REMOTE_CODE_CI_3_OF_3_GREEN / MAC_OFFLINE_PENDING | local | Unique OL-20261111-009 at pinned source `06de7c16599dc348857a0b0548135e458d5964e5`, CI #292, synthetic durable pin adversarial Mac acceptance + one sanitized report |
+| C6B2B5 | ACCEPTED_ACKED / ALL_OFFLINE_PASS | none | LO-009 report and online receipt verified; no replay |
 | REAL_NON_GIT_APPLY | STANDING_INTENT / EXACT_SCOPE_AND_OS_GATES_UNMET | operator + remote | Specific registered project and diff, path/quiescence proof, private grant, backup and recovery before any real write |
 
 ## Verified code/CI gate
@@ -33,3 +33,9 @@
 - [CI #292](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/42942799009) **3/3 green** with actual Linux/macOS Node **202/202**, proxy **5/5** each, `pnpm check` Vitest **1208/1208**. The pre-existing ledger Node suite is listed in BOTH workflow OS commands; job logs explicitly show the four newly added tests on both platforms, including two OS processes and an intentionally corrupt pin.
 - This is bounded by a **disposable 0700 `dsh-project-synthetic-*` parent directly under canonical OS temporary directory**. The 0600 `.dsh-synthetic-ledger-pin.json` is owner-private but unauthenticated; same-user deletion/replacement or different project parents can bypass its limited fencing. No global one-use authority, no source writes, no production caller, no real Apply.
 - **NEXT OWNER: local Mac Agent** completes OL-009 once, source pinned `06de7c16599dc348857a0b0548135e458d5964e5`; then online checks exact report/CI and publishes one ACK and next safe remote milestone. Older OL-001…008 are completed, no replays; do not dispatch another local task while OL-009 is pending or claimed.
+
+## C6B2B5 closeout and next remote owner — 2026-11-11
+
+- LO-009 Mac report, claimed/done receipts and complete message headers accepted; online ACK `d47d152af260a5670270af313b8f0a57968b8d84`. Pinned code `06de7c16599dc348857a0b0548135e458d5964e5`, CI #292 actual 3/3 with Linux/macOS 202 Node + 5 proxy, Vitest 1208. Mac report independently asserts 207 combined, 20 ledger, 71 adversarial checks; no live operations.
+- **REMOTE_OWNED executable next:** inspect synthetic ledger pin and registry code for a bounded fail-closed hardening opportunity (for example same-user pin deletion/replacement detection within an existing process), implement source + adversarial regression in the existing ledger suite, verify both OS CI job commands and logs plus build/check 3/3. No new local task until source CI green. Do not claim cryptographic or OS race freedom from owner-private fixture checks. A future task must have a new ID and pinned source.
+- No pending local task after OL-009. Real Apply gates remain unmet; no production caller or real writes authorized.
