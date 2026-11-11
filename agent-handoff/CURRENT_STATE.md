@@ -42,3 +42,9 @@
 - **Limited guarantee:** only within ONE disposable synthetic project parent. Separate project-parent roots, same-user marker deletion/forgery, external writers, OS path ABA/TOCTOU and real-project authorization are NOT solved. This is not a secure global arbiter and has no production Apply caller.
 - **NEW UNIQUE OFFLINE TASK**: `OL-20261111-009`, fixed to the above source SHA/CI. Local Mac Agent owns one independent synthetic-only acceptance; do not issue another local task or retry a claimed-but-not-done task. Remote online owns report verification and one done ACK after it arrives.
 - Real Apply standing principle consent remains separate from transaction approval: no specific registered target/diff, OS-level no-follow/quiescence, backup/recovery or private one-use grant. No Weixin/DSH Prompt/service/model/provider/production DB operations.
+
+## C6B2B5 independent Mac acceptance — 2026-11-11
+
+- **ACCEPTED_ACKED:** LO-20261111-009 and OL-009 claimed/done receipts independently checked; unique online receipt committed `d47d152af260a5670270af313b8f0a57968b8d84`. Do not replay OL-009.
+- Pinned source `06de7c16599dc348857a0b0548135e458d5964e5`, CI run `42942799009`: actual GitHub jobs all three success; inspected logs Linux and macOS **202/202 Node + 5/5 proxy**, check **1208/1208 Vitest**. Both OS workflow commands enroll ledger tests and logs contain durable-pin test. Local sanitized report `agent-reports/REPORT-c6b2b5-offline-durable-ledger-pin-acceptance.md`: Mac **207/207 combined**, standalone ledger **20/20**, independent adversarial **71/71**; synthetic-only, no real host work.
+- **NEXT OWNER: remote online**, next safe source-only milestone and CI; no new local task until a distinct tested source is accepted. Same-user pin forgery/deletion, separate synthetic parents, OS ABA/TOCTOU, private transaction grant and backup/recovery remain unresolved. Real Apply prohibited.
