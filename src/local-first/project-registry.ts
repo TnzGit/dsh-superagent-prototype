@@ -19,6 +19,8 @@ function canonicalDir(dir: string): string {
 /** Defensive path checks; process/container filesystem isolation is still required for execution. */
 export class LocalProjectRegistry {
   private readonly projects = new Map<string, Project>()
+  // Read-only registration-time identity evidence. Not an authenticated OS capability.
+  private readonly rootIdentities = new Map<string, {root:string;dev:number;ino:number}>()
   private readonly writers = new Map<string, ModelEndpointQueue>()
   constructor(allowedRoots: readonly string[], specs: readonly ProjectSpec[]) {
     if (!allowedRoots.length) throw new Error('Configure at least one allowed root')
@@ -28,6 +30,10 @@ export class LocalProjectRegistry {
       if (lstatSync(spec.root).isSymbolicLink()) throw new Error('Symlinked project root is forbidden')
       const root = canonicalDir(spec.root)
       if (!roots.some(allowed => within(allowed, root))) throw new Error('Project is outside the allowed roots')
+      const identity=lstatSync(root)
+      if(!identity.isDirectory()||identity.isSymbolicLink())
+        throw new Error('Registered project root identity unavailable')
+      this.rootIdentities.set(spec.id,{root,dev:identity.dev,ino:identity.ino})
       this.projects.set(spec.id, { id: spec.id, root, kind: spec.kind, readOnly: !!spec.readOnly })
     }
   }
@@ -37,6 +43,21 @@ export class LocalProjectRegistry {
     return project
   }
   list(): Project[] { return [...this.projects.values()].map(p => ({ ...p })) }
+  /** Read-only identity check against the actual directory captured at registration.
+   * Detects same-path directory replacement, unlike a path-only fingerprint.
+   * The check is NOT atomic with later uses and does not prevent external writers.
+   */
+  assertRegisteredRootIdentity(id:string):void {
+    const project=this.get(id),expected=this.rootIdentities.get(id)
+    if(!expected||project.root!==expected.root)
+      throw new Error('Registered synthetic project directory identity changed')
+    let actual
+    try {actual=lstatSync(expected.root)}
+    catch {throw new Error('Registered synthetic project directory identity changed')}
+    if(!actual.isDirectory()||actual.isSymbolicLink()||
+      actual.dev!==expected.dev||actual.ino!==expected.ino)
+      throw new Error('Registered synthetic project directory identity changed')
+  }
   /** Path may not exist yet, but all existing ancestors are checked without following symlinks. */
   path(id: string, input: string, access: 'read' | 'write' = 'read'): string {
     const project = this.get(id)

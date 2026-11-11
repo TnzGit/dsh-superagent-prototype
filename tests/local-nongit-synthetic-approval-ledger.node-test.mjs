@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import {mkdtempSync,mkdirSync,rmSync,writeFileSync,chmodSync,symlinkSync,readdirSync,statSync,realpathSync} from 'node:fs'
+import {mkdtempSync,mkdirSync,rmSync,renameSync,writeFileSync,chmodSync,symlinkSync,readdirSync,statSync,realpathSync} from 'node:fs'
 import {spawn} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {tmpdir} from 'node:os'
@@ -219,5 +219,29 @@ test('registry preflight refuses a symlinked ancestor after registry creation',(
       ...grant(journal),projectFingerprint:fp
     }),/ancestor identity changed/)
     assert.equal(readdirSync(root).length,0)
+  }finally{rmSync(external,{recursive:true,force:true})}
+}))
+
+// A same-path replacement by another ordinary directory preserves the path-only
+// projectFingerprint. The independent registration-time dev/ino MUST refuse it.
+test('registry preflight detects ordinary directory replacement at the identical path',()=>fixture(async({root,journal})=>{
+  const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+  try{
+    const project=join(external,'registered'),original=join(external,'original-moved')
+    mkdirSync(project,{mode:0o700})
+    const registry=new LocalProjectRegistry([external],[{id:'synthetic-inode',root:project,kind:'local'}])
+    const fp=projectFingerprint(registry.get('synthetic-inode'))
+    const base=join(root,'..')
+    writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+      version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+    }),{mode:0o600})
+    renameSync(project,original)
+    mkdirSync(project,{mode:0o700}) // not a symlink, but a DIFFERENT inode
+    assert.equal(projectFingerprint(registry.get('synthetic-inode')),fp)
+    await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-inode',base,{
+      ...grant(journal),projectFingerprint:fp
+    }),/Registered synthetic project directory identity changed/)
+    assert.equal(readdirSync(root).length,0,'read-only refusal must not issue a receipt')
+    assert.equal(readdirSync(journal).length,0)
   }finally{rmSync(external,{recursive:true,force:true})}
 }))

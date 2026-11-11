@@ -152,7 +152,7 @@ export async function reserveFixtureBoundSyntheticApproval(
  * This is NOT connected to any real project Apply or production caller.
  */
 export async function inspectRegistryBoundSyntheticApproval(
-  registry:Pick<LocalProjectRegistry,'get'>,
+  registry:Pick<LocalProjectRegistry,'get'|'assertRegisteredRootIdentity'>,
   projectId:string,fixtureRoot:string,reservation:SyntheticApprovalReservation
 ):Promise<{
   projectId:string
@@ -165,17 +165,22 @@ export async function inspectRegistryBoundSyntheticApproval(
   const project=registry.get(projectId)
   if(project.id!==projectId||project.kind!=='local'||project.readOnly)
     throw Error('Synthetic registry project is not eligible')
-  // C6B2B4F: reject a symlinked ancestor even when the final root is a directory.
-  // This is a best-effort read-only preflight, NOT an atomic no-follow fd walk.
-  let ancestor=project.root
-  while(true){
-    const ancestorStat=await lstat(ancestor)
-    if(ancestorStat.isSymbolicLink())
-      throw Error('Registered synthetic project ancestor identity changed')
-    const parent=dirname(ancestor)
-    if(parent===ancestor)break
-    ancestor=parent
+  // Registration-time inode binding detects replacement by a DIFFERENT normal
+  // directory at the same path. This remains a read-only, non-atomic check.
+  registry.assertRegisteredRootIdentity(projectId)
+  // Reject a symlinked ancestor even when the final root is a directory.
+  const checkAncestors=async()=>{
+    let ancestor=project.root
+    while(true){
+      const ancestorStat=await lstat(ancestor)
+      if(ancestorStat.isSymbolicLink())
+        throw Error('Registered synthetic project ancestor identity changed')
+      const parent=dirname(ancestor)
+      if(parent===ancestor)break
+      ancestor=parent
+    }
   }
+  await checkAncestors()
   const projectStat=await lstat(project.root)
   const canonicalProject=await realpath(project.root)
   if(!projectStat.isDirectory()||projectStat.isSymbolicLink()||
@@ -224,6 +229,11 @@ export async function inspectRegistryBoundSyntheticApproval(
   const requestedStat=await lstat(reservation.journalRoot)
   if(requestedStat.isSymbolicLink()||requested!==journal)
     throw Error('Synthetic registry journal differs from fixed binding')
+  // Re-attest both the original inode and ancestor path near return. A swap
+  // retained during the async marker/ledger checks must fail closed; ABA
+  // replacement and non-cooperating writers still need OS-level isolation.
+  await checkAncestors()
+  registry.assertRegisteredRootIdentity(projectId)
   // Return facts for read-only evidence. Never consume a grant in this gate.
   return Object.freeze({projectId,projectFingerprint:fingerprint,
     ledgerRoot:ledger,journalRoot:journal})
