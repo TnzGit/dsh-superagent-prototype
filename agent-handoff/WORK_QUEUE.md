@@ -1,3 +1,8 @@
+## 2026-11-12 C6B2B5P oversized synthetic receipt fail-closed — WAITING_CI
+
+- **REMOTE_OWNED / WAITING_CI:** source `7e05749d14e469d4e19f15c282d6d9620fc6f01f` adds 4096-byte bound before synthetic ledger receipt JSON parsing, plus an oversized corrupted-receipt regression confirming no rewrite and no reuse. Source CI #378 run `43211308197` was queued at inspection; no job success or independent Mac acceptance claimed. Both Linux/macOS workflow commands include `tests/local-nongit-synthetic-approval-ledger.node-test.mjs` (two occurrences).
+- **NEXT OWNER remote:** inspect exact-source #378 three jobs and full logs, Linux/macOS Node and proxy counts, Vitest and build, repair failures; once 3/3 verified, enumerate all messages and receipts and issue unique OL-023 in the SAME run if no pending task, with expected_sha non-force fast-forward. OL-022 already closed. No real Apply/Weixin/production authority.
+
 ## 2026-11-12 LO-022 accepted / next remote milestone
 
 OL-20261112-022 CLOSED. Pinned source f25207d6cd2549eafceb13ec52d21823bdb9c3af, source CI #373 (43188575956), report HEAD 95d41adcd762c6731a11f3ef12972409950379ca CI #376 (43191887671): both 3/3 SUCCESS. Inspected six job logs: Linux/macOS each Node 220/220, proxy 5/5, both new hostile-path cases executed; Vitest 1208/1208 and build success. Full sanitized Mac report, LO-022 and local claimed/done receipts reviewed; local ledger 38/38, adversarial 671/671. No production operations. NEXT OWNER remote: implement next substantive synthetic-only hardening with tests and exact-source CI; no new OL until verified. Same-user forgery, OS TOCTOU, private grant and backup/recovery unresolved.
