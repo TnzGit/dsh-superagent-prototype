@@ -29,8 +29,11 @@ jobs:
       - name: OpenAI queue proxy integration tests (bounded execution)
         run: timeout -k 5s 45s node --experimental-strip-types --test tests/local-openai-queue-proxy.node-test.mjs
 
+  # macos-latest (macOS 26 ARM64) repeatedly failed to acquire a hosted runner:
+  # zero steps/runner_id=0 and cancellation after ~15 minutes. Retain full
+  # macOS test coverage on the separately provisioned supported Intel pool.
   macos-portability:
-    runs-on: macos-latest
+    runs-on: macos-15-intel
     timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
