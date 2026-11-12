@@ -1,3 +1,8 @@
+## C6B2B5L read-only registry preflight input normalization — 2026-11-12
+
+- **REMOTE_OWNED / WAITING_CI:** independent exported inspectRegistryBoundSyntheticApproval now normalizes reservation before registry lookup or filesystem access. Synthetic Node regression rejects Proxy, revoked Proxy and accessor with zero traps/getters and zero registry reads. Existing test module is in both OS workflow Node commands. Source CI and actual test logs not yet verified; no OL dispatch until 3/3 success.
+- **NEXT OWNER remote online:** inspect latest branch HEAD and CI for this exact source, repair failures, then enumerate all messages/receipts and atomically dispatch unique OL if no pending local task. No real Apply/Weixin/DSH/production authority.
+
 ## C6B2B5K verified CI and unique OL-018 handoff — 2026-11-12
 
 - **REMOTE CI ACCEPTED / LOCAL MAC ACCEPTANCE PENDING:** exact source `ef352b2ec4b3b6992f614673a2a1100ba3408103`, CI #351 run `43128992443` attempt 2 **3/3 SUCCESS**. Actual Linux/macOS logs execute fixture-bound Proxy pre-read regression, Node **214/214** and proxy **5/5** on each; typecheck, Vitest **1208/1208**, build success. Earlier cancelled attempt is not passing evidence.

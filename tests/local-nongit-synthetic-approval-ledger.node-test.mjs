@@ -250,6 +250,29 @@ test('registry preflight binds a registered synthetic root and never creates an 
     }),/Unknown project ID/)
   }finally{rmSync(external,{recursive:true,force:true})}
 }))
+test('read-only registry preflight rejects Proxy and accessor inputs before registry or filesystem access',async()=>{
+ let traps=0,registryReads=0
+ const registry={
+  get(){registryReads++;throw Error('registry accessed')},
+  assertRegisteredRootIdentity(){registryReads++;throw Error('registry accessed')}
+ }
+ const valid=grant('/synthetic/never-read')
+ const proxy=new Proxy(valid,{
+  get(){traps++;throw Error('proxy get trap executed')},
+  getPrototypeOf(){traps++;throw Error('proxy prototype trap executed')},
+  ownKeys(){traps++;throw Error('proxy ownKeys trap executed')},
+  getOwnPropertyDescriptor(){traps++;throw Error('proxy descriptor trap executed')}
+ })
+ await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-preflight','/synthetic/never-read',proxy),/Invalid synthetic reservation/)
+ const revoked=Proxy.revocable(valid,{});revoked.revoke()
+ await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-preflight','/synthetic/never-read',revoked.proxy),/Invalid synthetic reservation/)
+ const accessor={...valid}
+ Object.defineProperty(accessor,'projectFingerprint',{enumerable:true,get(){traps++;throw Error('getter executed')}})
+ await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-preflight','/synthetic/never-read',accessor),/Invalid synthetic reservation/)
+ assert.equal(traps,0,'no attacker reflection trap or getter may run')
+ assert.equal(registryReads,0,'invalid inputs must not access registry')
+})
+
 test('registry preflight rejects alternate journal, forged marker fingerprint and unsafe marker mode',()=>fixture(async({root,journal})=>{
   const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
   try{

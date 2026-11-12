@@ -272,6 +272,9 @@ export async function inspectRegistryBoundSyntheticApproval(
   ledgerRoot:string
   journalRoot:string
 }>{
+  // This independently exported read-only preflight must reject hostile input
+  // before registry lookup or filesystem access, not only on reserve paths.
+  reservation=normalizeSyntheticReservation(reservation)
   if(!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(projectId))
     throw Error('Invalid synthetic registry project ID')
   const project=registry.get(projectId)
