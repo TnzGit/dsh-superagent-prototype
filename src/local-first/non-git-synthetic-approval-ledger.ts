@@ -59,6 +59,10 @@ export async function reserveSyntheticApproval(
   ledgerRoot:string, reservation:SyntheticApprovalReservation
 ):Promise<'reserved'> {
   reservation=normalizeSyntheticReservation(reservation)
+  // A public synthetic entry point must reject hostile paths before fs calls.
+  // Type checks are trap-free even for revoked Proxy objects.
+  if(typeof ledgerRoot!=='string'||!ledgerRoot.trim())
+    throw Error('Invalid synthetic ledger root')
   const stat=await lstat(ledgerRoot)
   if(!stat.isDirectory()||stat.isSymbolicLink()||(stat.mode&0o077)!==0)
     throw Error('Unsafe synthetic ledger root')
@@ -99,7 +103,7 @@ export async function inspectSyntheticApproval(
   ledgerRoot:string,approvalId:string
 ):Promise<SyntheticApprovalReservation> {
   if(typeof approvalId!=='string'||!ID.test(approvalId))throw Error('Invalid synthetic approval ID')
-  if(typeof ledgerRoot!=='string'||!ledgerRoot)throw Error('Invalid synthetic ledger root')
+  if(typeof ledgerRoot!=='string'||!ledgerRoot.trim())throw Error('Invalid synthetic ledger root')
   const root=await realpath(ledgerRoot)
   const rootStat=await lstat(ledgerRoot)
   if(!rootStat.isDirectory()||rootStat.isSymbolicLink()||(rootStat.mode&0o077)!==0)
@@ -138,6 +142,8 @@ export async function reserveFixtureBoundSyntheticApproval(
   // Normalize before fixture binding checks or any filesystem access: raw Proxy
   // getters must not run while comparing marker and journal identity.
   reservation=normalizeSyntheticReservation(reservation)
+  if(typeof fixtureRoot!=='string'||!fixtureRoot.trim())
+    throw Error('Invalid synthetic fixture root')
   const fixtureStat=await lstat(fixtureRoot)
   if(!fixtureStat.isDirectory()||fixtureStat.isSymbolicLink()||
     (fixtureStat.mode&0o077)!==0)
@@ -276,6 +282,10 @@ export async function inspectRegistryBoundSyntheticApproval(
   // This independently exported read-only preflight must reject hostile input
   // before registry lookup or filesystem access, not only on reserve paths.
   reservation=normalizeSyntheticReservation(reservation)
+  // Fail before registry.get, identity attestation and filesystem access.
+  // The reserveRegistryBoundSyntheticApproval caller uses this same gate.
+  if(typeof fixtureRoot!=='string'||!fixtureRoot.trim())
+    throw Error('Invalid synthetic fixture root')
   if(typeof projectId!=='string'||!/^[a-z0-9][a-z0-9_-]{0,63}$/.test(projectId))
     throw Error('Invalid synthetic registry project ID')
   const project=registry.get(projectId)

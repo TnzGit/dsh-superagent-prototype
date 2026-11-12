@@ -134,6 +134,44 @@ test('read-only synthetic inspection rejects hostile ledger roots before path co
  assert.equal((await inspectSyntheticApproval(root,'approval-synthetic-00001')).approvalId,'approval-synthetic-00001')
 }))
 
+test('all synthetic ledger root entry points reject hostile non-string and blank paths before side effects',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ let traps=0
+ const evil={toString(){traps++;throw Error('ledger path coerced')},valueOf(){traps++;throw Error('ledger path coerced')}}
+ const proxy=new Proxy(evil,{get(){traps++;throw Error('ledger Proxy trap')},getPrototypeOf(){traps++;throw Error('ledger Proxy trap')}})
+ const revoked=Proxy.revocable({},{});revoked.revoke()
+ for(const bad of [evil,proxy,revoked.proxy,null,0,'','   ',new String(root)]){
+  await assert.rejects(reserveSyntheticApproval(bad,g),/Invalid synthetic ledger root/)
+  await assert.rejects(inspectSyntheticApproval(bad,g.approvalId),/Invalid synthetic ledger root/)
+  assert.equal(traps,0)
+  assert.equal(readdirSync(root).length,0,'bad ledger root may not create a reservation')
+ }
+ assert.equal(await reserveSyntheticApproval(root,g),'reserved')
+ assert.equal((await inspectSyntheticApproval(root,g.approvalId)).approvalId,g.approvalId)
+ await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+}))
+
+test('fixture and registry synthetic entry points reject hostile fixture paths before registry or pin access',()=>fixture(async({root,journal})=>{
+ let traps=0,registryReads=0
+ const evil={toString(){traps++;throw Error('fixture path coerced')},valueOf(){traps++;throw Error('fixture path coerced')}}
+ const proxy=new Proxy(evil,{get(){traps++;throw Error('fixture Proxy trap')},getPrototypeOf(){traps++;throw Error('fixture Proxy trap')}})
+ const revoked=Proxy.revocable({},{});revoked.revoke()
+ const registry={get(){registryReads++;throw Error('registry read')},assertRegisteredRootIdentity(){registryReads++;throw Error('registry identity read')}}
+ const g=grant(journal)
+ for(const bad of [evil,proxy,revoked.proxy,null,0,'','   ',new String(join(root,'..'))]){
+  await assert.rejects(reserveFixtureBoundSyntheticApproval(bad,g),/Invalid synthetic fixture root/)
+  await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,'synthetic-fixture',bad,g),/Invalid synthetic fixture root/)
+  await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-fixture',bad,g),/Invalid synthetic fixture root/)
+  assert.equal(traps,0,'no implicit path coercion or Proxy traps')
+  assert.equal(registryReads,0,'invalid fixture must be rejected before registry access')
+  assert.equal(readdirSync(root).length,0,'no receipt or pin for invalid fixture')
+ }
+ const base=join(root,'..')
+ writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:g.projectFingerprint}),{mode:0o600})
+ assert.equal(await reserveFixtureBoundSyntheticApproval(base,g),'reserved')
+ await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
+}))
+
 test('ancestor and descendant ledger/journal roots fail closed before creating entries',()=>fixture(async({root,journal})=>{
  const nested=join(root,'nested');mkdirSync(nested,{mode:0o700})
  await assert.rejects(reserveSyntheticApproval(root,grant(nested)),/overlaps journal/)
