@@ -87,6 +87,18 @@ test('corrupt entry is never overwritten or silently recovered',()=>fixture(asyn
  await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
 }))
 
+test('oversized synthetic receipt fails closed without rewriting or reusing approval',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ await reserveSyntheticApproval(root,g)
+ const path=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const fs=await import('node:fs')
+ const oversized=JSON.stringify({...g,unexpected:'x'.repeat(8192)})+'\n'
+ fs.writeFileSync(path,oversized,{mode:0o600})
+ await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
+ assert.equal(fs.readFileSync(path,'utf8'),oversized)
+ await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+}))
+
 test('read-only synthetic receipt inspection rejects unexpected fields without consuming or rewriting receipt',()=>fixture(async({root,journal})=>{
  const g=grant(journal)
  await reserveSyntheticApproval(root,g)

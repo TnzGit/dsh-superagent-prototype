@@ -112,6 +112,8 @@ export async function inspectSyntheticApproval(
   const stat=await lstat(file)
   if(!stat.isFile()||stat.isSymbolicLink()||(stat.mode&0o077)!==0||stat.nlink!==1)
     throw Error('Unsafe synthetic reservation')
+  // Bound untrusted on-disk receipt size before allocation and parsing.
+  if(stat.size>4096)throw Error('Corrupt synthetic reservation; human reconciliation required')
   let value:unknown
   try {value=JSON.parse(await readFile(file,'utf8'))}
   catch {throw Error('Corrupt synthetic reservation; human reconciliation required')}
