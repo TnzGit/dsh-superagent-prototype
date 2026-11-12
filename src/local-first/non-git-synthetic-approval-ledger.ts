@@ -162,6 +162,7 @@ export async function reserveFixtureBoundSyntheticApproval(
     if(!st.isFile()||st.isSymbolicLink()||st.nlink!==1||
       (st.mode&0o777)!==0o600)
       throw Error('Untrusted synthetic fixture binding')
+    if(st.size>4096)throw Error('Corrupt synthetic fixture binding; manual review required')
     bound=JSON.parse(await readFile(marker,'utf8')) as unknown
   }catch(error){
     if(error instanceof SyntaxError||
@@ -244,6 +245,8 @@ async function pinDisposableSyntheticLedger(
   if(!entry.isFile()||entry.isSymbolicLink()||entry.nlink!==1||
     (entry.mode&0o777)!==0o600)
     throw Error('Unsafe synthetic registry ledger pin')
+  // Reject oversized owner-private pin before parsing. Never repair or overwrite it.
+  if(entry.size>4096)throw Error('Corrupt synthetic registry ledger pin; manual review required')
   let parsed:unknown
   try{parsed=JSON.parse(await readFile(file,'utf8'))}
   catch{throw Error('Corrupt synthetic registry ledger pin; manual review required')}
@@ -337,6 +340,7 @@ export async function inspectRegistryBoundSyntheticApproval(
   if(!markerStat.isFile()||markerStat.isSymbolicLink()||
     markerStat.nlink!==1||(markerStat.mode&0o777)!==0o600)
     throw Error('Unsafe synthetic registry binding marker')
+  if(markerStat.size>4096)throw Error('Corrupt synthetic registry binding marker')
   let parsed:unknown
   try{parsed=JSON.parse(await readFile(marker,'utf8'))}
   catch{throw Error('Corrupt synthetic registry binding marker')}

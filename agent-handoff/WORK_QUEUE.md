@@ -1,3 +1,8 @@
+## 2026-11-12 C6B2B5Q synthetic binding/pin size gates — WAITING_CI
+
+- **REMOTE_OWNED / WAITING_CI:** new source change bounds all three remaining on-disk synthetic fixture marker / registry marker / durable project pin reads to 4096 bytes before JSON parse. Three regression cases check 4097-byte hostile files fail closed, remain unmodified, and create no receipt or durable pin. Existing ledger Node suite is present in BOTH Linux/macOS workflow commands. No live Apply authority.
+- **NEXT OWNER remote:** verify the exact source-containing commit and all three GitHub Actions jobs/logs (Linux/macOS Node + proxy, Vitest/build), repair failures. Once 3/3 SUCCESS and no active local task, enumerate all messages and receipts and atomically dispatch unique OL task with expected_sha/non-force fast-forward in SAME run. Previous OL-023 is closed. Same-user forgery, OS TOCTOU, private grant, backup and recovery remain unresolved.
+
 ## 2026-11-12 LO-023 independent Mac acceptance verified / online ACK
 
 - **ACCEPTED_ACKED / REMOTE_OWNED:** OL-20261112-023 and LO-20261112-023 closed. Pinned source `7e05749d14e469d4e19f15c282d6d9620fc6f01f`; original CI #379 run `43211358744` at containing HEAD `29f4d060f3ca50095de137af3d23f6b4cbe798c1` and report CI #382 run `43220881910` at report HEAD `ab21163d312a742d4f0c14fc7c29afff01a30def` both **3/3 SUCCESS**. Six actual job logs checked: both Linux/macOS 221/221 Node and 5/5 proxy, oversized receipt test executed in both, Vitest 1208/1208, build successful.

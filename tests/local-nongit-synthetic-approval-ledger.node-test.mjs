@@ -737,3 +737,51 @@ test('same registry refuses ledger directory replacement before issuing a new re
     assert.equal(readdirSync(retained).filter(x=>x.endsWith('.json')).length,1)
   }finally{rmSync(parent,{recursive:true,force:true})}
 }))
+
+
+test('oversized fixture binding marker fails closed without receipt or rewriting marker',()=>fixture(async({root,journal})=>{
+ const marker=join(root,'..','.synthetic-ledger-binding.json')
+ const oversized='x'.repeat(4097)
+ writeFileSync(marker,oversized,{mode:0o600})
+ await assert.rejects(reserveFixtureBoundSyntheticApproval(join(root,'..'),grant(journal)),/Corrupt synthetic fixture binding/)
+ assert.equal((await import('node:fs')).readFileSync(marker,'utf8'),oversized)
+ assert.equal(readdirSync(root).length,0)
+}))
+
+test('oversized registry marker fails closed before pin and receipt',()=>fixture(async({root,journal})=>{
+ const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+ try{
+  const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+  const registry=new LocalProjectRegistry([parent],[{id:'synthetic-marker-size',root:project,kind:'local'}])
+  const fp=projectFingerprint(registry.get('synthetic-marker-size'))
+  const marker=join(root,'..','.synthetic-ledger-binding.json')
+  const oversized='x'.repeat(4097)
+  writeFileSync(marker,oversized,{mode:0o600})
+  await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-marker-size',join(root,'..'),{
+   ...grant(journal),projectFingerprint:fp
+  }),/Corrupt synthetic registry binding marker/)
+  assert.equal((await import('node:fs')).readFileSync(marker,'utf8'),oversized)
+  assert.equal(readdirSync(root).length,0)
+  assert.equal(readdirSync(parent).includes('.dsh-synthetic-ledger-pin.json'),false)
+ }finally{rmSync(parent,{recursive:true,force:true})}
+}))
+
+test('oversized durable registry pin fails closed without receipt or repair',()=>fixture(async({root,journal})=>{
+ const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+ try{
+  const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+  const registry=new LocalProjectRegistry([parent],[{id:'synthetic-pin-size',root:project,kind:'local'}])
+  const fp=projectFingerprint(registry.get('synthetic-pin-size'))
+  writeFileSync(join(root,'..','.synthetic-ledger-binding.json'),JSON.stringify({
+   version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+  }),{mode:0o600})
+  const pin=join(parent,'.dsh-synthetic-ledger-pin.json')
+  const oversized='x'.repeat(4097)
+  writeFileSync(pin,oversized,{mode:0o600})
+  await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-pin-size',join(root,'..'),{
+   ...grant(journal),projectFingerprint:fp
+  }),/Corrupt synthetic registry ledger pin/)
+  assert.equal((await import('node:fs')).readFileSync(pin,'utf8'),oversized)
+  assert.equal(readdirSync(root).length,0)
+ }finally{rmSync(parent,{recursive:true,force:true})}
+}))
