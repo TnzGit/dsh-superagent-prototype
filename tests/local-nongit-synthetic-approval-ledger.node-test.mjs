@@ -273,6 +273,23 @@ test('read-only registry preflight rejects Proxy and accessor inputs before regi
  assert.equal(registryReads,0,'invalid inputs must not access registry')
 })
 
+test('read-only registry preflight rejects hostile project ID without coercion or registry access',async()=>{
+ let traps=0,registryReads=0
+ const registry={
+  get(){registryReads++;throw Error('registry accessed')},
+  assertRegisteredRootIdentity(){registryReads++;throw Error('registry accessed')}
+ }
+ const reservation=grant('/synthetic/never-read')
+ const malicious={toString(){traps++;throw Error('coercion executed')},valueOf(){traps++;throw Error('coercion executed')}}
+ const proxy=new Proxy({}, {get(){traps++;throw Error('trap executed')},getPrototypeOf(){traps++;throw Error('trap executed')}})
+ const revoked=Proxy.revocable({},{});revoked.revoke()
+ for(const id of [malicious,proxy,revoked.proxy,new String('synthetic-preflight'),null,42]){
+  await assert.rejects(inspectRegistryBoundSyntheticApproval(registry,id,'/synthetic/never-read',reservation),/Invalid synthetic registry project ID/)
+ }
+ assert.equal(traps,0)
+ assert.equal(registryReads,0)
+})
+
 test('registry preflight rejects alternate journal, forged marker fingerprint and unsafe marker mode',()=>fixture(async({root,journal})=>{
   const external=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
   try{
