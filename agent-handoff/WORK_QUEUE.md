@@ -1,3 +1,9 @@
+## 2026-11-12 LO-023 independent Mac acceptance verified / online ACK
+
+- **ACCEPTED_ACKED / REMOTE_OWNED:** OL-20261112-023 and LO-20261112-023 closed. Pinned source `7e05749d14e469d4e19f15c282d6d9620fc6f01f`; original CI #379 run `43211358744` at containing HEAD `29f4d060f3ca50095de137af3d23f6b4cbe798c1` and report CI #382 run `43220881910` at report HEAD `ab21163d312a742d4f0c14fc7c29afff01a30def` both **3/3 SUCCESS**. Six actual job logs checked: both Linux/macOS 221/221 Node and 5/5 proxy, oversized receipt test executed in both, Vitest 1208/1208, build successful.
+- Full sanitized report `agent-reports/REPORT-c6b2b5p-offline-oversized-receipt.md`, LO-023 message, local claimed/done receipts checked. Independent macOS ledger 39/39 and adversarial 708/708, 4096 allowed / 4097 rejected, no source or live host mutation. All message and receipt directories enumerated; OL-001..023 closed (OL-002 non-task), LO-001,003..023 online processed after this ACK; no pending local task.
+- **NEXT OWNER remote online:** implement next substantive synthetic-only security hardening with tests; verify exact-source 3/3 CI and Linux/macOS logs; if green and no pending task, dispatch unique OL-024 atomically in the SAME run. No real Apply/Weixin/production authority. Same-user forgery, cross-root fencing, OS TOCTOU, private grant and backup/recovery remain unresolved.
+
 ## 2026-11-12 C6B2B5P verified CI / OL-023 independent Mac handoff
 
 - **LOCAL_OWNED / PENDING:** unique OL-20261112-023, pinned source `7e05749d14e469d4e19f15c282d6d9620fc6f01f` (oversized 4096-byte synthetic receipt fail-closed); latest branch CI **#379**, run `43211358744`, 3/3 SUCCESS at HEAD `29f4d060f3ca50095de137af3d23f6b4cbe798c1`. Earlier source push CI #378 was **cancelled** by the subsequent status commit; do not count it as passing. #379 checks out the exact source-containing HEAD and includes no later product changes.
