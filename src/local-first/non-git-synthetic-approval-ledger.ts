@@ -98,7 +98,7 @@ export async function reserveSyntheticApproval(
 export async function inspectSyntheticApproval(
   ledgerRoot:string,approvalId:string
 ):Promise<SyntheticApprovalReservation> {
-  if(!ID.test(approvalId))throw Error('Invalid synthetic approval ID')
+  if(typeof approvalId!=='string'||!ID.test(approvalId))throw Error('Invalid synthetic approval ID')
   const root=await realpath(ledgerRoot)
   const rootStat=await lstat(ledgerRoot)
   if(!rootStat.isDirectory()||rootStat.isSymbolicLink()||(rootStat.mode&0o077)!==0)
@@ -115,8 +115,9 @@ export async function inspectSyntheticApproval(
     Object.keys(r).sort().join(',')!==
       'approvalId,journalRoot,operation,previewDigest,projectFingerprint,transactionId,version'||
     r.version!==1||r.approvalId!==approvalId||
-    !ID.test(r.transactionId)||!SHA.test(r.projectFingerprint)||
-    !SHA.test(r.previewDigest)||!['apply','rollback'].includes(r.operation)||
+    (typeof r.transactionId!=='string'||!ID.test(r.transactionId))||
+    (typeof r.projectFingerprint!=='string'||!SHA.test(r.projectFingerprint))||
+    (typeof r.previewDigest!=='string'||!SHA.test(r.previewDigest))||!['apply','rollback'].includes(r.operation)||
     typeof r.journalRoot!=='string'||!r.journalRoot)
     throw Error('Corrupt synthetic reservation; human reconciliation required')
   return r

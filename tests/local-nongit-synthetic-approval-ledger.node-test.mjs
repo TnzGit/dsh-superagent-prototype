@@ -101,6 +101,25 @@ test('read-only synthetic receipt inspection rejects unexpected fields without c
  assert.notEqual(tampered,original)
 }))
 
+test('read-only synthetic inspection rejects object approval IDs before coercion and malformed receipt types',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ let coerced=0
+ const malicious={toString(){coerced++;throw Error('coercion executed')}}
+ await assert.rejects(inspectSyntheticApproval(root,malicious),/Invalid synthetic approval ID/)
+ assert.equal(coerced,0)
+ assert.equal(readdirSync(root).length,0)
+ await reserveSyntheticApproval(root,g)
+ const path=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const fs=await import('node:fs')
+ for(const [key,value] of [['transactionId',null],['projectFingerprint',{}],['previewDigest',42]]){
+  const malformed=JSON.stringify({...g,[key]:value})+'\\n'
+  fs.writeFileSync(path,malformed,{mode:0o600})
+  await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
+  assert.equal(fs.readFileSync(path,'utf8'),malformed,'read-only inspection must preserve malformed receipt')
+ }
+ await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+}))
+
 test('ancestor and descendant ledger/journal roots fail closed before creating entries',()=>fixture(async({root,journal})=>{
  const nested=join(root,'nested');mkdirSync(nested,{mode:0o700})
  await assert.rejects(reserveSyntheticApproval(root,grant(nested)),/overlaps journal/)
