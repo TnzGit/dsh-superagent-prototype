@@ -1,3 +1,9 @@
+## Latest verified transition — 2026-11-12 C6B2B5J LO-017 ACK
+
+- **LO-20261112-017 ACCEPTED_ACKED; OL-017 CLOSED**. Full sanitized report `agent-reports/REPORT-c6b2b5j-offline-proxy-input.md`, local claimed/done receipts and result verified at report HEAD `ac9021db7106c45f5508f02e47a5ce9fcc0c64db`. Exact tested source `6c9b7dfc99bd7f66fd1370410c695eeef1f2b6de`, original CI #346 run `43113707101`, report CI #349 run `43122203312`: each 3/3 SUCCESS. Actual Linux/macOS logs in both runs execute both Proxy regressions, Node 213/213 and proxy 5/5 each, Vitest 1208/1208, build success. Independent Mac Node 213/213, ledger 31/31, proxy 5/5, Vitest 1208/1208, adversarial 376/376.
+- **NEW REMOTE_OWNED C6B2B5K:** fixture-bound synthetic reservation performs binding-field reads on raw Proxy before isProxy rejection; observed get trap execution, no receipt or durable pin. Fix guard ordering in test-only fixture-bound entry, add regression proving zero traps and no filesystem artifacts, verify new source 3/3 CI and both OS suite logs, then unique OL task only if no active local task. No new task dispatched at this ACK transition.
+- **NO LIVE AUTHORITY:** same-user forgery, independent-process identity, OS TOCTOU/ABA, non-cooperating writers, private transaction authority and backup/recovery remain unresolved. No real Apply/Weixin/DSH Prompt/production changes.
+
 ## Current actionable handoff (remote-owned, 2026-11-11)
 
 - **C6B2B5 initial durable ledger pin:** `OL-20261111-009` accepted / online `LO-20261111-009` ACK exists. Do not replay.
