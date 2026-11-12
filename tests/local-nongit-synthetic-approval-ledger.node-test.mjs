@@ -120,6 +120,20 @@ test('read-only synthetic inspection rejects object approval IDs before coercion
  await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
 }))
 
+test('read-only synthetic inspection rejects hostile ledger roots before path coercion',()=>fixture(async({root,journal})=>{
+ let coerced=0
+ const malicious={toString(){coerced++;throw Error('ledger root coerced')},valueOf(){coerced++;throw Error('ledger root coerced')}}
+ const proxy=new Proxy(malicious,{get(){coerced++;throw Error('ledger root Proxy trap')},getPrototypeOf(){coerced++;throw Error('ledger root Proxy trap')}})
+ const revoked=Proxy.revocable({},{});revoked.revoke()
+ for(const bad of [malicious,proxy,revoked.proxy,null,42,{},new String(root)]){
+  await assert.rejects(inspectSyntheticApproval(bad,'approval-synthetic-00001'),/Invalid synthetic ledger root/)
+  assert.equal(coerced,0,'no coercion or Proxy trap before ledger root rejection')
+  assert.equal(readdirSync(root).length,0,'invalid root cannot create receipts')
+ }
+ await reserveSyntheticApproval(root,grant(journal))
+ assert.equal((await inspectSyntheticApproval(root,'approval-synthetic-00001')).approvalId,'approval-synthetic-00001')
+}))
+
 test('ancestor and descendant ledger/journal roots fail closed before creating entries',()=>fixture(async({root,journal})=>{
  const nested=join(root,'nested');mkdirSync(nested,{mode:0o700})
  await assert.rejects(reserveSyntheticApproval(root,grant(nested)),/overlaps journal/)

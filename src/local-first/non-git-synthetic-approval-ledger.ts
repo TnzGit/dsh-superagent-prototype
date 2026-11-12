@@ -99,6 +99,7 @@ export async function inspectSyntheticApproval(
   ledgerRoot:string,approvalId:string
 ):Promise<SyntheticApprovalReservation> {
   if(typeof approvalId!=='string'||!ID.test(approvalId))throw Error('Invalid synthetic approval ID')
+  if(typeof ledgerRoot!=='string'||!ledgerRoot)throw Error('Invalid synthetic ledger root')
   const root=await realpath(ledgerRoot)
   const rootStat=await lstat(ledgerRoot)
   if(!rootStat.isDirectory()||rootStat.isSymbolicLink()||(rootStat.mode&0o077)!==0)
