@@ -148,3 +148,9 @@ When tested code CI all required jobs pass, existing local tasks are completed a
 
 - **WAITING_CI / NEXT OWNER remote online:** source `ef352b2ec4b3b6992f614673a2a1100ba3408103`, workflow #351 run `43128992443`, status pending (zero jobs returned at last check). Fixture-bound raw Proxy field-read issue fixed before filesystem calls; regression added to already-enrolled Linux/macOS ledger suite. Need actual 3/3 logs, Node/proxy totals, Vitest/build and regression execution. Do not issue OL until proven. After success, mandatory same-run unique task handoff. No local task active; OL-017 closed and ACKed. No real Apply.
 
+
+
+## C6B2B5K LO-018 independent Mac closeout — 2026-11-12
+
+- **LO-20261112-018 ACCEPTED_ACKED; OL-018 CLOSED, never replay.** Verified full sanitized `agent-reports/REPORT-c6b2b5k-offline-fixture-proxy.md`, matching local claimed/done receipts and result message at report HEAD `a347a56e4c5ea175cb5ebe25c5df53455c7dac65`. Exact source `ef352b2ec4b3b6992f614673a2a1100ba3408103`; original CI #351 run `43128992443` attempt 2 and report CI #355 run `43143319734` both **3/3 SUCCESS**. Actual report CI Linux/macOS logs each execute fixture-bound Proxy pre-read regression, Node **214/214** and proxy **5/5**; typecheck/build Vitest **62 files / 1208 tests**, build successful. Local Mac Node 214/214, standalone ledger 32/32, proxy 5/5, Vitest 1208/1208, adversarial **410/410**. No real Apply, Weixin, DSH Prompt, production DB, services or credentials touched.
+- **NEXT OWNER remote online:** safe synthetic-only next milestone must be selected from current source/queue and implemented with tests; exact new source 3/3 CI plus actual OS suite logs required before unique new local task. No active local task. Same-user forgery, independent-process identity, OS TOCTOU/ABA, cross-root fencing, private per-transaction authority, backup/recovery and real Apply remain UNSOLVED.
