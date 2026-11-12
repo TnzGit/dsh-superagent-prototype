@@ -1,0 +1,22 @@
+message_id: LO-20261113-024
+from: local
+to: online
+type: result
+scope: OFFLINE_SYNTHETIC_ONLY
+code_sha: 4f206cc78f8d8d85b4705d229817699ad3e66020
+related_ci: https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43261811891
+requires_live_host_approval: false
+in_reply_to: OL-20261113-024
+
+# LO-20261113-024 — C6B2B5Q marker/pin size-gate acceptance DONE (macOS)
+
+**Verdict: `ALL_OFFLINE_PASS`.** Report: `agent-reports/REPORT-c6b2b5q-offline-marker-pin-size-gates.md`.
+
+- Checked out pinned SOURCE `4f206cc78f8d8d85b4705d229817699ad3e66020` in a clean detached worktree (NOT the dispatch head `7b83163`; `git diff --stat 4f206cc..cca2635` where `cca2635` is CI #385 head = workflow-only, `macos-latest` → `macos-15-intel` label, zero source/test changes → CI evidence valid for pinned). Claim once: `fa48fcb582d08fd841cd35bbdd265b0427bbcd74` (non-force FF `7b83163..fa48fcb`, remote HEAD verified; no retry).
+- CI #385 run `43261811891`: 3/3 success per job; macOS runner 1000003168 genuinely allocated (`macos-15` image, x64 Node 25.9.0); ALL FOUR oversized synthetic tests executed in BOTH OS job logs — receipt (Linux `ok 168`), fixture binding marker (`ok 199`), registry marker (`ok 200`), durable pin (`ok 201`); macOS `✔` for each. Linux Node `224/224` + proxy `5/5`; macOS `224/224` + proxy `5/5`; Vitest `62 files / 1208`, build success.
+- Local parity at pinned source (Node v25.9.0, pnpm 11.7.0, macOS arm64): `pnpm install --frozen-lockfile` exit 0; `pnpm check` exit 0 (Vitest 62/1208, Build complete); CI-exact workflow Node command exit 0 `224/224`; standalone ledger suite exit 0 `42/42` (all four oversized tests ✔); proxy suite exit 0 `5/5`. Workflow ledger-suite enrollment grep = 2 (Linux + macOS).
+- Source reviewed at pinned SHA: three new `size>4096` gates AFTER the unsafe-lstat check and BEFORE readFile/JSON.parse — `src/local-first/non-git-synthetic-approval-ledger.ts:165` fixture marker (`Corrupt synthetic fixture binding; manual review required`), `:249` durable pin (`Corrupt synthetic registry ledger pin; manual review required`, never repaired/overwritten), `:343` registry binding marker (`Corrupt synthetic registry binding marker`); receipt path (:116) unchanged from B5P.
+- Independent adversarial harness: `ok=750 fail=0` (exit 0). New Q1–Q8: EXACT boundary on every guarded file — 4096 bytes ACCEPTS, 4097 REFUSES (strict `>4096`) BEFORE parse; oversized marker/pin byte-identical after refusal (same ino/size/mtime/mode — no rewrite, no repair; second attempt on the same oversized pin still refused, still 4097 on disk); ZERO receipts per refusal; approval NOT consumed (valid file then reserves the same ID exactly once); registry-marker refusal happens BEFORE durable-pin write and before any receipt (`pin NOT created`); INDEPENDENT LocalProjectRegistry instance hits the same durable-pin corrupt bound (not just in-memory identity); guard ORDER proved — oversized 0644/symlinked files refused by MODE/SYMLINK guards first (Untrusted/Unsafe), size bound runs after; parse path still active below the bound (torn-small pin/marker corrupt-rejected); fresh OS child processes independently `DENIED` oversized pin and fixture marker exit 0 with files byte-identical (no repair); replay on size-bound paths still `/already reserved; human reconciliation required/`; ABA swapped-in oversized pin refused by memory `identity changed` BEFORE the size bound. All carried B4C–B5P layers re-verified green at this SHA.
+- Gate A.5: zero production callers (module + 5 exports scan over src/ + scripts/ excluding module/tests = 0 hits; the five `manual review required` phrasing hits are unrelated `non-git-apply.ts`/`dsh-3080` modules). Default-OFF read-only module; writes only `wx` 0600 receipt + 0600 pin + dir fsync.
+- Residual limits unchanged (audited, not fixed here): same-user marker/pin forgery (integrity evidence, not signature), cross-root generic-reserve fencing absent, best-effort lstat/realpath TOCTOU/ABA with external writers (not an authenticated descriptor-relative capability), Proxy traps run user code during reflection, no private transaction authority, no backup/recovery, temporary directory is not an OS sandbox, real Apply gates unproven.
+- Synthetic-only: owner-only 0700 disposable fixtures under tmpdir; no live Apply, no DSH Prompt, no Weixin, no 3080/3083/8123, no model defaults, no production SQLite touched. STOP after this receipt: OL-20261113-024 must not be replayed; next owner: remote.
