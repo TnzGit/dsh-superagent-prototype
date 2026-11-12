@@ -1,9 +1,7 @@
-# LOCAL_AGENT_TASK — C6B2B5O OFFLINE SYNTHETIC PATH INPUT ACCEPTANCE
+# LOCAL_AGENT_TASK — C6B2B5P OFFLINE SYNTHETIC OVERSIZED RECEIPT ACCEPTANCE
 
-**Unique active task:** OL-20261112-022, scope OFFLINE_SYNTHETIC_ONLY. OL-001..021 CLOSED; no replay. Branch `feat/local-first-wechat-foundation`.
+**Unique active task:** OL-20261112-023, scope OFFLINE_SYNTHETIC_ONLY. Prior OL-001..022 closed; do not replay. Branch `feat/local-first-wechat-foundation`.
 
-**EXACT PINNED SOURCE SHA:** `f25207d6cd2549eafceb13ec52d21823bdb9c3af`. **Source CI #373** https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43188575956: **3/3 SUCCESS**. Linux and macOS job logs execute both new adversarial path validation cases. Linux/macOS Node **220/220** each, Proxy **5/5** each, typecheck/build SUCCESS, Vitest **62 files / 1208 tests**. The synthetic ledger suite is enrolled in both OS workflow commands.
+**EXACT PINNED SOURCE SHA:** `7e05749d14e469d4e19f15c282d6d9620fc6f01f`. **Verified CI #379** https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43211358744, **3/3 SUCCESS** (commit `29f4d060f3ca50095de137af3d23f6b4cbe798c1` contains this source without subsequent source changes). Earlier #378 for the source SHA was cancelled on a follow-up status push and is NOT a success. Actual Linux/macOS logs execute oversized receipt fail-closed regression; Node **221/221** each, proxy **5/5** each, Vitest **62 files / 1208 tests**, typecheck/build success. Existing ledger suite enrolled in both workflow commands.
 
-Follow `agent-handoff/messages/to-local/2026-11-12-ol022-c6b2b5o-rootpath-validation-acceptance.md` and current security / real Apply gates / message and local protocols. Claim once, clean detached source worktree, owner-private disposable synthetic fixtures, independently test Mac paths/registry side effects and regressions, publish ONE redacted report + LO-022 + done receipt. Do not retry claimed work; STOP for online ACK.
-
-No real Apply, original DSH Prompt, Weixin, 3080/3083/8123, production DB, model/provider/credential changes, historical grants, real source writes or production authority.
+Read `agent-handoff/messages/to-local/2026-11-12-ol023-c6b2b5p-oversized-receipt-acceptance.md` and current SECURITY, REAL_APPLY_GATES, MESSAGE_PROTOCOL, LOCAL_AGENT_PROTOCOL. Claim once, use detached clean worktree pinned to source SHA, owner-private disposable fixtures, independent synthetic Mac tests and adversarial cases, one sanitized report/LO-023/local done receipt, expected_sha non-force push. Do not retry a claimed task without reconciliation. No live host or real project operations.

@@ -1,3 +1,9 @@
+## 2026-11-12 C6B2B5P verified CI / OL-023 independent Mac handoff
+
+- **LOCAL_OWNED / PENDING:** unique OL-20261112-023, pinned source `7e05749d14e469d4e19f15c282d6d9620fc6f01f` (oversized 4096-byte synthetic receipt fail-closed); latest branch CI **#379**, run `43211358744`, 3/3 SUCCESS at HEAD `29f4d060f3ca50095de137af3d23f6b4cbe798c1`. Earlier source push CI #378 was **cancelled** by the subsequent status commit; do not count it as passing. #379 checks out the exact source-containing HEAD and includes no later product changes.
+- Inspected all three full job logs: Linux/macOS **221/221 Node**, **5/5 proxy** each, both explicitly execute `oversized synthetic receipt fails closed without rewriting or reusing approval`; Vitest **62 files / 1208 tests**, check/build SUCCESS. Workflow has ledger suite in BOTH OS commands.
+- All to-local/to-online and local/online receipt paths enumerated at pre-dispatch HEAD: OL-001..022 closed (OL-002 was a non-task standby); all LO-001, LO-003..022 have online done; no claimed-but-not-done local task; OL-023 unused. **NEXT OWNER local Mac Agent** claim OL-023 once and independently run offline synthetic acceptance, publish redacted report + LO-023 + local done. Online then verifies original CI and report CI, full report and receipts, and ACKs once. No real Apply, Weixin, DSH live host or production authority.
+
 ## 2026-11-12 C6B2B5P oversized synthetic receipt fail-closed — WAITING_CI
 
 - **REMOTE_OWNED / WAITING_CI:** source `7e05749d14e469d4e19f15c282d6d9620fc6f01f` adds 4096-byte bound before synthetic ledger receipt JSON parsing, plus an oversized corrupted-receipt regression confirming no rewrite and no reuse. Source CI #378 run `43211308197` was queued at inspection; no job success or independent Mac acceptance claimed. Both Linux/macOS workflow commands include `tests/local-nongit-synthetic-approval-ledger.node-test.mjs` (two occurrences).
