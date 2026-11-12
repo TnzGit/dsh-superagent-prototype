@@ -1,3 +1,7 @@
+## 2026-11-12 LO-022 accepted / next remote milestone
+
+OL-20261112-022 CLOSED. Pinned source f25207d6cd2549eafceb13ec52d21823bdb9c3af, source CI #373 (43188575956), report HEAD 95d41adcd762c6731a11f3ef12972409950379ca CI #376 (43191887671): both 3/3 SUCCESS. Inspected six job logs: Linux/macOS each Node 220/220, proxy 5/5, both new hostile-path cases executed; Vitest 1208/1208 and build success. Full sanitized Mac report, LO-022 and local claimed/done receipts reviewed; local ledger 38/38, adversarial 671/671. No production operations. NEXT OWNER remote: implement next substantive synthetic-only hardening with tests and exact-source CI; no new OL until verified. Same-user forgery, OS TOCTOU, private grant and backup/recovery unresolved.
+
 ## C6B2B5L read-only registry preflight input normalization — 2026-11-12
 
 - **REMOTE_OWNED / WAITING_CI:** independent exported inspectRegistryBoundSyntheticApproval now normalizes reservation before registry lookup or filesystem access. Synthetic Node regression rejects Proxy, revoked Proxy and accessor with zero traps/getters and zero registry reads. Existing test module is in both OS workflow Node commands. Source CI and actual test logs not yet verified; no OL dispatch until 3/3 success.
