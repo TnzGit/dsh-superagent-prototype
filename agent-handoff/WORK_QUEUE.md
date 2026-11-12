@@ -139,3 +139,8 @@ When tested code CI all required jobs pass, existing local tasks are completed a
 - **ACCEPTED_ACKED**: local LO-017 result, complete redacted report and claimed/done verified. Source `6c9b7dfc99bd7f66fd1370410c695eeef1f2b6de`, original CI #346 `43113707101`, report CI #349 `43122203312`, each 3/3 SUCCESS; real Linux/macOS logs confirm both Proxy regressions, Node 213/213 and proxy 5/5 each; Vitest 1208/1208 and build success. Local Mac ledger 31/31, adversarial 376/376. **OL-017 CLOSED, no replay; no active local task.**
 - **NEXT OWNER remote online C6B2B5K**: fixture-bound API reads raw Proxy before native guard, observed trap >0 despite fail-closed zero receipts. Implement early rejection/normalization and adversarial regression in both workflow suites; require exact source CI 3/3 and then atomic unique local handoff. Do not dispatch until proven. Real Apply gates remain unmet.
 
+
+## C6B2B5K CI pending — 2026-11-12
+
+- **WAITING_CI / NEXT OWNER remote online:** source `ef352b2ec4b3b6992f614673a2a1100ba3408103`, workflow #351 run `43128992443`, status pending (zero jobs returned at last check). Fixture-bound raw Proxy field-read issue fixed before filesystem calls; regression added to already-enrolled Linux/macOS ledger suite. Need actual 3/3 logs, Node/proxy totals, Vitest/build and regression execution. Do not issue OL until proven. After success, mandatory same-run unique task handoff. No local task active; OL-017 closed and ACKed. No real Apply.
+

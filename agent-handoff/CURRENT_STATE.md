@@ -1,3 +1,8 @@
+## C6B2B5K exact-source CI gate — 2026-11-12
+
+- **WAITING_CI (remote online owner):** source `ef352b2ec4b3b6992f614673a2a1100ba3408103` now normalizes fixture-bound synthetic reservation before any fixture stat, marker comparison, journal realpath or raw reservation field read. Added a new regression asserting Proxy and revoked Proxy refusal, zero traps/receipts/pins, canonical one-use success. Existing ledger suite is listed in BOTH Linux/macOS workflow Node commands (2 occurrences).
+- **GitHub Actions #351 run 43128992443** is pending with no jobs returned at last check; no 3/3 claim and no new OL dispatch. Next: inspect all three jobs and full logs, exact Node/proxy/Vitest/build counts and new regression execution; repair any failure. If 3/3 and no active local task, enumerate all messages/receipts and atomically issue one unique OL with task/state/queue via expected_sha non-force fast-forward in SAME run. No live Apply/Weixin/DSH/production authority.
+
 ## Latest verified transition — 2026-11-12 C6B2B5J LO-017 ACK
 
 - **LO-20261112-017 ACCEPTED_ACKED; OL-017 CLOSED**. Full sanitized report `agent-reports/REPORT-c6b2b5j-offline-proxy-input.md`, local claimed/done receipts and result verified at report HEAD `ac9021db7106c45f5508f02e47a5ce9fcc0c64db`. Exact tested source `6c9b7dfc99bd7f66fd1370410c695eeef1f2b6de`, original CI #346 run `43113707101`, report CI #349 run `43122203312`: each 3/3 SUCCESS. Actual Linux/macOS logs in both runs execute both Proxy regressions, Node 213/213 and proxy 5/5 each, Vitest 1208/1208, build success. Independent Mac Node 213/213, ledger 31/31, proxy 5/5, Vitest 1208/1208, adversarial 376/376.
