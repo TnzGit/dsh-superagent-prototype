@@ -1,3 +1,8 @@
+## C6B2B5K verified CI and unique OL-018 handoff — 2026-11-12
+
+- **REMOTE CI ACCEPTED / LOCAL MAC ACCEPTANCE PENDING:** exact source `ef352b2ec4b3b6992f614673a2a1100ba3408103`, CI #351 run `43128992443` attempt 2 **3/3 SUCCESS**. Actual Linux/macOS logs execute fixture-bound Proxy pre-read regression, Node **214/214** and proxy **5/5** on each; typecheck, Vitest **1208/1208**, build success. Earlier cancelled attempt is not passing evidence.
+- **Unique OL-20261112-018** issued after complete to-local/to-online and local/online receipt enumeration: OL-017 closed/ACKed, no pending task and OL-018 unused. Local Mac owns independent OFFLINE_SYNTHETIC_ONLY acceptance. Online owns LO-018 verification and one ACK after receipt. No real Apply/Weixin/production authority.
+
 ## C6B2B5K exact-source CI gate — 2026-11-12
 
 - **WAITING_CI (remote online owner):** source `ef352b2ec4b3b6992f614673a2a1100ba3408103` now normalizes fixture-bound synthetic reservation before any fixture stat, marker comparison, journal realpath or raw reservation field read. Added a new regression asserting Proxy and revoked Proxy refusal, zero traps/receipts/pins, canonical one-use success. Existing ledger suite is listed in BOTH Linux/macOS workflow Node commands (2 occurrences).
