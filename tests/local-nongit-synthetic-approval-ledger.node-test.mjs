@@ -133,6 +133,26 @@ test('fixture-bound reservation denies alternate private journal roots and a mis
   assert.equal(readdirSync(alternate).length,0)
   assert.equal(readdirSync(root).filter(x=>x.endsWith('.json')).length,1)
 }))
+test('fixture-bound Proxy is refused before binding reads, traps or receipt',()=>fixture(async({root,journal})=>{
+  const base=join(root,'..')
+  writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+    version:1,purpose:'offline-synthetic-only',projectFingerprint:'a'.repeat(64)
+  }),{mode:0o600})
+  let traps=0
+  const malicious=new Proxy(grant(journal),{
+    get(){traps++;throw Error('fixture-bound Proxy get trap executed')},
+    getPrototypeOf(){traps++;throw Error('fixture-bound Proxy prototype trap executed')},
+    ownKeys(){traps++;throw Error('fixture-bound Proxy ownKeys trap executed')},
+    getOwnPropertyDescriptor(){traps++;throw Error('fixture-bound Proxy descriptor trap executed')}
+  })
+  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,malicious),/Invalid synthetic reservation/)
+  assert.equal(traps,0,'fixture-bound input must be normalized before raw field reads')
+  const revoked=Proxy.revocable(grant(journal),{});revoked.revoke()
+  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,revoked.proxy),/Invalid synthetic reservation/)
+  assert.equal(readdirSync(root).length,0,'no receipt or pin for invalid input')
+  assert.equal(await reserveFixtureBoundSyntheticApproval(base,grant(journal)),'reserved')
+  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,grant(journal)),/already reserved/)
+}))
 test('synthetic fixture binding must be owner-only, unsymlinked and non-replayable',()=>fixture(async({root,journal})=>{
   const base=join(root,'..'),marker=join(base,'.synthetic-ledger-binding.json')
   writeFileSync(marker,JSON.stringify({

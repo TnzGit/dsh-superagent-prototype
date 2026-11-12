@@ -133,6 +133,9 @@ export async function inspectSyntheticApproval(
 export async function reserveFixtureBoundSyntheticApproval(
   fixtureRoot:string,reservation:SyntheticApprovalReservation
 ):Promise<'reserved'>{
+  // Normalize before fixture binding checks or any filesystem access: raw Proxy
+  // getters must not run while comparing marker and journal identity.
+  reservation=normalizeSyntheticReservation(reservation)
   const fixtureStat=await lstat(fixtureRoot)
   if(!fixtureStat.isDirectory()||fixtureStat.isSymbolicLink()||
     (fixtureStat.mode&0o077)!==0)
