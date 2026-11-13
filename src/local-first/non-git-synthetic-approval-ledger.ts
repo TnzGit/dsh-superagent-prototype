@@ -162,7 +162,10 @@ export async function inspectSyntheticApproval(
     value=JSON.parse(serialized)
     // Receipts are written canonically by reserveSyntheticApproval. Reject
     // duplicate keys and alternate serialized forms after parsing.
-    if(serialized!==JSON.stringify(value)+'\n')
+    if(!value||typeof value!=='object'||Array.isArray(value)||
+      Object.keys(value).join(',')!==
+        'version,approvalId,transactionId,projectFingerprint,previewDigest,operation,journalRoot'||
+      serialized!==JSON.stringify(value)+'\n')
       throw Error('Noncanonical synthetic reservation')
   }catch {
     throw Error('Corrupt synthetic reservation; human reconciliation required')
