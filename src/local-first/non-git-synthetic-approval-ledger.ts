@@ -392,7 +392,7 @@ export async function inspectRegistryBoundSyntheticApproval(
     throw Error('Unsafe synthetic registry binding marker')
   if(markerStat.size>4096)throw Error('Corrupt synthetic registry binding marker')
   let parsed:unknown
-  try{parsed=await readPrivateSyntheticJson(marker,'marker')
+  try{parsed=await readPrivateSyntheticJson(marker,'marker')}
   catch{throw Error('Corrupt synthetic registry binding marker')}
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||
     Object.keys(parsed).sort().join(',')!=='projectFingerprint,purpose,version')
