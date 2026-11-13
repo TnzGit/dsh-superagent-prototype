@@ -33,7 +33,7 @@ test('synthetic inspection rejects duplicate JSON keys without rewriting receipt
  const file=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
  const fs=await import('node:fs')
  const original=fs.readFileSync(file,'utf8')
- const tampered=original.replace('"version":1,','"version":1,"version":1,')
+ const tampered=original.replace(/"version":1(?=})/,'"version":1,"version":1')
  assert.notEqual(tampered,original)
  fs.writeFileSync(file,tampered,{mode:0o600})
  await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
