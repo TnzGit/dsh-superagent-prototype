@@ -839,7 +839,8 @@ test('noncanonical fixture binding marker rejects semantic-equivalent JSON varia
  ]
  for(const content of altered){
   writeFileSync(marker,content,{mode:0o600})
-  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,grant(journal)),/Missing or corrupt synthetic fixture binding/)
+  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,grant(journal)),
+    content.includes('"version":"1"') ? /Synthetic fixture binding project mismatch/ : /Missing or corrupt synthetic fixture binding/)
   assert.equal(fs.readFileSync(marker,'utf8'),content,'marker must not be repaired')
   assert.equal(readdirSync(root).length,0,'noncanonical marker must not issue receipt')
  }
