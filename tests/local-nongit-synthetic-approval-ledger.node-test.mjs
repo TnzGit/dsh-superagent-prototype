@@ -75,7 +75,7 @@ test('synthetic receipt rejects canonical JSON with noncanonical journal path wi
   await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
  }
  fs.writeFileSync(file,original,{mode:0o600})
- assert.equal((await inspectSyntheticApproval(root,g.approvalId)).journalRoot,journal)
+ assert.equal((await inspectSyntheticApproval(root,g.approvalId)).journalRoot,realpathSync(journal))
 }))
 test('one-use reservation is durable and rejects same ID across journal roots',()=>fixture(async({root,journal})=>{
  const g=grant(journal)
