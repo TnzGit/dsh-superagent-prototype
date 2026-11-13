@@ -1,3 +1,8 @@
+## 2026-11-13 C6B2B5R verified CI / OL-025 dispatched
+
+- **LOCAL_OWNED / PENDING:** unique OL-20261113-025; exact source SHA `0ed50723b57811b54129b4347ecea7651b2b6d50`, Actions #390 run 43339186653 **3/3 SUCCESS**. Actual Linux/macOS logs: Node **225/225**, proxy **5/5** each, hardlinked synthetic receipt refusal test executed both OS; Vitest **62 files / 1208 tests**, typecheck/build successful. Existing ledger suite registered in both workflow commands.
+- Pre-dispatch full Git tree (truncated=false) shows OL-001..024 (002 non-task), all task local claimed/done and all LO online done, no pending task/result, OL-025 unused. **NEXT OWNER local Mac:** claim OL-025 once, detached independent synthetic-only descriptor/nofollow/hardlink acceptance, sanitized report + LO-025 + local done. Online verifies report and original CI and ACKs. No real Apply, Weixin, production or historic grants; TOCTOU, same-user forgery, private approval and recovery unresolved.
+
 ## 2026-11-13 C6B2B5Q LO-024 independently verified and ACKed
 
 - **ACCEPTED_ACKED / REMOTE_OWNED:** OL-20261113-024 completed; valid LO-20261113-024, local claim/done and full sanitized `agent-reports/REPORT-c6b2b5q-offline-marker-pin-size-gates.md` reviewed. Pinned product SHA `4f206cc78f8d8d85b4705d229817699ad3e66020`; source CI #385 run `43261811891` and report HEAD `9aaeda2fdd587e195a4c046154a3c04b894bdb65` CI #388 run `43264877056`, both 3/3 SUCCESS. Six actual job logs checked: Linux/macOS Node 224/224 + proxy 5/5, all four oversized cases executed both OS, Vitest 62 files/1208 tests, build success. Source→CI workflow-only runner change. Local Mac ledger 42/42, adversarial 750/750; no real host changes. Online receipt LO-20261113-024-done recorded once.
