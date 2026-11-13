@@ -216,6 +216,7 @@ export async function reserveFixtureBoundSyntheticApproval(
     bound=await readPrivateSyntheticJson(marker,'marker')
   }catch(error){
     if(error instanceof SyntaxError||
+      (error instanceof Error&&error.message==='Noncanonical synthetic private JSON')||
       ['ENOENT','ENOTDIR'].includes((error as NodeJS.ErrnoException).code??''))
       throw Error('Missing or corrupt synthetic fixture binding')
     throw error
