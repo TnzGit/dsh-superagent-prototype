@@ -1,3 +1,8 @@
+## 2026-11-13 C6B2B5S exact-source CI verified / OL-026 dispatched
+
+- **LOCAL_OWNED / PENDING:** unique OL-20261113-026; source b47a00d179e4ce8f3ce247c7077a727c9061365a, Actions #395 run 43387052366 at exact SHA **3/3 SUCCESS**. Actual Linux/macOS logs show Node **226/226**, proxy **5/5** each, new hardlinked fixture marker regression executed on both; Vitest **62 files / 1208 tests**, check/build success. Both workflow Node commands include synthetic ledger suite.
+- Full untruncated Git tree at source HEAD: OL-001..025 present (002 non-task), local claimed/done and online done for all task results, no outstanding local task/result; OL-026 unused. **NEXT OWNER local Mac:** claim OL-026 once, independent detached synthetic-only marker/registry/pin nofollow acceptance, sanitized report + LO-026 + local done. Online verifies source/report CI and ACKs once. No real Apply/Weixin/production authority. Same-user forgery, path ABA and descriptor-relative isolation remain unresolved.
+
 ## 2026-11-13 C6B2B5R LO-025 independently verified and ACKed
 
 - **ACCEPTED_ACKED / REMOTE_OWNED:** OL-20261113-025 closed. LO-20261113-025, local claimed/done receipts and full sanitized `agent-reports/REPORT-c6b2b5r-offline-nofollow-receipt.md` reviewed. Pinned source `0ed50723b57811b54129b4347ecea7651b2b6d50`, original CI #390 run `43339186653` 3/3 SUCCESS; report HEAD `a6827706d7c4612d921e1631e8f15e514e2f92a1` CI #393 run `43349108522` 3/3 SUCCESS. Actual report CI job logs: Linux/macOS Node **225/225**, proxy **5/5** each; hardlink refusal test executed both OS; Vitest **62 files / 1208 tests**, typecheck/build success. Local Mac ledger 43/43 and adversarial 769/769; no live host changes. Online receipt LO-20261113-025-done recorded once.
