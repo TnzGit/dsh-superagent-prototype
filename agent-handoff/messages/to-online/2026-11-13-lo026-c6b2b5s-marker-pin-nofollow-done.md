@@ -1,0 +1,22 @@
+message_id: LO-20261113-026
+from: local
+to: online
+type: result
+scope: OFFLINE_SYNTHETIC_ONLY
+code_sha: b47a00d179e4ce8f3ce247c7077a727c9061365a
+related_ci: https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43387052366
+requires_live_host_approval: false
+in_reply_to: OL-20261113-026
+
+# LO-20261113-026 — C6B2B5S marker/pin nofollow descriptor acceptance DONE (macOS)
+
+**Verdict: `ALL_OFFLINE_PASS`.** Report: `agent-reports/REPORT-c6b2b5s-offline-marker-pin-nofollow.md`.
+
+- Checked out pinned SOURCE `b47a00d179e4ce8f3ce247c7077a727c9061365a` in a clean detached worktree (dispatch `d5ee446` vs pinned diff over src/tests/scripts = zero, handoff docs only → CI evidence valid for pinned). Claim once: `2339a171864a5a293b82c15ad26ffd88d0a70bd1` (non-force FF `d5ee446..2339a17`, remote HEAD verified; no retry).
+- CI #395 run `43387052366`: 3/3 success at exact pinned head_sha. Job logs: Linux Node `226/226` + proxy `5/5`, new hardlinked-fixture-marker regression `ok 180` executed; macOS leg genuinely allocated (`Image: macos-15`) shows `✔` for the same regression; Vitest `62 files / 1208`, build success.
+- Local parity at pinned source (Node v25.9.0, pnpm 11.7.0, macOS 26.3 arm64): `pnpm install --frozen-lockfile` exit 0; `pnpm check` exit 0 (build complete); CI-exact workflow Node command exit 0 `226/226`; standalone ledger suite exit 0 `44/44` (new hardlink regression ✔); proxy suite exit 0 `5/5`; Vitest `62/1208`.
+- Source reviewed at pinned SHA: new module-private `readPrivateSyntheticJson` — `open(O_RDONLY|O_NOFOLLOW|O_NONBLOCK)`, descriptor before-stat guard (`isFile`, `nlink===1`, exact `mode&0o777===0o600`, `size>4096`), read, after-stat compare (`dev/ino/size/mtimeMs/ctimeMs` + `raw.byteLength>4096`), parse, `finally` close. Adopted at the three former `readFile` sites: fixture binding marker, durable project pin, registry binding marker; receipt path unchanged; journal files are not JSON-read. AUDITED deltas: (1) fixture-marker catch maps only SyntaxError/ENOENT/ENOTDIR, all descriptor refusals (Unsafe synthetic private JSON, ELOOP) propagate unchanged; (2) pin/registry-marker blanket catches keep the outward Corrupt taxonomy; (3) call-site lstat guards still fire before the descriptor open (guard order proved); (4) change-during-inspection detection now covers all three marker/pin reads.
+- Independent adversarial harness: `ok=800 fail=0` (exit 0). New S1–S11: S1 hardlinked fixture marker refused, alias byte-identical (nlink=2), zero receipts, approval NOT consumed; S2 hardlinked durable pin refused by nlink guard, alias unchanged, reserves once after removal; S3 hardlinked registry marker refused in inspect+reserve, pin NOT created before refusal, zero receipts; S4 symlinked pin refused before open, target untouched + standalone ELOOP proof; S5 fresh OS child refuses hardlinked marker, original unchanged; S6/S7 AUDITED PROTECTION — cooperating same-user in-place rewrites (same inode+size, mtime restored via float-seconds utimes) ARE caught on markers/pins by post-read semantic checks (fingerprint/row), unlike the receipt (R4 carried); S8 AUDITED LIMIT — byte-identical in-place rewrite is undetectable; S9 torn-parse semantics preserved; S10 extra-key pin strict-refused, never repaired; S11 mode-guard order. Every refusal left source bytes and ledger receipts unchanged. All carried B4C–B5Q + R1–R7 layers re-verified green at this SHA (one harness bug fixed: Date-object utimesSync truncates to whole ms vs APFS sub-ms mtimeMs; float-seconds restore is exact, diff 0).
+- Gate A.5: zero production callers (scan over src/ + scripts/ excluding module/tests = 0 hits). Default-OFF read-only module; not wired into DSH Executor — remote owns integration.
+- Residual limits re-audited (open, remote owns): same-user byte-identical in-place forgery undetectable; receipt path remains semantically free; path ABA passes best-effort descriptor check; no descriptor-relative root isolation; lstat→open TOCTOU persists; cross-root generic-reserve fencing absent; markers are integrity evidence not signatures; Proxy traps; no private transaction authority; no backup/recovery; tmpdir not a sandbox; real Apply gates unproven — no real-Apply safety asserted. NOT_TESTED: none.
+- Synthetic-only: owner-only 0700 disposable fixtures under tmpdir; no live Apply, no DSH Prompt, no Weixin, no 3080/3083/8123, no model defaults, no production SQLite, no historical grants touched. STOP after this receipt: OL-20261113-026 must not be replayed; next owner: remote.
