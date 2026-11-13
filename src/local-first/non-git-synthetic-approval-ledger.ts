@@ -146,7 +146,12 @@ export async function inspectSyntheticApproval(
       after.size!==before.size||after.mtimeMs!==before.mtimeMs||
       after.ctimeMs!==before.ctimeMs)
       throw Error('Synthetic reservation changed during inspection')
-    value=JSON.parse(raw.toString('utf8'))
+    const serialized=raw.toString('utf8')
+    value=JSON.parse(serialized)
+    // Receipts are written canonically by reserveSyntheticApproval. Reject
+    // duplicate keys and alternate serialized forms after parsing.
+    if(serialized!==JSON.stringify(value)+'\n')
+      throw Error('Noncanonical synthetic reservation')
   }catch {
     throw Error('Corrupt synthetic reservation; human reconciliation required')
   }finally {await handle?.close()}

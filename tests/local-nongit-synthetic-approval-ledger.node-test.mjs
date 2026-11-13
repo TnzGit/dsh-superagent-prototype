@@ -27,6 +27,20 @@ test('synthetic inspection rejects hardlinked receipt without consuming or rewri
  assert.deepEqual(readFileSync(receipt),original)
  assert.equal(readdirSync(root).length,1)
 }))
+test('synthetic inspection rejects duplicate JSON keys without rewriting receipt',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ await reserveSyntheticApproval(root,g)
+ const file=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const fs=await import('node:fs')
+ const original=fs.readFileSync(file,'utf8')
+ const tampered=original.replace('"version":1,','"version":1,"version":1,')
+ assert.notEqual(tampered,original)
+ fs.writeFileSync(file,tampered,{mode:0o600})
+ await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
+ assert.equal(fs.readFileSync(file,'utf8'),tampered)
+ await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+}))
+
 test('one-use reservation is durable and rejects same ID across journal roots',()=>fixture(async({root,journal})=>{
  const g=grant(journal)
  assert.equal(await reserveSyntheticApproval(root,g),'reserved')
