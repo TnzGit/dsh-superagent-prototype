@@ -50,7 +50,7 @@ test('synthetic receipt refuses reordered canonical JSON keys without repair or 
  const row=JSON.parse(original)
  const reordered=JSON.stringify({approvalId:row.approvalId,version:row.version,
   transactionId:row.transactionId,projectFingerprint:row.projectFingerprint,
-  previewDigest:row.previewDigest,operation:row.operation,journalRoot:row.journalRoot})+'\\n'
+  previewDigest:row.previewDigest,operation:row.operation,journalRoot:row.journalRoot})+'\n'
  assert.notEqual(reordered,original)
  fs.writeFileSync(path,reordered,{mode:0o600})
  await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
