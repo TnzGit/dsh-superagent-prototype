@@ -14,7 +14,7 @@ import type {LocalProjectRegistry} from './project-registry.ts'
 /** Best-effort same-descriptor synthetic JSON read. Not a directory capability,
  * same-user authenticity guarantee, or defense against path ABA.
  */
-async function readPrivateSyntheticJson(file:string):Promise<unknown>{
+async function readPrivateSyntheticJson(file:string,kind:'marker'|'pin'):Promise<unknown>{
   const handle=await open(file,fsConstants.O_RDONLY|fsConstants.O_NOFOLLOW|fsConstants.O_NONBLOCK)
   try{
     const before=await handle.stat()
@@ -26,7 +26,19 @@ async function readPrivateSyntheticJson(file:string):Promise<unknown>{
       after.size!==before.size||after.mtimeMs!==before.mtimeMs||
       after.ctimeMs!==before.ctimeMs)
       throw Error('Synthetic private JSON changed during inspection')
-    return JSON.parse(raw.toString('utf8')) as unknown
+    // Synthetic metadata is written in a fixed key order and byte format.
+    // Reject equivalent JSON with duplicate keys, changed order or whitespace.
+    // This is test-fixture tamper detection, not same-user authentication.
+    const serialized=raw.toString('utf8')
+    const value=JSON.parse(serialized) as unknown
+    const expectedKeys=kind==='marker'
+      ? 'version,purpose,projectFingerprint'
+      : 'version,purpose,projectId,projectFingerprint,ledgerRoot'
+    if(!value||typeof value!=='object'||Array.isArray(value)||
+      Object.keys(value).join(',')!==expectedKeys||
+      serialized!==JSON.stringify(value)+(kind==='pin'?'\n':''))
+      throw Error('Noncanonical synthetic private JSON')
+    return value
   }finally{await handle.close()}
 }
 
@@ -201,7 +213,7 @@ export async function reserveFixtureBoundSyntheticApproval(
       (st.mode&0o777)!==0o600)
       throw Error('Untrusted synthetic fixture binding')
     if(st.size>4096)throw Error('Corrupt synthetic fixture binding; manual review required')
-    bound=await readPrivateSyntheticJson(marker)
+    bound=await readPrivateSyntheticJson(marker,'marker')
   }catch(error){
     if(error instanceof SyntaxError||
       ['ENOENT','ENOTDIR'].includes((error as NodeJS.ErrnoException).code??''))
@@ -286,7 +298,7 @@ async function pinDisposableSyntheticLedger(
   // Reject oversized owner-private pin before parsing. Never repair or overwrite it.
   if(entry.size>4096)throw Error('Corrupt synthetic registry ledger pin; manual review required')
   let parsed:unknown
-  try{parsed=await readPrivateSyntheticJson(file)}
+  try{parsed=await readPrivateSyntheticJson(file,'pin')}
   catch{throw Error('Corrupt synthetic registry ledger pin; manual review required')}
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||
     Object.keys(parsed).sort().join(',')!==
@@ -380,7 +392,7 @@ export async function inspectRegistryBoundSyntheticApproval(
     throw Error('Unsafe synthetic registry binding marker')
   if(markerStat.size>4096)throw Error('Corrupt synthetic registry binding marker')
   let parsed:unknown
-  try{parsed=await readPrivateSyntheticJson(marker)}
+  try{parsed=await readPrivateSyntheticJson(marker,'marker')
   catch{throw Error('Corrupt synthetic registry binding marker')}
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||
     Object.keys(parsed).sort().join(',')!=='projectFingerprint,purpose,version')

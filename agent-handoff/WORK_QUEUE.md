@@ -1,3 +1,8 @@
+## 2026-11-13 C6B2B5U canonical synthetic fixture marker and durable pin — WAITING_CI, OL-027 pending
+
+- **REMOTE_OWNED / WAITING_CI (non-conflicting with independent OL-027):** new source and three targeted synthetic regressions reject duplicate-key, key-reordered, and extra/truncated-newline forms of marker/pin JSON even if parsing yields the same object. Same-descriptor reads, 4096-byte bounds, and receipt canonicalization retained; ledger suite is in BOTH workflow commands. This is strict test-fixture tamper detection, NOT same-user authentication or OS TOCTOU mitigation.
+- **NEXT OWNER remote online:** inspect the exact new source CI three real jobs/logs, Linux/macOS Node/proxy, Vitest and build; repair any failures. **DO NOT issue OL-028 while local OL-027 remains pending or claimed.** On valid LO-027, verify full sanitized report, original CI #401, report CI, local claim/done and then online ACK with guarded non-force fast-forward. Only after closure and new-source verified 3/3 may a unique new OL be issued. No real Apply or production authority.
+
 ## 2026-11-13 C6B2B5T exact-source CI verified / OL-027 dispatched
 
 - **LOCAL_OWNED / PENDING:** unique OL-20261113-027; pinned source `bc2d87c143dcbd8c4f96014888e536fff5fa2ef2`, Actions #401 run `43418593496` **3/3 SUCCESS**. Inspected three actual job logs: Linux/macOS Node **227/227**, proxy **5/5** each; new duplicate-key synthetic receipt regression executed on both; Vitest **62 files / 1208 tests**, typecheck/build success. Both workflow commands include the ledger suite.

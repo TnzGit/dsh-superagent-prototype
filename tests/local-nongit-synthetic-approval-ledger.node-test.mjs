@@ -823,3 +823,87 @@ test('oversized durable registry pin fails closed without receipt or repair',()=
   assert.equal(readdirSync(root).length,0)
  }finally{rmSync(parent,{recursive:true,force:true})}
 }))
+
+
+test('noncanonical fixture binding marker rejects semantic-equivalent JSON variants without receipt',()=>fixture(async({root,journal})=>{
+ const base=join(root,'..'),marker=join(base,'.synthetic-ledger-binding.json')
+ const fs=await import('node:fs')
+ const canonical=JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:'a'.repeat(64)})
+ const altered=[
+  canonical.replace(/}$/,',"version":1}'),
+  JSON.stringify({purpose:'offline-synthetic-only',version:1,projectFingerprint:'a'.repeat(64)}),
+  canonical+'\n'
+ ]
+ for(const content of altered){
+  writeFileSync(marker,content,{mode:0o600})
+  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,grant(journal)),/Noncanonical synthetic private JSON/)
+  assert.equal(fs.readFileSync(marker,'utf8'),content,'marker must not be repaired')
+  assert.equal(readdirSync(root).length,0,'noncanonical marker must not issue receipt')
+ }
+ writeFileSync(marker,canonical,{mode:0o600})
+ assert.equal(await reserveFixtureBoundSyntheticApproval(base,grant(journal)),'reserved')
+}))
+
+test('noncanonical registry marker rejects semantic-equivalent JSON without pin or receipt',()=>fixture(async({root,journal})=>{
+ const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+ try{
+  const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+  const registry=new LocalProjectRegistry([parent],[{id:'synthetic-marker-canonical',root:project,kind:'local'}])
+  const fp=projectFingerprint(registry.get('synthetic-marker-canonical'))
+  const marker=join(root,'..','.synthetic-ledger-binding.json')
+  const canonical=JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:fp})
+  const altered=[canonical.replace(/}$/,',"version":1}'),
+    JSON.stringify({projectFingerprint:fp,purpose:'offline-synthetic-only',version:1}),
+    canonical+'\n']
+  const fs=await import('node:fs')
+  for(const content of altered){
+   writeFileSync(marker,content,{mode:0o600})
+   await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-marker-canonical',join(root,'..'),{
+    ...grant(journal),projectFingerprint:fp
+   }),/Corrupt synthetic registry binding marker/)
+   assert.equal(fs.readFileSync(marker,'utf8'),content)
+   assert.equal(readdirSync(root).length,0)
+   assert.equal(readdirSync(parent).includes('.dsh-synthetic-ledger-pin.json'),false)
+  }
+  writeFileSync(marker,canonical,{mode:0o600})
+  assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-marker-canonical',join(root,'..'),{
+   ...grant(journal),projectFingerprint:fp
+  }),'reserved')
+ }finally{rmSync(parent,{recursive:true,force:true})}
+}))
+
+test('noncanonical durable pin refuses fresh approval without repair or receipt',()=>fixture(async({root,journal})=>{
+ const parent=mkdtempSync(join(tmpdir(),'dsh-project-synthetic-'))
+ try{
+  const project=join(parent,'registered');mkdirSync(project,{mode:0o700})
+  const registry=new LocalProjectRegistry([parent],[{id:'synthetic-pin-canonical',root:project,kind:'local'}])
+  const fp=projectFingerprint(registry.get('synthetic-pin-canonical'))
+  const base=join(root,'..')
+  writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+   version:1,purpose:'offline-synthetic-only',projectFingerprint:fp
+  }),{mode:0o600})
+  const g={...grant(journal),projectFingerprint:fp}
+  assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-pin-canonical',base,g),'reserved')
+  const pin=join(parent,'.dsh-synthetic-ledger-pin.json'),fs=await import('node:fs')
+  const canonical=fs.readFileSync(pin,'utf8'),row=JSON.parse(canonical)
+  const altered=[
+   canonical.replace(/}\n$/,',"version":1}\n'),
+   JSON.stringify({purpose:row.purpose,version:1,projectId:row.projectId,
+    projectFingerprint:row.projectFingerprint,ledgerRoot:row.ledgerRoot})+'\n',
+   canonical.trimEnd()
+  ]
+  for(const content of altered){
+   writeFileSync(pin,content,{mode:0o600})
+   await assert.rejects(reserveRegistryBoundSyntheticApproval(registry,'synthetic-pin-canonical',base,{
+    ...g,approvalId:'approval-synthetic-00002'
+   }),/Corrupt synthetic registry ledger pin/)
+   assert.equal(fs.readFileSync(pin,'utf8'),content,'pin must not be repaired')
+   assert.equal(readdirSync(root).length,1,'fresh approval must not be consumed')
+  }
+  writeFileSync(pin,canonical,{mode:0o600})
+  assert.equal(await reserveRegistryBoundSyntheticApproval(registry,'synthetic-pin-canonical',base,{
+   ...g,approvalId:'approval-synthetic-00002'
+  }),'reserved')
+  assert.equal(readdirSync(root).length,2)
+ }finally{rmSync(parent,{recursive:true,force:true})}
+}))
