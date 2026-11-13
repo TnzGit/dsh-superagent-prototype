@@ -59,6 +59,24 @@ test('synthetic receipt refuses reordered canonical JSON keys without repair or 
  fs.writeFileSync(path,original,{mode:0o600})
  assert.equal((await inspectSyntheticApproval(root,g.approvalId)).transactionId,g.transactionId)
 }))
+test('synthetic receipt rejects canonical JSON with noncanonical journal path without repair',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ await reserveSyntheticApproval(root,g)
+ const fs=await import('node:fs')
+ const file=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const original=fs.readFileSync(file,'utf8')
+ for(const bad of ['relative/journal',journal+'/../journal']){
+  const row=JSON.parse(original)
+  row.journalRoot=bad
+  const altered=JSON.stringify(row)+'\\n'
+  fs.writeFileSync(file,altered,{mode:0o600})
+  await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
+  assert.equal(fs.readFileSync(file,'utf8'),altered)
+  await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+ }
+ fs.writeFileSync(file,original,{mode:0o600})
+ assert.equal((await inspectSyntheticApproval(root,g.approvalId)).journalRoot,journal)
+}))
 test('one-use reservation is durable and rejects same ID across journal roots',()=>fixture(async({root,journal})=>{
  const g=grant(journal)
  assert.equal(await reserveSyntheticApproval(root,g),'reserved')

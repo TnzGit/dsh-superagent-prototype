@@ -5,7 +5,7 @@
 import {createHash} from 'node:crypto'
 import {lstat,open,realpath} from 'node:fs/promises'
 import {constants as fsConstants} from 'node:fs'
-import {join,relative,isAbsolute,dirname,basename} from 'node:path'
+import {join,relative,isAbsolute,dirname,basename,normalize} from 'node:path'
 import {tmpdir} from 'node:os'
 import {types as utilTypes} from 'node:util'
 import {projectFingerprint} from './project-workspaces.ts'
@@ -180,7 +180,8 @@ export async function inspectSyntheticApproval(
     (typeof r.transactionId!=='string'||!ID.test(r.transactionId))||
     (typeof r.projectFingerprint!=='string'||!SHA.test(r.projectFingerprint))||
     (typeof r.previewDigest!=='string'||!SHA.test(r.previewDigest))||!['apply','rollback'].includes(r.operation)||
-    typeof r.journalRoot!=='string'||!r.journalRoot)
+    typeof r.journalRoot!=='string'||!r.journalRoot||
+    !isAbsolute(r.journalRoot)||normalize(r.journalRoot)!==r.journalRoot)
     throw Error('Corrupt synthetic reservation; human reconciliation required')
   return r
 }
