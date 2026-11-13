@@ -183,6 +183,24 @@ export async function inspectSyntheticApproval(
     typeof r.journalRoot!=='string'||!r.journalRoot||
     !isAbsolute(r.journalRoot)||normalize(r.journalRoot)!==r.journalRoot)
     throw Error('Corrupt synthetic reservation; human reconciliation required')
+  // Read-only journal existence/identity preflight: a canonical absolute string
+  // alone is not evidence of a real, private directory. No repair or writes.
+  // Path-based checks remain subject to ABA/TOCTOU and same-user forgery.
+  try {
+    const journalEntry=await lstat(r.journalRoot)
+    const actualJournal=await realpath(r.journalRoot)
+    if(!journalEntry.isDirectory()||journalEntry.isSymbolicLink()||
+      (journalEntry.mode&0o077)!==0||actualJournal!==r.journalRoot)
+      throw Error('Unsafe synthetic journal')
+    const rel=relative(root,actualJournal)
+    const reverse=relative(actualJournal,root)
+    const contained=(path:string)=>path===''||
+      (path!=='..'&&!path.startsWith('..'+(process.platform==='win32'?'\\\\':'/'))&&
+        !isAbsolute(path))
+    if(contained(rel)||contained(reverse))throw Error('Synthetic journal overlaps ledger')
+  }catch {
+    throw Error('Corrupt synthetic reservation; human reconciliation required')
+  }
   return r
 }
 

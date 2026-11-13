@@ -77,6 +77,29 @@ test('synthetic receipt rejects canonical JSON with noncanonical journal path wi
  fs.writeFileSync(file,original,{mode:0o600})
  assert.equal((await inspectSyntheticApproval(root,g.approvalId)).journalRoot,realpathSync(journal))
 }))
+test('synthetic inspection refuses forged missing and unsafe journal directories without repair',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ await reserveSyntheticApproval(root,g)
+ const fs=await import('node:fs')
+ const file=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const original=fs.readFileSync(file,'utf8')
+ const missing=join(journal,'missing-journal')
+ const publicDir=join(journal,'public-journal')
+ mkdirSync(publicDir,{mode:0o755})
+ chmodSync(publicDir,0o755)
+ const alias=join(journal,'journal-alias')
+ symlinkSync(journal,alias)
+ for(const bad of [missing,publicDir,alias,root]){
+  const forged=JSON.stringify({...JSON.parse(original),journalRoot:bad})+'\\n'
+  fs.writeFileSync(file,forged,{mode:0o600})
+  await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
+  assert.equal(fs.readFileSync(file,'utf8'),forged)
+  await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+ }
+ fs.writeFileSync(file,original,{mode:0o600})
+ assert.equal((await inspectSyntheticApproval(root,g.approvalId)).journalRoot,realpathSync(journal))
+}))
+
 test('one-use reservation is durable and rejects same ID across journal roots',()=>fixture(async({root,journal})=>{
  const g=grant(journal)
  assert.equal(await reserveSyntheticApproval(root,g),'reserved')
