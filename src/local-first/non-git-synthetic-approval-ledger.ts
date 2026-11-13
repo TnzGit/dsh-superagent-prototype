@@ -123,7 +123,9 @@ export async function reserveSyntheticApproval(
   // Any failure after exclusive creation leaves a consumed, possibly incomplete
   // reservation. Never delete it automatically or retry.
   try {
-    await handle.writeFile(JSON.stringify({version:reservation.version,approvalId:reservation.approvalId,\n      transactionId:reservation.transactionId,projectFingerprint:reservation.projectFingerprint,\n      previewDigest:reservation.previewDigest,operation:reservation.operation,journalRoot:journal})+'\n')
+    await handle.writeFile(JSON.stringify({version:reservation.version,approvalId:reservation.approvalId,
+      transactionId:reservation.transactionId,projectFingerprint:reservation.projectFingerprint,
+      previewDigest:reservation.previewDigest,operation:reservation.operation,journalRoot:journal})+'\n')
     await handle.sync()
   } finally {await handle.close()}
   const dir=await open(root,'r')
