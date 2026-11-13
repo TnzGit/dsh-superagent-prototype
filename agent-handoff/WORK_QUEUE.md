@@ -1,3 +1,8 @@
+## 2026-11-13 C6B2B5S LO-026 independent Mac acceptance verified / online ACK
+
+- **ACCEPTED_ACKED / REMOTE_OWNED:** OL-20261113-026 closed; LO-20261113-026, local claimed/done and complete sanitized `agent-reports/REPORT-c6b2b5s-offline-marker-pin-nofollow.md` verified. Pinned source `b47a00d179e4ce8f3ce247c7077a727c9061365a`, source CI #395 run `43387052366` and report HEAD `a4278b140dcffcd823eb467c0557f689fdad3240` CI #398 run `43398752173`: both **3/3 SUCCESS**. Inspected report CI three actual job logs: Linux/macOS Node **226/226**, proxy **5/5** each; hardlinked fixture regression executed on both; Vitest **62 files / 1208 tests**, typecheck/build success. Independent Mac ledger 44/44, adversarial 800/800; no live host changes.
+- **NEXT OWNER remote online:** substantive synthetic-only security hardening and adversarial tests; verify exact-source 3/3 CI and both OS logs, then enumerate messages/receipts and atomically dispatch unique next OL only if no pending task. Same-user forgery, path ABA/TOCTOU, fd-relative root isolation, private grant and recovery remain unresolved. No real Apply/Weixin/production authority.
+
 ## 2026-11-13 C6B2B5S exact-source CI verified / OL-026 dispatched
 
 - **LOCAL_OWNED / PENDING:** unique OL-20261113-026; source b47a00d179e4ce8f3ce247c7077a727c9061365a, Actions #395 run 43387052366 at exact SHA **3/3 SUCCESS**. Actual Linux/macOS logs show Node **226/226**, proxy **5/5** each, new hardlinked fixture marker regression executed on both; Vitest **62 files / 1208 tests**, check/build success. Both workflow Node commands include synthetic ledger suite.
