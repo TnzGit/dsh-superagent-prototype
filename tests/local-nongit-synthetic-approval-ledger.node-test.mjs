@@ -15,6 +15,18 @@ async function fixture(run){
  mkdirSync(root,{mode:0o700});mkdirSync(journal,{mode:0o700})
  try{await run({root,journal})}finally{rmSync(base,{recursive:true,force:true})}
 }
+test('synthetic inspection rejects hardlinked receipt without consuming or rewriting it',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ await reserveSyntheticApproval(root,g)
+ const name=createHash('sha256').update(g.approvalId).digest('hex')+'.json'
+ const receipt=join(root,name),alias=join(journal,'receipt-alias.json')
+ const {linkSync,readFileSync}=await import('node:fs')
+ const original=readFileSync(receipt)
+ linkSync(receipt,alias)
+ await assert.rejects(inspectSyntheticApproval(root,g.approvalId),/Corrupt synthetic reservation/)
+ assert.deepEqual(readFileSync(receipt),original)
+ assert.equal(readdirSync(root).length,1)
+}))
 test('one-use reservation is durable and rejects same ID across journal roots',()=>fixture(async({root,journal})=>{
  const g=grant(journal)
  assert.equal(await reserveSyntheticApproval(root,g),'reserved')

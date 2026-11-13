@@ -4,6 +4,7 @@
  */
 import {createHash} from 'node:crypto'
 import {lstat,open,realpath,readFile} from 'node:fs/promises'
+import {constants as fsConstants} from 'node:fs'
 import {join,relative,isAbsolute,dirname,basename} from 'node:path'
 import {tmpdir} from 'node:os'
 import {types as utilTypes} from 'node:util'
@@ -109,14 +110,27 @@ export async function inspectSyntheticApproval(
   if(!rootStat.isDirectory()||rootStat.isSymbolicLink()||(rootStat.mode&0o077)!==0)
     throw Error('Unsafe synthetic ledger root')
   const file=join(root,createHash('sha256').update(approvalId).digest('hex')+'.json')
-  const stat=await lstat(file)
-  if(!stat.isFile()||stat.isSymbolicLink()||(stat.mode&0o077)!==0||stat.nlink!==1)
-    throw Error('Unsafe synthetic reservation')
-  // Bound untrusted on-disk receipt size before allocation and parsing.
-  if(stat.size>4096)throw Error('Corrupt synthetic reservation; human reconciliation required')
+  // Inspect the same opened inode we parse, not a path that may be replaced
+  // between lstat and readFile. This is still NOT descriptor-relative root
+  // isolation, nor protection from a cooperating same-user in-place writer.
   let value:unknown
-  try {value=JSON.parse(await readFile(file,'utf8'))}
-  catch {throw Error('Corrupt synthetic reservation; human reconciliation required')}
+  let handle
+  try {
+    handle=await open(file,fsConstants.O_RDONLY|fsConstants.O_NOFOLLOW|fsConstants.O_NONBLOCK)
+    const before=await handle.stat()
+    if(!before.isFile()||before.nlink!==1||(before.mode&0o777)!==0o600||
+      before.size>4096)
+      throw Error('Unsafe synthetic reservation')
+    const raw=await handle.readFile()
+    const after=await handle.stat()
+    if(raw.byteLength>4096||after.dev!==before.dev||after.ino!==before.ino||
+      after.size!==before.size||after.mtimeMs!==before.mtimeMs||
+      after.ctimeMs!==before.ctimeMs)
+      throw Error('Synthetic reservation changed during inspection')
+    value=JSON.parse(raw.toString('utf8'))
+  }catch {
+    throw Error('Corrupt synthetic reservation; human reconciliation required')
+  }finally {await handle?.close()}
   const r=value as SyntheticApprovalReservation
   if(!r||typeof r!=='object'||Array.isArray(r)||
     Object.keys(r).sort().join(',')!==
