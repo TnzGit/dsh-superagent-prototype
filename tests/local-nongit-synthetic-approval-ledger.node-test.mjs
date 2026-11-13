@@ -263,6 +263,18 @@ test('synthetic fixture binding must be owner-only, unsymlinked and non-replayab
   await assert.rejects(reserveFixtureBoundSyntheticApproval(base,grant(journal)),/Untrusted synthetic fixture binding/)
   assert.equal(readdirSync(root).length,0)
 }))
+test('hardlinked fixture binding is rejected without creating a synthetic receipt',()=>fixture(async({root,journal})=>{
+  const base=join(root,'..'),marker=join(base,'.synthetic-ledger-binding.json')
+  const original=join(base,'binding-original.json')
+  const content=JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:'a'.repeat(64)})
+  writeFileSync(original,content,{mode:0o600})
+  const {linkSync}=await import('node:fs')
+  linkSync(original,marker)
+  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,grant(journal)),/synthetic fixture binding/i)
+  assert.equal((await import('node:fs')).readFileSync(original,'utf8'),content)
+  assert.equal(readdirSync(root).length,0)
+}))
+
 test('partial durable reservation after simulated crash is never overwritten or replayed',()=>fixture(async({root,journal})=>{
   const g=grant(journal)
   const id=createHash('sha256').update(g.approvalId).digest('hex')+'.json'

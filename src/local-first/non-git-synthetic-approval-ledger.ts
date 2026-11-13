@@ -3,13 +3,32 @@
  * This is NOT an operator authorization or a production fencing primitive.
  */
 import {createHash} from 'node:crypto'
-import {lstat,open,realpath,readFile} from 'node:fs/promises'
+import {lstat,open,realpath} from 'node:fs/promises'
 import {constants as fsConstants} from 'node:fs'
 import {join,relative,isAbsolute,dirname,basename} from 'node:path'
 import {tmpdir} from 'node:os'
 import {types as utilTypes} from 'node:util'
 import {projectFingerprint} from './project-workspaces.ts'
 import type {LocalProjectRegistry} from './project-registry.ts'
+
+/** Best-effort same-descriptor synthetic JSON read. Not a directory capability,
+ * same-user authenticity guarantee, or defense against path ABA.
+ */
+async function readPrivateSyntheticJson(file:string):Promise<unknown>{
+  const handle=await open(file,fsConstants.O_RDONLY|fsConstants.O_NOFOLLOW|fsConstants.O_NONBLOCK)
+  try{
+    const before=await handle.stat()
+    if(!before.isFile()||before.nlink!==1||(before.mode&0o777)!==0o600||
+      before.size>4096)throw Error('Unsafe synthetic private JSON')
+    const raw=await handle.readFile()
+    const after=await handle.stat()
+    if(raw.byteLength>4096||after.dev!==before.dev||after.ino!==before.ino||
+      after.size!==before.size||after.mtimeMs!==before.mtimeMs||
+      after.ctimeMs!==before.ctimeMs)
+      throw Error('Synthetic private JSON changed during inspection')
+    return JSON.parse(raw.toString('utf8')) as unknown
+  }finally{await handle.close()}
+}
 
 const ID=/^[a-z0-9][a-z0-9-]{7,79}$/
 const SHA=/^[a-f0-9]{64}$/
@@ -177,7 +196,7 @@ export async function reserveFixtureBoundSyntheticApproval(
       (st.mode&0o777)!==0o600)
       throw Error('Untrusted synthetic fixture binding')
     if(st.size>4096)throw Error('Corrupt synthetic fixture binding; manual review required')
-    bound=JSON.parse(await readFile(marker,'utf8')) as unknown
+    bound=await readPrivateSyntheticJson(marker)
   }catch(error){
     if(error instanceof SyntaxError||
       ['ENOENT','ENOTDIR'].includes((error as NodeJS.ErrnoException).code??''))
@@ -262,7 +281,7 @@ async function pinDisposableSyntheticLedger(
   // Reject oversized owner-private pin before parsing. Never repair or overwrite it.
   if(entry.size>4096)throw Error('Corrupt synthetic registry ledger pin; manual review required')
   let parsed:unknown
-  try{parsed=JSON.parse(await readFile(file,'utf8'))}
+  try{parsed=await readPrivateSyntheticJson(file)}
   catch{throw Error('Corrupt synthetic registry ledger pin; manual review required')}
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||
     Object.keys(parsed).sort().join(',')!==
@@ -356,7 +375,7 @@ export async function inspectRegistryBoundSyntheticApproval(
     throw Error('Unsafe synthetic registry binding marker')
   if(markerStat.size>4096)throw Error('Corrupt synthetic registry binding marker')
   let parsed:unknown
-  try{parsed=JSON.parse(await readFile(marker,'utf8'))}
+  try{parsed=await readPrivateSyntheticJson(marker)}
   catch{throw Error('Corrupt synthetic registry binding marker')}
   if(!parsed||typeof parsed!=='object'||Array.isArray(parsed)||
     Object.keys(parsed).sort().join(',')!=='projectFingerprint,purpose,version')
