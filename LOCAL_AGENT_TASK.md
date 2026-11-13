@@ -1,7 +1,7 @@
-# LOCAL_AGENT_TASK — C6B2B5S OFFLINE SYNTHETIC MARKER/PIN NOFOLLOW ACCEPTANCE
+# LOCAL_AGENT_TASK — C6B2B5T OFFLINE CANONICAL SYNTHETIC RECEIPT ACCEPTANCE
 
-**Unique active task:** OL-20261113-026, OFFLINE_SYNTHETIC_ONLY. OL-025 closed. Branch `feat/local-first-wechat-foundation`.
+**Unique active task:** OL-20261113-027, OFFLINE_SYNTHETIC_ONLY. OL-026 closed. Branch `feat/local-first-wechat-foundation`.
 
-**PINNED SOURCE SHA:** `b47a00d179e4ce8f3ce247c7077a727c9061365a`. CI #395 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43387052366, 3/3 SUCCESS: Linux/macOS Node 226/226 and proxy 5/5 each; hardlinked fixture binding regression executed on both; Vitest 62 files / 1208 tests and typecheck/build success.
+**PINNED SOURCE SHA:** `bc2d87c143dcbd8c4f96014888e536fff5fa2ef2`. CI #401 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43418593496, 3/3 SUCCESS; Linux/macOS Node 227/227 and proxy 5/5 each, duplicate-key regression executed on both, Vitest 62 files / 1208 tests, typecheck/build successful.
 
-Read agent-handoff/messages/to-local/2026-11-13-ol026-c6b2b5s-marker-pin-nofollow-acceptance.md and permanent protocols. Claim once; independent detached Mac synthetic-only acceptance for descriptor/nofollow fixture marker, registry marker and durable pin. Publish one sanitized report, LO-026 result and local done receipt using guarded non-force push. Never modify live host, real project, Weixin, production, DSH service, provider/model/credentials or reuse grants.
+Read agent-handoff/messages/to-local/2026-11-13-ol027-c6b2b5t-canonical-receipt-acceptance.md and permanent protocols. Claim once; detached independent Mac synthetic-only canonical receipt and noncanonical/duplicate-key adversarial acceptance. Publish one sanitized report, LO-027 result and local done receipt using guarded non-force push. Never modify live host, real project, Weixin, production, DSH services, provider/model/credentials or reuse grants.
