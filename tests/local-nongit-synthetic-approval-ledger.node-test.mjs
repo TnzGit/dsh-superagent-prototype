@@ -1055,7 +1055,7 @@ test('strict synthetic fixture inspection rejects missing/corrupt marker, unsafe
   try{
    await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),
     err=>err.message==='Unsafe synthetic fixture private directory'&&!err.message.includes(child))
-   if(child===root)assert.deepEqual(fs.readFileSync(join(parked,basename(file))),original)
+   if(child===root)assert.deepEqual(fs.readFileSync(join(parked,file.slice(root.length+1))),original)
   }finally{fs.renameSync(parked,child)}
   assert.deepEqual(fs.readFileSync(file),original)
   assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
