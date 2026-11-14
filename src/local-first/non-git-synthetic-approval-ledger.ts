@@ -219,6 +219,54 @@ export async function inspectSyntheticApproval(
 }
 
 
+
+/** Strict READ-ONLY synthetic fixture receipt inspection. The generic ledger
+ * inspector cannot bind an otherwise canonical receipt to its original fixed
+ * journal and fixture fingerprint. No same-user authenticity or ABA guarantee;
+ * never use this synthetic experiment to authorize real source Apply.
+ */
+export async function inspectFixtureBoundSyntheticApproval(
+  fixtureRoot:string,approvalId:string
+):Promise<SyntheticApprovalReservation>{
+  if(typeof fixtureRoot!=='string'||!fixtureRoot.trim())
+    throw Error('Invalid synthetic fixture root')
+  if(typeof approvalId!=='string'||!ID.test(approvalId))
+    throw Error('Invalid synthetic approval ID')
+  const initial=await lstat(fixtureRoot)
+  if(!initial.isDirectory()||initial.isSymbolicLink()||(initial.mode&0o077)!==0)
+    throw Error('Unsafe synthetic fixture root')
+  const fixture=await realpath(fixtureRoot),temp=await realpath(tmpdir())
+  if(dirname(fixture)!==temp||
+    !/^dsh-ledger-synthetic-[a-zA-Z0-9_-]{6,70}$/.test(basename(fixture)))
+    throw Error('Synthetic approval fixture is not a disposable temp root')
+  let marker:unknown
+  try{marker=await readPrivateSyntheticJson(join(fixture,'.synthetic-ledger-binding.json'),'marker')}
+  catch{throw Error('Missing or corrupt synthetic fixture binding')}
+  if(!marker||typeof marker!=='object'||Array.isArray(marker)||
+    Object.keys(marker).join(',')!=='version,purpose,projectFingerprint')
+    throw Error('Untrusted synthetic fixture binding')
+  const row=marker as Record<string,unknown>
+  if(row.version!==1||row.purpose!=='offline-synthetic-only'||
+    typeof row.projectFingerprint!=='string'||!SHA.test(row.projectFingerprint))
+    throw Error('Untrusted synthetic fixture binding')
+  const ledger=join(fixture,'ledger'),journal=join(fixture,'journal')
+  for(const dir of [ledger,journal]){
+    const st=await lstat(dir)
+    if(!st.isDirectory()||st.isSymbolicLink()||(st.mode&0o077)!==0||
+      (st.mode&0o500)!==0o500||await realpath(dir)!==dir)
+      throw Error('Unsafe synthetic fixture private directory')
+  }
+  const receipt=await inspectSyntheticApproval(ledger,approvalId)
+  if(receipt.journalRoot!==journal||receipt.projectFingerprint!==row.projectFingerprint)
+    throw Error('Synthetic receipt differs from fixture binding; manual review required')
+  const finalEntry=await lstat(fixtureRoot)
+  if(finalEntry.dev!==initial.dev||finalEntry.ino!==initial.ino||
+    finalEntry.isSymbolicLink()||await realpath(fixtureRoot)!==fixture)
+    throw Error('Synthetic fixture root identity changed; manual review required')
+  return receipt
+}
+
+
 /** Synthetic fixture-only *root binding* for process/crash adversarial tests.
  *
  * The fixture name, private marker and fixed child directories prevent a test

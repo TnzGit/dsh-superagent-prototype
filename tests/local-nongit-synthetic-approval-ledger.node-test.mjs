@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-import {reserveSyntheticApproval,inspectSyntheticApproval,reserveFixtureBoundSyntheticApproval,inspectRegistryBoundSyntheticApproval,reserveRegistryBoundSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
+import {reserveSyntheticApproval,inspectSyntheticApproval,inspectFixtureBoundSyntheticApproval,reserveFixtureBoundSyntheticApproval,inspectRegistryBoundSyntheticApproval,reserveRegistryBoundSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
 import {LocalProjectRegistry} from '../src/local-first/project-registry.ts'
 import {projectFingerprint} from '../src/local-first/project-workspaces.ts'
 const grant=(journalRoot)=>({version:1,approvalId:'approval-synthetic-00001',transactionId:'transaction-synthetic-00001',projectFingerprint:'a'.repeat(64),previewDigest:'b'.repeat(64),operation:'apply',journalRoot})
@@ -1003,4 +1003,54 @@ test('noncanonical durable pin refuses fresh approval without repair or receipt'
   }),'reserved')
   assert.equal(readdirSync(root).length,2)
  }finally{rmSync(parent,{recursive:true,force:true})}
+}))
+
+
+test('strict synthetic fixture inspection rejects canonical forgeries to another private journal or fingerprint without repair',()=>fixture(async({root,journal})=>{
+ const base=join(root,'..'),fs=await import('node:fs'),g=grant(journal)
+ writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+  version:1,purpose:'offline-synthetic-only',projectFingerprint:g.projectFingerprint
+ }),{mode:0o600})
+ assert.equal(await reserveFixtureBoundSyntheticApproval(base,g),'reserved')
+ const file=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const original=fs.readFileSync(file,'utf8')
+ assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).journalRoot,realpathSync(journal))
+ const other=join(base,'other-private');mkdirSync(other,{mode:0o700})
+ for(const forgedField of [{journalRoot:realpathSync(other)},{projectFingerprint:'c'.repeat(64)}]){
+  const forged=JSON.stringify({...JSON.parse(original),...forgedField})+'\n'
+  fs.writeFileSync(file,forged,{mode:0o600})
+  await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),/differs from fixture binding/)
+  assert.equal(fs.readFileSync(file,'utf8'),forged)
+  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
+ }
+ fs.writeFileSync(file,original,{mode:0o600})
+ assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
+}))
+
+test('strict synthetic fixture inspection rejects missing/corrupt marker, unsafe journal and symlink fixture without replay',()=>fixture(async({root,journal})=>{
+ const base=join(root,'..'),fs=await import('node:fs'),g=grant(journal)
+ const marker=join(base,'.synthetic-ledger-binding.json')
+ const canonical=JSON.stringify({version:1,purpose:'offline-synthetic-only',projectFingerprint:g.projectFingerprint})
+ writeFileSync(marker,canonical,{mode:0o600})
+ await reserveFixtureBoundSyntheticApproval(base,g)
+ const file=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const original=fs.readFileSync(file)
+ for(const tamper of [canonical+'\n',canonical.replace(/}$/,',"version":1}')]){
+  writeFileSync(marker,tamper,{mode:0o600})
+  await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),/Missing or corrupt synthetic fixture binding/)
+  assert.deepEqual(fs.readFileSync(file),original)
+ }
+ rmSync(marker)
+ await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),/Missing or corrupt synthetic fixture binding/)
+ writeFileSync(marker,canonical,{mode:0o600})
+ try{
+  chmodSync(journal,0o200)
+  await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),/Unsafe synthetic fixture private directory/)
+ }finally{chmodSync(journal,0o700)}
+ const alias=join(base,'fixture-symlink');symlinkSync(base,alias)
+ try{await assert.rejects(inspectFixtureBoundSyntheticApproval(alias,g.approvalId),/Unsafe synthetic fixture root/)}
+ finally{rmSync(alias)}
+ assert.deepEqual(fs.readFileSync(file),original)
+ assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
+ await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
 }))
