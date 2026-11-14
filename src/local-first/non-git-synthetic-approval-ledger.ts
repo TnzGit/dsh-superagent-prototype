@@ -151,8 +151,15 @@ export async function inspectSyntheticApproval(
 ):Promise<SyntheticApprovalReservation> {
   if(typeof approvalId!=='string'||!ID.test(approvalId))throw Error('Invalid synthetic approval ID')
   if(typeof ledgerRoot!=='string'||!ledgerRoot.trim())throw Error('Invalid synthetic ledger root')
-  const root=await realpath(ledgerRoot)
-  const rootStat=await lstat(ledgerRoot)
+  // C6B2B6E: a missing/replaced ledger during read-only inspection must not
+  // expose raw filesystem errno or the private path. This is error sanitation,
+  // NOT fd-relative isolation or protection against path ABA/TOCTOU.
+  let root:string
+  let rootStat:Awaited<ReturnType<typeof lstat>>
+  try {
+    root=await realpath(ledgerRoot)
+    rootStat=await lstat(ledgerRoot)
+  }catch {throw Error('Unsafe synthetic ledger root')}
   if(!rootStat.isDirectory()||rootStat.isSymbolicLink()||(rootStat.mode&0o077)!==0)
     throw Error('Unsafe synthetic ledger root')
   const file=join(root,createHash('sha256').update(approvalId).digest('hex')+'.json')
@@ -274,7 +281,12 @@ export async function inspectFixtureBoundSyntheticApproval(
         throw Error('Unsafe synthetic fixture private directory')
     }catch {throw Error('Unsafe synthetic fixture private directory')}
   }
-  const receipt=await inspectSyntheticApproval(ledger,approvalId)
+  // The generic delegate can observe a removed/replaced ledger AFTER the
+  // strict child preflight. Never propagate its raw errno/private paths from
+  // this strict synthetic API; do not repair, retry or consume the receipt.
+  let receipt:SyntheticApprovalReservation
+  try {receipt=await inspectSyntheticApproval(ledger,approvalId)}
+  catch {throw Error('Corrupt synthetic reservation; human reconciliation required')}
   if(receipt.journalRoot!==journal||receipt.projectFingerprint!==row.projectFingerprint)
     throw Error('Synthetic receipt differs from fixture binding; manual review required')
   // A mid-inspection unlink/replacement must not leak a private path/errno.

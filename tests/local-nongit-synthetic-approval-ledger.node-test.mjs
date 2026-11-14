@@ -1116,3 +1116,49 @@ test('strict synthetic fixture inspection refuses deleted or replaced root witho
  assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
 }))
+
+test('generic synthetic inspection sanitizes a missing ledger without receipt repair or approval replay',()=>fixture(async({root,journal})=>{
+ const fs=await import('node:fs'),g=grant(journal)
+ assert.equal(await reserveSyntheticApproval(root,g),'reserved')
+ const receipt=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const original=fs.readFileSync(receipt),parked=root+'-ledger-parked'
+ renameSync(root,parked)
+ try{
+  for(const kind of ['missing','file','dangling-link']){
+   if(kind==='file')writeFileSync(root,'not a ledger',{mode:0o600})
+   if(kind==='dangling-link')symlinkSync(join(root,'absent'),root)
+   await assert.rejects(inspectSyntheticApproval(root,g.approvalId),err=>
+    err.message==='Unsafe synthetic ledger root'&&
+    !err.message.includes(root)&&!/ENOENT|ENOTDIR|ELOOP/.test(err.message))
+   assert.deepEqual(fs.readFileSync(join(parked,receipt.slice(root.length+1))),original)
+   if(kind!=='missing')rmSync(root)
+   assert.equal(fs.existsSync(root),false,'read-only inspection must not repair root')
+  }
+ }finally{renameSync(parked,root)}
+ assert.deepEqual(fs.readFileSync(receipt),original)
+ assert.equal((await inspectSyntheticApproval(root,g.approvalId)).approvalId,g.approvalId)
+ await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+}))
+
+test('strict fixture inspection masks delegate filesystem errors without changing receipt',()=>fixture(async({root,journal})=>{
+ const fs=await import('node:fs'),base=join(root,'..'),g=grant(journal)
+ writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+  version:1,purpose:'offline-synthetic-only',projectFingerprint:g.projectFingerprint
+ }),{mode:0o600})
+ await reserveFixtureBoundSyntheticApproval(base,g)
+ const receipt=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const original=fs.readFileSync(receipt)
+ // This deterministic missing-child case complements bounded mid-call race
+ // testing: it proves refusal is sanitized and does not repair/reissue.
+ const parked=root+'-delegate-parked'
+ renameSync(root,parked)
+ try{
+  await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),err=>
+   err.message==='Unsafe synthetic fixture private directory'&&
+   !err.message.includes(root)&&!/ENOENT|ENOTDIR|ELOOP/.test(err.message))
+  assert.deepEqual(fs.readFileSync(join(parked,receipt.slice(root.length+1))),original)
+ }finally{renameSync(parked,root)}
+ assert.deepEqual(fs.readFileSync(receipt),original)
+ assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
+ await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
+}))
