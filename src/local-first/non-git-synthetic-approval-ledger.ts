@@ -251,10 +251,15 @@ export async function inspectFixtureBoundSyntheticApproval(
     throw Error('Untrusted synthetic fixture binding')
   const ledger=join(fixture,'ledger'),journal=join(fixture,'journal')
   for(const dir of [ledger,journal]){
-    const st=await lstat(dir)
-    if(!st.isDirectory()||st.isSymbolicLink()||(st.mode&0o077)!==0||
-      (st.mode&0o500)!==0o500||await realpath(dir)!==dir)
-      throw Error('Unsafe synthetic fixture private directory')
+    // Missing or replaced private children are untrusted fixture state, not
+    // raw filesystem errors to disclose through the strict read-only API.
+    // This remains a best-effort path check, NOT an fd-relative capability.
+    try {
+      const st=await lstat(dir)
+      if(!st.isDirectory()||st.isSymbolicLink()||(st.mode&0o077)!==0||
+        (st.mode&0o500)!==0o500||await realpath(dir)!==dir)
+        throw Error('Unsafe synthetic fixture private directory')
+    }catch {throw Error('Unsafe synthetic fixture private directory')}
   }
   const receipt=await inspectSyntheticApproval(ledger,approvalId)
   if(receipt.journalRoot!==journal||receipt.projectFingerprint!==row.projectFingerprint)
