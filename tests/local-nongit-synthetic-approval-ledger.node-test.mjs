@@ -5,7 +5,7 @@ import {spawn} from 'node:child_process'
 import {createHash} from 'node:crypto'
 import {tmpdir} from 'node:os'
 import {join} from 'node:path'
-import {reserveSyntheticApproval,inspectSyntheticApproval,inspectFixtureBoundSyntheticApproval,reserveFixtureBoundSyntheticApproval,inspectRegistryBoundSyntheticApproval,reserveRegistryBoundSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
+import {reserveSyntheticApproval,reserveSharedFenceSyntheticApproval,inspectSyntheticApproval,inspectFixtureBoundSyntheticApproval,reserveFixtureBoundSyntheticApproval,inspectRegistryBoundSyntheticApproval,reserveRegistryBoundSyntheticApproval} from '../src/local-first/non-git-synthetic-approval-ledger.ts'
 import {LocalProjectRegistry} from '../src/local-first/project-registry.ts'
 import {projectFingerprint} from '../src/local-first/project-workspaces.ts'
 const grant=(journalRoot)=>({version:1,approvalId:'approval-synthetic-00001',transactionId:'transaction-synthetic-00001',projectFingerprint:'a'.repeat(64),previewDigest:'b'.repeat(64),operation:'apply',journalRoot})
@@ -1180,4 +1180,37 @@ test('strict fixture inspection masks delegate filesystem errors without changin
  assert.deepEqual(fs.readFileSync(receipt),original)
  assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
+}))
+
+test('shared synthetic fence rejects cross-ledger re-reservation without repair or replay',()=>fixture(async({root,journal})=>{
+ const fs=await import('node:fs'),base=join(root,'..'),fence=join(base,'shared-fence')
+ const second=join(base,'alternate-ledger')
+ mkdirSync(fence,{mode:0o700});mkdirSync(second,{mode:0o700})
+ const g=grant(journal)
+ assert.equal(await reserveSharedFenceSyntheticApproval(fence,root,g),'reserved')
+ const first=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const snapshot=fs.readFileSync(first)
+ const fenceNames=readdirSync(fence)
+ assert.equal(fenceNames.length,1)
+ await assert.rejects(reserveSharedFenceSyntheticApproval(fence,second,g),err=>
+  err.message==='Synthetic approval already fenced; human reconciliation required')
+ assert.equal(readdirSync(second).length,0)
+ assert.deepEqual(fs.readFileSync(first),snapshot)
+ assert.deepEqual(readdirSync(fence),fenceNames)
+ await assert.rejects(reserveSharedFenceSyntheticApproval(fence,root,g),/already fenced/)
+ assert.equal((await inspectSyntheticApproval(root,g.approvalId)).approvalId,g.approvalId)
+}))
+test('shared synthetic fence consumes failed downstream reservation and rejects unsafe fence',()=>fixture(async({root,journal})=>{
+ const base=join(root,'..'),fence=join(base,'shared-fence')
+ mkdirSync(fence,{mode:0o700})
+ const g=grant(journal)
+ assert.equal(await reserveSyntheticApproval(root,g),'reserved')
+ await assert.rejects(reserveSharedFenceSyntheticApproval(fence,root,g),/already reserved/)
+ assert.equal(readdirSync(fence).length,1,'failed downstream reserve must not release fence')
+ await assert.rejects(reserveSharedFenceSyntheticApproval(fence,root,g),/already fenced/)
+ const alias=join(base,'fence-link');symlinkSync(fence,alias)
+ try{await assert.rejects(reserveSharedFenceSyntheticApproval(alias,root,{...g,approvalId:'approval-synthetic-00002'}),/Unsafe synthetic shared fence root/)}
+ finally{rmSync(alias)}
+ assert.equal(readdirSync(root).length,1)
+ assert.equal(readdirSync(fence).length,1)
 }))

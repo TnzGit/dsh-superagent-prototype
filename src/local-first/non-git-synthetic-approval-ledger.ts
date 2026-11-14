@@ -595,3 +595,56 @@ export async function reserveRegistryBoundSyntheticApproval(
   if(!ledgerIdentities.has(projectId))ledgerIdentities.set(projectId,{dev:ledgerEntry.dev,ino:ledgerEntry.ino})
   return reserveFixtureBoundSyntheticApproval(fixtureRoot,reservation)
 }
+
+/** C6B2B6G: opt-in, owner-supplied SHARED synthetic reservation fence.
+ * The same private fence root MUST be supplied for every competing ledger.
+ * A different root, same-user mutation, inode ABA or a non-cooperating writer
+ * defeats this experiment. This is NOT a global authority or real Apply gate.
+ * A failed/partial fence is terminal: never unlink, repair or auto-retry.
+ */
+export async function reserveSharedFenceSyntheticApproval(
+  fenceRoot:string,ledgerRoot:string,reservation:SyntheticApprovalReservation
+):Promise<'reserved'>{
+  reservation=normalizeSyntheticReservation(reservation)
+  if(typeof fenceRoot!=='string'||!fenceRoot.trim()||
+    typeof ledgerRoot!=='string'||!ledgerRoot.trim())
+    throw Error('Invalid synthetic shared fence root')
+  let fence:string
+  try{
+    const entry=await lstat(fenceRoot)
+    fence=await realpath(fenceRoot)
+    if(!entry.isDirectory()||entry.isSymbolicLink()||
+      (entry.mode&0o777)!==0o700||
+      !isAbsolute(fenceRoot)||normalize(fenceRoot)!==fenceRoot||
+      fence!==join(await realpath(dirname(fenceRoot)),basename(fenceRoot)))
+      throw Error('Unsafe synthetic shared fence root')
+    const ledger=await realpath(ledgerRoot)
+    const journal=await realpath(reservation.journalRoot)
+    const overlaps=(a:string,b:string)=>{
+      const rel=relative(a,b)
+      return rel===''||(!rel.startsWith('..'+(process.platform==='win32'?'\\':'/'))&&
+        rel!=='..'&&!isAbsolute(rel))
+    }
+    if(overlaps(fence,ledger)||overlaps(ledger,fence)||
+      overlaps(fence,journal)||overlaps(journal,fence))
+      throw Error('Unsafe synthetic shared fence root')
+  }catch{throw Error('Unsafe synthetic shared fence root')}
+  const name=createHash('sha256').update(reservation.approvalId).digest('hex')+'.fence'
+  let handle
+  try{handle=await open(join(fence,name),'wx',0o600)}
+  catch(error){
+    if((error as NodeJS.ErrnoException).code==='EEXIST')
+      throw Error('Synthetic approval already fenced; human reconciliation required')
+    throw Error('Unsafe synthetic shared fence root')
+  }
+  // The durable fence is consumed even when the downstream reservation fails.
+  // No automatic rollback of an ambiguous reservation is permitted.
+  try{
+    await handle.writeFile(JSON.stringify({version:1,purpose:'offline-synthetic-shared-fence',
+      approvalId:reservation.approvalId})+'\n')
+    await handle.sync()
+  }finally{await handle.close()}
+  const directory=await open(fence,'r')
+  try{await directory.sync()}finally{await directory.close()}
+  return reserveSyntheticApproval(ledgerRoot,reservation)
+}
