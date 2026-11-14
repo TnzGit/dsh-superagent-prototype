@@ -1027,6 +1027,27 @@ test('strict synthetic fixture inspection rejects canonical forgeries to another
  assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
 }))
 
+test('strict synthetic fixture inspection sanitizes a missing fixture root without repairing or replaying',()=>fixture(async({root,journal})=>{
+ const base=join(root,'..'),fs=await import('node:fs'),g=grant(journal)
+ writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+  version:1,purpose:'offline-synthetic-only',projectFingerprint:g.projectFingerprint
+ }),{mode:0o600})
+ assert.equal(await reserveFixtureBoundSyntheticApproval(base,g),'reserved')
+ const receipt=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const original=fs.readFileSync(receipt)
+ const parked=base+'-parked'
+ renameSync(base,parked)
+ try{
+  await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),
+   err=>err.message==='Unsafe synthetic fixture root'&&!err.message.includes(base)&&!err.message.includes('ENOENT'))
+  assert.deepEqual(fs.readFileSync(join(parked,'ledger',receipt.slice(root.length+1))),original)
+  assert.equal(fs.readdirSync(parked).length,3,'no repair or heartbeat entries')
+ }finally{renameSync(parked,base)}
+ assert.deepEqual(fs.readFileSync(receipt),original)
+ assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
+ await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
+}))
+
 test('strict synthetic fixture inspection rejects missing/corrupt marker, unsafe journal and symlink fixture without replay',()=>fixture(async({root,journal})=>{
  const base=join(root,'..'),fs=await import('node:fs'),g=grant(journal)
  const marker=join(base,'.synthetic-ledger-binding.json')

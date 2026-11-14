@@ -232,10 +232,18 @@ export async function inspectFixtureBoundSyntheticApproval(
     throw Error('Invalid synthetic fixture root')
   if(typeof approvalId!=='string'||!ID.test(approvalId))
     throw Error('Invalid synthetic approval ID')
-  const initial=await lstat(fixtureRoot)
-  if(!initial.isDirectory()||initial.isSymbolicLink()||(initial.mode&0o077)!==0)
-    throw Error('Unsafe synthetic fixture root')
-  const fixture=await realpath(fixtureRoot),temp=await realpath(tmpdir())
+  // A missing/replaced fixture root is untrusted synthetic state. Do not
+  // disclose raw ENOENT/ENOTDIR or private path details through this strict
+  // read-only API. Path checks remain best-effort, not fd-relative/ABA-safe.
+  let fixture:string
+  try {
+    const initialRoot=await lstat(fixtureRoot)
+    if(!initialRoot.isDirectory()||initialRoot.isSymbolicLink()||
+      (initialRoot.mode&0o077)!==0)
+      throw Error('Unsafe synthetic fixture root')
+    fixture=await realpath(fixtureRoot)
+  }catch {throw Error('Unsafe synthetic fixture root')}
+  const initial=await lstat(fixtureRoot),temp=await realpath(tmpdir())
   if(dirname(fixture)!==temp||
     !/^dsh-ledger-synthetic-[a-zA-Z0-9_-]{6,70}$/.test(basename(fixture)))
     throw Error('Synthetic approval fixture is not a disposable temp root')
