@@ -1047,6 +1047,19 @@ test('strict synthetic fixture inspection rejects missing/corrupt marker, unsafe
   chmodSync(journal,0o200)
   await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),/Unsafe synthetic fixture private directory/)
  }finally{chmodSync(journal,0o700)}
+ // A missing fixed private child must fail closed without leaking ENOENT
+ // or a private path. Restore it and prove inspection did not repair or consume.
+ for(const child of [journal,root]){
+  const parked=child+'-parked'
+  fs.renameSync(child,parked)
+  try{
+   await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),
+    err=>err.message==='Unsafe synthetic fixture private directory'&&!err.message.includes(child))
+   if(child===root)assert.deepEqual(fs.readFileSync(join(parked,basename(file))),original)
+  }finally{fs.renameSync(parked,child)}
+  assert.deepEqual(fs.readFileSync(file),original)
+  assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
+ }
  const alias=join(base,'fixture-symlink');symlinkSync(base,alias)
  try{await assert.rejects(inspectFixtureBoundSyntheticApproval(alias,g.approvalId),/Unsafe synthetic fixture root/)}
  finally{rmSync(alias)}
