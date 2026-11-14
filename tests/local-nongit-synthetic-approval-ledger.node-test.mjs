@@ -884,6 +884,21 @@ test('oversized durable registry pin fails closed without receipt or repair',()=
 }))
 
 
+test('synthetic receipt inspection refuses journal without owner read/search bits without altering receipt',()=>fixture(async({root,journal})=>{
+ const fs=await import('node:fs')
+ const approvalId='approval-synthetic-00001'
+ assert.equal(await reserveSyntheticApproval(root,grant(journal)),'reserved')
+ const receipt=join(root,createHash('sha256').update(approvalId).digest('hex')+'.json')
+ const before=fs.readFileSync(receipt)
+ try{
+  chmodSync(journal,0o200)
+  await assert.rejects(inspectSyntheticApproval(root,approvalId),/Corrupt synthetic reservation/)
+  assert.deepEqual(fs.readFileSync(receipt),before)
+ }finally{chmodSync(journal,0o700)}
+ assert.equal((await inspectSyntheticApproval(root,approvalId)).journalRoot,realpathSync(journal))
+ await assert.rejects(reserveSyntheticApproval(root,grant(journal)),/already reserved/)
+}))
+
 test('noncanonical fixture binding marker rejects semantic-equivalent JSON variants without receipt',()=>fixture(async({root,journal})=>{
  const base=join(root,'..'),marker=join(base,'.synthetic-ledger-binding.json')
  const fs=await import('node:fs')

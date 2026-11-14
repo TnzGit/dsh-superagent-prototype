@@ -190,7 +190,8 @@ export async function inspectSyntheticApproval(
     const journalEntry=await lstat(r.journalRoot)
     const actualJournal=await realpath(r.journalRoot)
     if(!journalEntry.isDirectory()||journalEntry.isSymbolicLink()||
-      (journalEntry.mode&0o077)!==0||actualJournal!==r.journalRoot)
+      (journalEntry.mode&0o077)!==0||(journalEntry.mode&0o500)!==0o500||
+      actualJournal!==r.journalRoot)
       throw Error('Unsafe synthetic journal')
     const rel=relative(root,actualJournal)
     const reverse=relative(actualJournal,root)
