@@ -109,7 +109,11 @@ export async function reserveSyntheticApproval(
   // This is best-effort path preflight, not fd-relative or ABA-safe isolation.
   if(!isAbsolute(reservation.journalRoot)||
     normalize(reservation.journalRoot)!==reservation.journalRoot||
-    journal!==reservation.journalRoot||
+    // macOS may expose the same temp ancestor as /var and /private/var.
+    // Compare the final component against its canonical parent rather than
+    // requiring every ancestor in the caller's path to be realpath-spelled.
+    journal!==join(await realpath(dirname(reservation.journalRoot)),
+      basename(reservation.journalRoot))||
     (journalStat.mode&0o500)!==0o500)
     throw Error('Unsafe synthetic journal root')
   // Reject ancestor/descendant roots as well as equality; both directions matter.
