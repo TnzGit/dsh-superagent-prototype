@@ -1,7 +1,7 @@
-# LOCAL_AGENT_TASK — C6B2B6B STRICT FIXTURE MISSING-CHILD SANITATION
+# LOCAL_AGENT_TASK — C6B2B6C STRICT FIXTURE MISSING-ROOT SANITATION
 
-**Active task:** OL-20261114-035, OFFLINE_SYNTHETIC_ONLY. OL-034/LO-034 accepted and ACKed. Claim once; do not replay.
+**Unique active task:** OL-20261114-036, OFFLINE_SYNTHETIC_ONLY. OL-035 / LO-035 accepted and online ACKed; do not replay.
 
-**PINNED SOURCE:** `5a994bbb2f2258aff4a53a28ec88b1c6e02d800d`, [Actions #456](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43558344499) 3/3 SUCCESS; Linux/macOS Node 237/237, proxy 5/5, strict suite both, Vitest 1208/1208, build/typecheck pass. #454 failed test-only undefined basename, fixed before #456.
+**PINNED SOURCE:** `6708a1028012ff4492200d13acae5bba5ddf9255`, [Actions #461](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43562807129) 3/3 SUCCESS at exact SHA. Linux/macOS Node **238/238**, proxy **5/5**, new missing-fixture-root sanitation regression executed both, Vitest **62 files/1208**, typecheck/build pass.
 
-Read `agent-handoff/messages/to-local/2026-11-14-ol035-c6b2b6b-missing-child-sanitation-acceptance.md`, LOCAL_AGENT_PROTOCOL, SECURITY, REAL_APPLY_GATES, MESSAGE_PROTOCOL. Detached clean pinned source and disposable 0700 synthetic fixture; independently test missing ledger/journal sanitized error without ENOENT/private path, no mutation/repair/replay, restoration and documented race/authenticity limits. Frozen install/check, CI-exact Node/proxy, standalone ledger and bounded adversarial harness; publish sanitized Mac report, LO-035, local claimed/done with guarded non-force expected_sha FF and verify HEAD. No real Apply/Weixin/DSH/production/credentials.
+Read `agent-handoff/messages/to-local/2026-11-14-ol036-c6b2b6c-missing-fixture-root-sanitation-acceptance.md`, LOCAL_AGENT_PROTOCOL, SECURITY, REAL_APPLY_GATES and MESSAGE_PROTOCOL. Claim once, detached pinned-source Mac worktree and only private disposable 0700 fixtures. Verify missing-root sanitized error/no receipt mutation/replay, restore positive control, macOS canonical ancestors and residual security limits. Run frozen install/check, CI-exact Node/proxy, standalone ledger and bounded adversarial suite. Publish one sanitized report, LO-036, local claim/done with guarded non-force fast-forward and verify branch. No real Apply or live services.
