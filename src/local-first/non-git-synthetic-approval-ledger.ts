@@ -103,6 +103,15 @@ export async function reserveSyntheticApproval(
   if(!journalStat.isDirectory()||journalStat.isSymbolicLink()||(journalStat.mode&0o077)!==0)
     throw Error('Unsafe synthetic journal root')
   const journal=await realpath(reservation.journalRoot)
+  // C6B2B5Z: reject syntactically aliased or non-private journal paths BEFORE
+  // exclusive receipt creation. Inspection already refuses these, so issuing
+  // an unusable consumed approval would otherwise be a needless denial of use.
+  // This is best-effort path preflight, not fd-relative or ABA-safe isolation.
+  if(!isAbsolute(reservation.journalRoot)||
+    normalize(reservation.journalRoot)!==reservation.journalRoot||
+    journal!==reservation.journalRoot||
+    (journalStat.mode&0o500)!==0o500)
+    throw Error('Unsafe synthetic journal root')
   // Reject ancestor/descendant roots as well as equality; both directions matter.
   const overlaps=(a:string,b:string)=>{
     const rel=relative(a,b)

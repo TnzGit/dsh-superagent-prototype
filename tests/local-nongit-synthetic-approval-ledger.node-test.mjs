@@ -100,6 +100,25 @@ test('synthetic inspection refuses forged missing and unsafe journal directories
  assert.equal((await inspectSyntheticApproval(root,g.approvalId)).journalRoot,realpathSync(journal))
 }))
 
+test('synthetic reservation refuses noncanonical and unreadable journal before consuming ID',()=>fixture(async({root,journal})=>{
+ const g=grant(journal)
+ const fs=await import('node:fs')
+ const alias=join(journal,'alias')
+ symlinkSync(journal,alias)
+ const variants=[journal+'/../journal',alias,'relative/journal']
+ for(const bad of variants){
+  await assert.rejects(reserveSyntheticApproval(root,{...g,journalRoot:bad}),/Unsafe synthetic journal root|ENOENT/)
+  assert.equal(readdirSync(root).length,0,'invalid journal must not consume approval')
+ }
+ try{
+  chmodSync(journal,0o200)
+  await assert.rejects(reserveSyntheticApproval(root,g),/Unsafe synthetic journal root/)
+  assert.equal(readdirSync(root).length,0)
+ }finally{chmodSync(journal,0o700)}
+ assert.equal(await reserveSyntheticApproval(root,g),'reserved')
+ assert.equal((await inspectSyntheticApproval(root,g.approvalId)).journalRoot,realpathSync(journal))
+ await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
+}))
 test('one-use reservation is durable and rejects same ID across journal roots',()=>fixture(async({root,journal})=>{
  const g=grant(journal)
  assert.equal(await reserveSyntheticApproval(root,g),'reserved')
