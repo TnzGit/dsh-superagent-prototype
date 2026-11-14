@@ -1140,6 +1140,25 @@ test('generic synthetic inspection sanitizes a missing ledger without receipt re
  await assert.rejects(reserveSyntheticApproval(root,g),/already reserved/)
 }))
 
+test('strict fixture inspection keeps missing receipt distinct from unsafe ledger root',()=>fixture(async({root,journal})=>{
+ const fs=await import('node:fs'),base=join(root,'..'),g=grant(journal)
+ writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+  version:1,purpose:'offline-synthetic-only',projectFingerprint:g.projectFingerprint
+ }),{mode:0o600})
+ await reserveFixtureBoundSyntheticApproval(base,g)
+ const receipt=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const original=fs.readFileSync(receipt)
+ fs.renameSync(receipt,receipt+'.parked')
+ try {
+  await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),err=>
+   err.message==='Corrupt synthetic reservation; human reconciliation required'&&
+   !err.message.includes(root)&&!/ENOENT|ENOTDIR|ELOOP/.test(err.message))
+ }finally{fs.renameSync(receipt+'.parked',receipt)}
+ assert.deepEqual(fs.readFileSync(receipt),original)
+ assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
+ await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
+}))
+
 test('strict fixture inspection masks delegate filesystem errors without changing receipt',()=>fixture(async({root,journal})=>{
  const fs=await import('node:fs'),base=join(root,'..'),g=grant(journal)
  writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({

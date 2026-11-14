@@ -286,7 +286,14 @@ export async function inspectFixtureBoundSyntheticApproval(
   // this strict synthetic API; do not repair, retry or consume the receipt.
   let receipt:SyntheticApprovalReservation
   try {receipt=await inspectSyntheticApproval(ledger,approvalId)}
-  catch {throw Error('Corrupt synthetic reservation; human reconciliation required')}
+  catch(error) {
+    // Preserve the known root-identity classification without leaking paths or
+    // errno. Unknown delegate errors still collapse to the generic corrupt
+    // receipt category: never relay arbitrary error.message from a filesystem.
+    if(error instanceof Error&&error.message==='Unsafe synthetic ledger root')
+      throw Error('Unsafe synthetic fixture private directory')
+    throw Error('Corrupt synthetic reservation; human reconciliation required')
+  }
   if(receipt.journalRoot!==journal||receipt.projectFingerprint!==row.projectFingerprint)
     throw Error('Synthetic receipt differs from fixture binding; manual review required')
   // A mid-inspection unlink/replacement must not leak a private path/errno.
