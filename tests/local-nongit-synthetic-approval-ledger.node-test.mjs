@@ -1088,3 +1088,31 @@ test('strict synthetic fixture inspection rejects missing/corrupt marker, unsafe
  assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
  await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
 }))
+
+
+test('strict synthetic fixture inspection refuses deleted or replaced root without raw errno and without receipt repair',()=>fixture(async({root,journal})=>{
+ const base=join(root,'..'),fs=await import('node:fs'),g=grant(journal)
+ writeFileSync(join(base,'.synthetic-ledger-binding.json'),JSON.stringify({
+  version:1,purpose:'offline-synthetic-only',projectFingerprint:g.projectFingerprint
+ }),{mode:0o600})
+ assert.equal(await reserveFixtureBoundSyntheticApproval(base,g),'reserved')
+ const receipt=join(root,createHash('sha256').update(g.approvalId).digest('hex')+'.json')
+ const before=fs.readFileSync(receipt)
+ const parked=base+'-offline-parked'
+ renameSync(base,parked)
+ try{
+  for(const replacement of ['missing','file','dangling-link']){
+   if(replacement==='file')writeFileSync(base,'not a fixture',{mode:0o600})
+   if(replacement==='dangling-link')symlinkSync(join(base,'absent'),base)
+   await assert.rejects(inspectFixtureBoundSyntheticApproval(base,g.approvalId),err=>
+    err.message==='Unsafe synthetic fixture root'&&
+    !err.message.includes(base)&&!/ENOENT|ENOTDIR|ELOOP/.test(err.message))
+   assert.deepEqual(fs.readFileSync(join(parked,'ledger',receipt.slice(root.length+1))),before)
+   if(replacement!=='missing')rmSync(base)
+   assert.equal(fs.existsSync(base),false,'strict inspection must not repair fixture')
+  }
+ }finally{renameSync(parked,base)}
+ assert.deepEqual(fs.readFileSync(receipt),before)
+ assert.equal((await inspectFixtureBoundSyntheticApproval(base,g.approvalId)).approvalId,g.approvalId)
+ await assert.rejects(reserveFixtureBoundSyntheticApproval(base,g),/already reserved/)
+}))

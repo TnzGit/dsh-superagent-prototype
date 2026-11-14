@@ -243,7 +243,12 @@ export async function inspectFixtureBoundSyntheticApproval(
       throw Error('Unsafe synthetic fixture root')
     fixture=await realpath(fixtureRoot)
   }catch {throw Error('Unsafe synthetic fixture root')}
-  const initial=await lstat(fixtureRoot),temp=await realpath(tmpdir())
+  // C6B2B6D: a fixture can disappear after the first checked lstat/realpath.
+  // Sanitize the second observation too; this is still NOT race-free.
+  let initial:Awaited<ReturnType<typeof lstat>>
+  try {initial=await lstat(fixtureRoot)}
+  catch {throw Error('Unsafe synthetic fixture root')}
+  const temp=await realpath(tmpdir())
   if(dirname(fixture)!==temp||
     !/^dsh-ledger-synthetic-[a-zA-Z0-9_-]{6,70}$/.test(basename(fixture)))
     throw Error('Synthetic approval fixture is not a disposable temp root')
@@ -272,9 +277,16 @@ export async function inspectFixtureBoundSyntheticApproval(
   const receipt=await inspectSyntheticApproval(ledger,approvalId)
   if(receipt.journalRoot!==journal||receipt.projectFingerprint!==row.projectFingerprint)
     throw Error('Synthetic receipt differs from fixture binding; manual review required')
-  const finalEntry=await lstat(fixtureRoot)
+  // A mid-inspection unlink/replacement must not leak a private path/errno.
+  // This is only error sanitation; inode ABA and TOCTOU remain unresolved.
+  let finalEntry:Awaited<ReturnType<typeof lstat>>
+  let finalRoot:string
+  try {
+    finalEntry=await lstat(fixtureRoot)
+    finalRoot=await realpath(fixtureRoot)
+  }catch {throw Error('Synthetic fixture root identity changed; manual review required')}
   if(finalEntry.dev!==initial.dev||finalEntry.ino!==initial.ino||
-    finalEntry.isSymbolicLink()||await realpath(fixtureRoot)!==fixture)
+    finalEntry.isSymbolicLink()||finalRoot!==fixture)
     throw Error('Synthetic fixture root identity changed; manual review required')
   return receipt
 }
