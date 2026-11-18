@@ -320,6 +320,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/local-first/non-git-batch-recovery.ts` | Read-only classifier for sealed non-Git batch recovery evidence: before, after, partial, diverged or ambiguous; no writes or automatic repair, no Runtime/Worker/Weixin integration |
 | `src/local-first/non-git-batch-stage.ts` | Default-OFF grant-gated staging of multi-file before/after images outside source; plus source-independent read-only verification of all sealed Worker after-images before an audit issue; no source writes | Default-OFF, grant-gated multi-file staging/sealing outside project source; durable per-file before/after evidence, no source apply or Runtime/Worker/Weixin integration |
 | `src/local-first/non-git-apply.ts` | Default-OFF, private owner-approved one-file non-Git apply/rollback primitive; out-of-source durable write-ahead journal, exact preview digest, drift checks, no runtime/Weixin/Worker caller; manual recovery on ambiguous state, not a general multi-file transaction |
+| `src/local-first/real-apply-contract.ts` | Proposal-only deterministic bounded change-plan validator; no host access, operator grant or production Apply API |
 | `src/local-first/project-workspaces.ts` | Host-only registered project configuration, explicit Ticket selectors, transactional isolated Git clone/non-Git snapshot preparation, safety checks and workspace verification |
 | `src/local-first/project-registry.ts` | Registered local project IDs, canonical path checks, forbidden paths and per-project write serialization; not a substitute for OS sandboxing or worker integration |
 | `src/core/model.ts` | The domain types, among them the typed Ticket and `MandateBasis`, with `threadKey`, `ticketOutcome`, `reached`, `followupOwners`, `settled`, `waitsForPerson`, `liveTicket`, `runningAssignment`, `latestAssignment` and `latestReport` |
@@ -433,6 +434,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/policy.spec.ts` | Source scope, the gate, the admission table, Mandate revalidation, the Policy version, settings migrations and assessment outcomes |
 | `tests/local-ticket-selection.spec.ts` | Actual DshExecutor.prepare local project selection and fail-closed no-project path |
 | `tests/local-ticket-worker-preview.spec.ts` | Offline cross-module `DshExecutor.prepare` → disposable snapshot → isolated Worker-copy diff → sealed batch evidence → no-write `awaiting-human` audit checkpoint; not a live DSH Session or real Apply |
+| `tests/real-apply-contract.spec.ts` | P3 pure proposal-contract refusals: path aliases, secret files, metadata/byte limits, sorting, digest; no source writes or authorization |
 | `tests/local-ticket-worker-session.spec.ts` | I1B disposable fake-host Engine receive/decide → real Executor launch/prepareDirectory → fake Session transport, Git/non-Git snapshots, replay/cancel/deny and result Outbox; no live model/Weixin/Apply |
 | `tests/weixin-native.spec.ts` | DSH-native iLink Source peer allowlist and owner-only credentials, tested with Vitest (no real QR) |
 | `tests/registry.spec.ts` | `SourceRegistry`: instances, validation, Policy parts, Channels and Thread context |
