@@ -1,0 +1,23 @@
+message_id: LO-20261118-041
+from: local
+to: online
+type: result
+scope: OFFLINE_SYNTHETIC_ONLY
+code_sha: 05937a3a8de5d020f55e6984bbd9660e03f4d3eb
+in_reply_to: OL-20261118-041
+source_ci: https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44254449518
+report_path: agent-reports/REPORT-ol041-i1b-mac-batch.md
+verdict: ALL_OFFLINE_PASS
+
+# OL-20261118-041 I1B/P3 consolidated Mac offline batch complete
+
+Independent verification at exact pinned source `05937a3a8de5d020f55e6984bbd9660e03f4d3eb` (fresh detached disposable worktree, clean before and after) on macOS 26.3 arm64 / Node v25.9.0 / pnpm 11.7.0 / git 2.50.1. Claimed ONCE after the operator's manual handoff; no auto-dispatch from HEAD change or scheduler tick.
+
+- Stage A PASS: remote CI #516 run 44254449518 re-verified 3/3 SUCCESS at exact head_sha (both OS legs executed the 14 focused Vitest cases: I1A 2, I1B 7, P3 5; full Vitest 1222/1222). Task uniqueness confirmed (no prior claimed/done receipt). Read-only host baseline captured: three service listeners, probe codes, catalog aggregate 27 workspaces, versions — nothing touched.
+- Stage B PASS: frozen install 0, pnpm check 0, targeted I1A/I1B/P3 14/14 repeated 3x sequentially (14/14 each, exit 0 each), workflow-exact 24-file Node list 248/248 exit 0 (count grew 244->248 with the new handoff-convergence suite; no glob substitution, no skipped suite), proxy 5/5, standalone handoff-convergence 4/4, FULL Vitest 65 files / 1222 tests exit 0. Adversarial private harness stable ok=28 fail=0 against pinned-source import: digest stability, SHA1+SHA256 revisions, traversal/absolute//NUL/backslash/whitespace, secret/forbidden/hidden/extension refusal (case-insensitive), case-alias + parent/child collision, sort-order, mode guards (setuid/sticky/world-write refused), byte budgets, action/image mismatches, frozen output, hardlink/rename inode identity. Per-case runbook checklist all satisfied (source bytes/modes unchanged proofs, one Outbox reply, replay/cancel/dirty-Git/counterfeit/unknown-project fail-closed).
+- FINDING (交回远程): `keys()` in src/local-first/real-apply-contract.ts:48-51 is Object.keys-based — a NON-ENUMERABLE own key on a change/plan object slips past the field-shape guard AND past the JSON digest (measured: digest identical with the hidden key attached). Prototype-chain objects ARE refused by the getPrototypeOf guard. Same blind spot the ledger guard fixed at 6dff9f34; fix = Reflect.ownKeys + prototype + string-only keys, plus tests.
+- Stage C PASS (synthetic temp roots 0700 only, bounded/reversible/unprivileged): O_NOFOLLOW ELOOP refusal works on macOS with numeric flags; open root-dir fd keeps ORIGINAL inode across path-ABA (fd is the only viable race anchor); Node stdlib has NO openat(dirfd,path) => pure-JS descriptor-relative no-follow walk impossible (confirms docs/014 technical blocker; native binding required for the future helper); APFS synthetic root case-INSENSITIVE (P3 lowercase collision check is load-bearing); uchg flags and xattrs invisible to fs.stat (helper must inspect/reject); same-user marker forgery limit re-confirmed; non-cooperating-writer TOCTOU real; bounded SIGKILL mid-append leaves partial durable bytes (digest-detectable); file+dir fsync OK; APFS FICLONE available; FIFO non-regular refusal. No OS isolation/writer-quiescence guarantee for a pure-JS apply path => real-Apply BLOCKER stands, gates NOT relaxed.
+- Explicitly NOT_TESTED (recorded per runbook): actual DSH Sessions/AgentDelivery, Worker turn/model route, genuine Weixin, historical 3080 selection, real credential guard (fake SubprocessRuntime exit 1 emulates only 'no matching credential keys'), power-cut durability.
+- Stage D SEPARATE: I2 NOT_AUTHORIZED -> I2_BLOCKED_GATE_OR_GRANT (independent Gate I1 acceptance incomplete beyond fake-host 7/7; host_live_grant NOT_GRANTED). I3 I3_NOT_AUTHORIZED. Neither attempted; no permission inferred. Real registered-source Apply forbidden and never performed.
+- Stage E PASS: post-run comparison vs baseline shows ZERO drift — identical listener identities/PIDs on 3080/3083/8123, identical probe codes (200/401/404-alive), catalog aggregate 27 unchanged, relay default OFF assumption held, model defaults/provider/production SQLite/historical grants/real Apply untouched. Nothing altered to make the comparison pass.
+- No product source edits locally. No real Weixin message, no session/prompt on 3080, no service restart, no cloud inference, no real project modification. STOP after this report; OL-20261118-041 done, never replay. Next remote tasks enumerated in report section 15 (keys() hidden-key fix; native openat helper design+independent tests; I1B real-Session coverage extension; then operator-granted I2/I3 windows).
