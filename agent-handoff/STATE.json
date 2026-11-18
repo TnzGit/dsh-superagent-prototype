@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online_with_manual_local_batch",
+  "owner": "remote_online",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -17,14 +17,17 @@
     "vitest_tests": 1208
   },
   "last_accepted_local": {
-    "task_id": "OL-20261114-040",
-    "result_id": "LO-20261114-040",
-    "report_commit": "52234ceb80ec781ed3f18df8ac10ab5f2626e664",
-    "report_ci_run_id": 43597825578,
-    "online_ack": "agent-handoff/receipts/online/LO-20261114-040-done.md",
+    "task_id": "OL-20261118-041",
+    "result_id": "LO-20261118-041",
+    "report_commit": "fc0744406d4464ec09daa6c17619ed4b1a698d69",
+    "report_ci_run_id": 44270499684,
+    "report_ci_status": "FAIL_HANDOFF_MIDSYNC_UNTIL_ACK",
+    "source_code_sha": "05937a3a8de5d020f55e6984bbd9660e03f4d3eb",
+    "source_ci_run_id": 44254449518,
+    "online_ack": "agent-handoff/receipts/online/LO-20261118-041-done.md",
     "verdict": "ALL_OFFLINE_PASS"
   },
-  "active_local_task": "OL-20261118-041",
+  "active_local_task": null,
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -72,7 +75,12 @@
     "host_live_grant": "NOT_GRANTED",
     "real_source_apply": "FORBIDDEN",
     "handoff": "agent-handoff/HANDOFF-2026-11-18-I1B-MAC-BATCH.md",
-    "report_expected": "agent-reports/REPORT-ol041-i1b-mac-batch.md"
+    "report_expected": "agent-reports/REPORT-ol041-i1b-mac-batch.md",
+    "status": "ACCEPTED_AND_CLOSED",
+    "local_claim_sha": "8e24f1b4bdafd1c03cc6a2cade21a4037cbfabf8",
+    "local_done_sha": "4a0d166d39d55a9ac8df6752bbdc9284a86a03fe",
+    "report_commit": "fc0744406d4464ec09daa6c17619ed4b1a698d69",
+    "online_ack": "agent-handoff/receipts/online/LO-20261118-041-done.md"
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -83,7 +91,8 @@
     "actual_dsh_sessions": false,
     "model_turn": false,
     "real_weixin": false,
-    "real_source_apply": false
+    "real_source_apply": false,
+    "local_offline_verdict": "ALL_OFFLINE_PASS"
   },
   "p3_apply_contract": {
     "status": "PURE_PROPOSAL_VALIDATOR_ONLY",
@@ -91,6 +100,7 @@
     "linux_named_tests": 5,
     "macos_named_tests": 5,
     "os_helper_implemented": false,
-    "real_apply_enabled": false
+    "real_apply_enabled": false,
+    "local_mac_assessment": "OFFLINE_PASS_WITH_HIDDEN_PROPERTY_FINDING"
   }
 }

@@ -1,17 +1,14 @@
-# WORK_QUEUE — current integration delivery (2026-11-18)
+# WORK_QUEUE — post OL-041 closure (2026-11-18)
 
-Read STATE.json first; archives are historic, not authority.
+STATE.json is authoritative; all history is archived. No active local task, no pending online ACK, remote scheduler remains paused.
 
-| Priority | Workstream | Status | Exit |
+| Priority | Work | State / owner | Next measurable exit |
 | --- | --- | --- | --- |
-| P0 | C6B2B6G / OL-040 | DONE/ACKed | Prior CI #485/#488 verified, never replay |
-| P1 | State convergence, PR conflict | DONE | short state, archived history, mergeable PR still Draft |
-| P2/I1A | prepare→snapshot→preview→audit | OFFLINE_PARTIAL_PASS | CI #498 2/2 each OS |
-| P2/I1B | Engine→actual Executor launch, fake Sessions | FAKE_HOST_PARTIAL_PASS | source 05937a3, CI #516 7/7 per OS; real Session/model not tested |
-| P2/Local | Concentrated Mac I1 readiness/P3 OS proof | OL-20261118-041 MANUAL OFFLINE TASK | once-only redacted LO-041 report and receipts, no live host |
-| P2/I2-I3 | Real disposable Worker/Weixin project tests | BLOCKED/NOT AUTHORIZED | full I1 pass plus fresh private per-stage human grants |
-| P3/contract | Pure proposed-plan validation | PASS_FILTER_ONLY | 5/5 each OS; no Apply or operator grant |
-| P3/helper | OS real Apply execution component | NOT IMPLEMENTED | fd-safe paths, writer quiescence, true one-use authority, backups/crash recovery |
-| P4 | PR review, split and release | DRAFT/BLOCKED | code review/real validation; no auto merge |
+| P0 | OL-041 consolidated macOS offline acceptance | CLOSED / ACKed LO-041 | Report + claim/done + source CI independently reviewed; online ACK committed |
+| P0 | Handoff convergence mid-sync #530–533 | ACK state synchronized / remote | New post-ACK CI 3/3, no re-run OL-041 |
+| P1 | P3 proposed-plan hidden non-enumerable key | FIX PENDING / remote | Reflect.ownKeys descriptor tests, Linux/macOS + full CI |
+| P2 | True I1B Sessions/AgentDelivery/worker lifecycle | INCOMPLETE / remote | Real DSH Session management via fake DSH host, worker turn, request/reply provenance; retain no-write guarantees |
+| P3 | macOS fd-rooted OS Apply helper | DESIGN/FEASIBILITY ONLY / remote | Native openat/no-follow, metadata, writer quiescence, private capability, durable backup and crash recovery; NO real Apply |
+| P4 | PR #1 review/split/merge | DRAFT, NOT RELEASE READY | Functional review + actual host evidence + separate approval |
 
-Remote ChatGPT scheduler remains PAUSED, local scheduler state unverified, no auto dispatch. Local Agent may manually claim only this offline task, no original host modification. Remote resumes source progress after independently accepting LO-041.
+Verified source: `05937a3a8de5d020f55e6984bbd9660e03f4d3eb`, CI #516 3/3, I1A/I1B/P3 14/14 each OS, full Vitest 1222/1222. Local report: agent-reports/REPORT-ol041-i1b-mac-batch.md. Do not infer full I1 or production Apply acceptance from synthetic findings. No new OL-042 or live-host grant exists.
