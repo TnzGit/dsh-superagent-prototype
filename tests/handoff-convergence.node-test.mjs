@@ -59,7 +59,14 @@ test('historical long documents remain losslessly archived and active state is s
   if(state.active_local_task){
     assert.ok(read('LOCAL_AGENT_TASK.md').includes(state.active_local_task))
     assert.equal(state.local_batch.host_live_grant,'NOT_GRANTED')
-    assert.equal(state.local_batch.code_sha,state.integration_i1b.test_sha)
+    assert.match(state.local_batch.code_sha,/^[0-9a-f]{40}$/)
+    assert.ok(read('LOCAL_AGENT_TASK.md').includes(state.local_batch.code_sha))
+    const sequence=state.active_local_task.slice(-3)
+    const messages=readdirSync(path('agent-handoff/messages/to-local')).filter(name=>name.includes('-ol'+sequence+'-'))
+    assert.equal(messages.length,1)
+    const taskMessage=read('agent-handoff/messages/to-local/'+messages[0])
+    assert.ok(taskMessage.includes('message_id: '+state.active_local_task))
+    assert.ok(taskMessage.includes('code_sha: '+state.local_batch.code_sha))
     // A claimed/done receipt with no online ACK is a valid bounded handoff transition.
     // It grants no additional host actions; STATE remains pending until the remote ACK.
   }else assert.match(read('LOCAL_AGENT_TASK.md'),/NO ACTIVE TASK/)
