@@ -38,3 +38,11 @@ Follow `docs/013-integration-acceptance.md` for isolated project-aware Ticket/Wo
 - I1B fake-host uses real Engine accept, DshExecutor effect/launch/prepareDirectory and disposable Git/non-Git source snapshots but FAKE Session/Agent transport; actual model/Weixin/DSH Session and full I1 not proven.
 - P3 proposed-plan contract is a pure rejection filter with no source I/O, OS helper, genuine authorization or Apply method. No registered source writes eligible.
 - New user-requested local handoff OL-20261118-041 is manual-only OFFLINE_SYNTHETIC_ONLY; see agent-handoff/HANDOFF-2026-11-18-I1B-MAC-BATCH.md. I2/I3 are NOT granted by GitHub text; old historical baseline 9adced9 and OL-040 ACK remain intact; PR #1 stays DRAFT.
+
+
+## 2026-11-18 LO-041 closeout and subsequent remote code checks (NOT a release)
+
+- OL-20261118-041 local verdict ALL_OFFLINE_PASS was independently ACKed at `agent-handoff/receipts/online/LO-20261118-041-done.md`. Original source SHA 05937a3 and source CI #516 3/3. Local report addendum commit fc0744406d4464ec09daa6c17619ed4b1a698d69, expected mid-sync report CI #530–533 RED on two state guards; post-ACK state synchronization restored 3/3 CI #534/#535. Historical failed checks were not reclassified as green.
+- Remote hidden-key fix + I1C real AgentDelivery test SHA `1b9fe55ce2e59d8e3a7e6c979101774bb9a72890`, CI [#539](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44289161705) 3/3; Linux/macOS each 23/23 focused tests (I1A 2, fake-host I1B 7, P3 validator 9, I1C real AgentDelivery/fake persistence 5), full Vitest 1231/1231, build/typecheck successful. No true SessionController Worker turn/model inference.
+- Original source baseline 9adced9 remains a historical C6 synthetic anchor, not the most recent integration candidate or production deployed version. PR #1 is still DRAFT/unmerged; no service, provider, Weixin, historical Session/Workspace, registered source, real Apply or main changes.
+- Native fd-rooted OS helper, writer quiescence, private one-time transaction capability, metadata/backup/crash recovery and real I2/I3 authorizations remain **NOT DONE**. Local handoff OL-041 is closed and no new local task is active. Automation remains paused.
