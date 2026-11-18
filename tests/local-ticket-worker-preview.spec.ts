@@ -1,9 +1,10 @@
+// @ts-nocheck
 /** I1A: cross-module offline fixture acceptance, NOT a real DSH Worker Session or real Apply.
  * Exercise the actual DshExecutor.prepare project binding followed by the same
  * snapshot function used by its directory preparation, preview, sealed evidence
  * and the durable human-review checkpoint. All writes are disposable fixtures.
  */
-import test from 'node:test'
+import {test} from 'vitest'
 import assert from 'node:assert/strict'
 import {mkdtempSync,mkdirSync,writeFileSync,readFileSync,rmSync,existsSync,statSync} from 'node:fs'
 import {tmpdir} from 'node:os'
