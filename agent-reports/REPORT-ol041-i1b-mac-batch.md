@@ -122,9 +122,18 @@ All synthetic fixtures were created under fresh OS-temp roots (0700) and are rec
 - to-online: `agent-handoff/messages/to-online/2026-11-18-lo041-integrated-mac-batch-done.md` (message_id LO-20261118-041)
 - private: `claim-OL-20261118-041` status done (0600); evidence harness + sanitized log in a NEW private 0700 directory outside the repo.
 
+## 13a. Report-commit CI status and exact repro (known mid-sync mismatch, remote-owned)
+
+Done-commit `4a0d166` CI runs #530 (44269422939) and #531 (44269427942): `dsh-typecheck-and-build` SUCCESS; `local-first-core` and `macos-portability` FAILED with exactly 2 assertions in `tests/handoff-convergence.node-test.mjs` — both caused by the handoff being mid-sync after publication (STATE.json is remote-owned product state; local publication is forbidden to edit it):
+
+1. `last accepted result is acked and a newer OL is at most one and independently scoped` (:37): `Expected values to be strictly equal: 41 !== 40` — `largest(messages/to-online, /-lo(\d{3})-/)` now sees the new `LO-20261118-041` while `last_accepted_local` still names `OL-20261114-040`/`LO-20261114-040`.
+2. `historical long documents remain losslessly archived and active state is short` (:52): `assert.ok(!existsSync(receipts/local/ + state.active_local_task + '-done.md'))` fails because STATE.json still has `active_local_task: "OL-20261118-041"` while the done receipt now exists.
+
+At the exact pinned source (stage worktree, before publication) the same 4 tests pass 4/4; the red appears ONLY on the report HEAD tree containing the new LO-041 + done receipt + unchanged STATE.json. Same class as the OL-20261113-024 precedent: the guard needs the remote's ACK/state-sync commit (`last_accepted_local` → OL-041/LO-041, `active_local_task` → null, LOCAL_AGENT_TASK.md → NO ACTIVE TASK) before it goes green again. Minimal repro on any checkout containing the done receipt with unchanged STATE.json. No local action taken; product state not edited locally per protocol.
+
 ## 14. Sanitized security review
 
-Report contains only: SHAs, CI run numbers, test counts, tool versions, synthetic fixture behavior, and generic service probe codes. No real file paths, session/workspace IDs, Weixin IDs, tokens, secrets, config JSON, or host identifiers exposed. Private evidence stayed outside the repository and real projects; nothing pushed is credential output.
+Report contains only: SHAs, CI run numbers, test counts, tool versions, synthetic fixture behavior, and generic service probe codes. No real file paths, session/workspace IDs, Weixin IDs, tokens, secrets, config JSON, or host identifiers exposed. Private evidence stayed outside the repository and real projects; nothing pushed is credential output. (Updated section 13a after observing the report-commit CI failure; the only added content is assertion text and line numbers.)
 
 ## 15. Exact next remote code tasks
 
@@ -132,3 +141,4 @@ Report contains only: SHAs, CI run numbers, test counts, tool versions, syntheti
 2. Design and independently test the OS-isolated apply helper: native `openat`-equivalent (C binding) anchored to a root dir fd; inode identity revalidation; ACL/xattr/flags/hardlink/symlink reject-or-fully-preserve; bounded crash injection per journal/write/sync step with kill-after-each-step; exclusive writer/maintenance domain proof. Until then real Apply gates stay BLOCKED per REAL_APPLY_GATES.md and docs/014 (all 7-gate matrix rows PENDING).
 3. Extend I1B toward real DSH Sessions/AgentDelivery + Worker model-route coverage beyond the fake envelope (keep fake-host tests as regression, not acceptance).
 4. After 1–3 land with own CI 3/3, operator-granted one-shot I2 (isolated disposable project copy, STOP BEFORE SOURCE APPLY), then a separately granted I3 window — never inferred from this batch.
+5. State-sync commit (remote-owned): after ACKing LO-041, update `agent-handoff/STATE.json` (`last_accepted_local` → OL-20261118-041/LO-20261118-041 with this report commit + report CI, `active_local_task` → null) and revert LOCAL_AGENT_TASK.md to NO ACTIVE TASK, so the two handoff-convergence guards pass again; then re-run CI to 3/3.
