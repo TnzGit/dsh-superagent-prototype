@@ -39,7 +39,8 @@
     "agent-handoff/HANDOFF-2026-11-18-I1B-MAC-BATCH.md",
     "tests/local-ticket-worker-session.spec.ts",
     "src/local-first/real-apply-contract.ts",
-    "tests/real-apply-contract.spec.ts"
+    "tests/real-apply-contract.spec.ts",
+    "tests/local-agent-delivery-session.spec.ts"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -95,12 +96,38 @@
     "local_offline_verdict": "ALL_OFFLINE_PASS"
   },
   "p3_apply_contract": {
-    "status": "PURE_PROPOSAL_VALIDATOR_ONLY",
+    "status": "PURE_PROPOSAL_VALIDATOR_HIDDEN_FIELD_FIXED",
     "test_sha": "05937a3a8de5d020f55e6984bbd9660e03f4d3eb",
     "linux_named_tests": 5,
     "macos_named_tests": 5,
     "os_helper_implemented": false,
     "real_apply_enabled": false,
-    "local_mac_assessment": "OFFLINE_PASS_WITH_HIDDEN_PROPERTY_FINDING"
+    "local_mac_assessment": "OFFLINE_PASS_WITH_HIDDEN_PROPERTY_FINDING",
+    "hidden_own_keys_rejected": true,
+    "symbol_and_getter_rejected": true,
+    "changes_array_strict": true,
+    "remote_fix_sha": "1b9fe55ce2e59d8e3a7e6c979101774bb9a72890"
+  },
+  "remote_followup": {
+    "status": "SOURCE_CI_GREEN_OFFLINE",
+    "source_sha": "1b9fe55ce2e59d8e3a7e6c979101774bb9a72890",
+    "ci_run_id": 44289161705,
+    "ci_run_number": 539,
+    "os_jobs": "3_of_3_success",
+    "focus_tests_per_os": 23,
+    "full_vitest": 1231,
+    "i1c_real_agent_delivery_mock_host_tests": 5,
+    "p3_plan_contract_tests": 9,
+    "handoff_transitional_guards": "FIXED"
+  },
+  "integration_i1c": {
+    "status": "REAL_AGENT_DELIVERY_DISPOSABLE_TRANSPORT_PASS_NOT_REAL_SESSION",
+    "test_sha": "1b9fe55ce2e59d8e3a7e6c979101774bb9a72890",
+    "ci_run_id": 44289161705,
+    "linux_named_tests": 5,
+    "macos_named_tests": 5,
+    "real_dsh_session_controller": false,
+    "real_model_turn": false,
+    "real_weixin": false
   }
 }

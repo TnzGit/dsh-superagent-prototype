@@ -1,14 +1,15 @@
-# WORK_QUEUE — post OL-041 closure (2026-11-18)
+# WORK_QUEUE — post LO-041 remote work (2026-11-18)
 
-STATE.json is authoritative; all history is archived. No active local task, no pending online ACK, remote scheduler remains paused.
+Read STATE.json. There is NO ACTIVE LOCAL TASK and no automatic dispatch; old tasks are archived/ACKed, no OL-042. Online automation PAUSED.
 
-| Priority | Work | State / owner | Next measurable exit |
+| Priority | Work | State | Exit criterion |
 | --- | --- | --- | --- |
-| P0 | OL-041 consolidated macOS offline acceptance | CLOSED / ACKed LO-041 | Report + claim/done + source CI independently reviewed; online ACK committed |
-| P0 | Handoff convergence mid-sync #530–533 | ACK state synchronized / remote | New post-ACK CI 3/3, no re-run OL-041 |
-| P1 | P3 proposed-plan hidden non-enumerable key | FIX PENDING / remote | Reflect.ownKeys descriptor tests, Linux/macOS + full CI |
-| P2 | True I1B Sessions/AgentDelivery/worker lifecycle | INCOMPLETE / remote | Real DSH Session management via fake DSH host, worker turn, request/reply provenance; retain no-write guarantees |
-| P3 | macOS fd-rooted OS Apply helper | DESIGN/FEASIBILITY ONLY / remote | Native openat/no-follow, metadata, writer quiescence, private capability, durable backup and crash recovery; NO real Apply |
-| P4 | PR #1 review/split/merge | DRAFT, NOT RELEASE READY | Functional review + actual host evidence + separate approval |
+| P0 | OL-041 independent Mac offline acceptance | DONE/ACKed LO-041 | Sanitized report, receipts and source CI verified; post-ACK CI #535 3/3 |
+| P1 | P3 hidden own-property shape bypass | FIXED / remote | Source `1b9fe55ce2e59d8e3a7e6c979101774bb9a72890`, [CI #539](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44289161705) 3/3; new 4 regression cases, P3 suite 9/9 |
+| P1 | Mid-sync done-before-ACK CI guard | FIXED / remote | Recognize one narrow pending-ACK transition; #539 3/3 |
+| P2 | I1C actual AgentDelivery with disposable DSH transport | OFFLINE_PARTIAL_PASS / remote | New 5/5 on Linux/macOS; not real Sessions.ensure or model Worker turn |
+| P2 | Full I1 Ticket→actual DSH Session→model Worker→preview→review→reply | INCOMPLETE / remote | Integrate real DSH SessionController fake host, model/tool role, review correlation and replay negative matrix; then privately authorized real host I2/I3 |
+| P3 | OS-native real Apply helper and quiescence | DESIGN / BLOCKED | native descriptor-relative no-follow, metadata, durable backup/recovery, authenticated one-time capability; NO source Apply |
+| P4 | Large PR #1 review/split/merge | DRAFT / NOT READY | actual host proof, independent review, explicit release decision |
 
-Verified source: `05937a3a8de5d020f55e6984bbd9660e03f4d3eb`, CI #516 3/3, I1A/I1B/P3 14/14 each OS, full Vitest 1222/1222. Local report: agent-reports/REPORT-ol041-i1b-mac-batch.md. Do not infer full I1 or production Apply acceptance from synthetic findings. No new OL-042 or live-host grant exists.
+Previous OL-041 source SHA 05937a3 and tests 14/14 remain historical accepted evidence; no automatic or historical host authorization is implied by new CI.
