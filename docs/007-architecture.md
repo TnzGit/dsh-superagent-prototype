@@ -435,6 +435,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/local-ticket-selection.spec.ts` | Actual DshExecutor.prepare local project selection and fail-closed no-project path |
 | `tests/local-ticket-worker-preview.spec.ts` | Offline cross-module `DshExecutor.prepare` → disposable snapshot → isolated Worker-copy diff → sealed batch evidence → no-write `awaiting-human` audit checkpoint; not a live DSH Session or real Apply |
 | `tests/real-apply-contract.spec.ts` | P3 pure proposal-contract refusals: path aliases, secret files, metadata/byte limits, sorting, digest; no source writes or authorization |
+| `tests/local-sessions-worker-boundary.spec.ts` | I1D actual Sessions.ensure/initializeRoleModel/AgentDelivery worker lifecycle on a disposable DSH SessionController/agent context; source and host untouched |
 | `tests/local-agent-delivery-session.spec.ts` | I1C actual AgentDelivery under synthetic DSH event/persistence agent transport; dedup, restart/history, abort/authorization, legacy and notice semantics, no real model or source writes |
 | `tests/local-ticket-worker-session.spec.ts` | I1B disposable fake-host Engine receive/decide → real Executor launch/prepareDirectory → fake Session transport, Git/non-Git snapshots, replay/cancel/deny and result Outbox; no live model/Weixin/Apply |
 | `tests/weixin-native.spec.ts` | DSH-native iLink Source peer allowlist and owner-only credentials, tested with Vitest (no real QR) |

@@ -134,8 +134,17 @@ export class Sessions {
       if (status === 'idle' && !this.host.closing()) { this.retryHealth.clear(agent.id); this.updateModelHealth() }
     })
   }
-  /** Resolves or creates session `id` in workspace `cwd`, initializes its role model, decorates it with prompts/skills/tools, sets `danger-full-access` permissions, and renames it to `title`. */
+  /** Resolves or creates a role-bound Session. Registered project workers may run only for an active Ticket in its selected snapshot. */
   async ensure(id: string, cwd: string, title: string, role: 'orchestrator' | 'worker'): Promise<Agent> {
+    // Fail closed BEFORE creating or resolving an Agent: a name resembling a Worker
+    // must not turn an absent/ended Ticket into a danger-full-access Session.
+    const workerTicketId = role === 'worker' ? ticketOfSession(id) : undefined
+    const workerTicket = workerTicketId ? this.host.store.tickets.get(workerTicketId) : undefined
+    if (role === 'worker' && (!workerTicket || !liveTicket(workerTicket)))
+      throw new Error('Worker Session requires an active existing Ticket')
+    if (role === 'worker' && workerTicket?.execution?.projectId &&
+      (!cwd || cwd !== workerTicket.execution.directory))
+      throw new Error('Worker Session directory does not match its registered project snapshot')
     const ctx = this.ctx
     let result = await ctx.sessionController.resolveAgent(id as SessionId)
     if ('error' in result && result.error.code === 'session/not-found') {
@@ -150,9 +159,7 @@ export class Sessions {
     await initializeRoleModel(ctx, result.agent, role === 'orchestrator' ? settings.eval.model : settings.executor.model)
     await this.decorate(result.agent)
     // Registered local-project Tickets run only in a disposable snapshot, not with unrestricted host write access.
-    const localTicketId = role === 'worker' ? ticketOfSession(id) : undefined
-    const localTicket = localTicketId ? this.host.store.tickets.get(localTicketId) : undefined
-    ctx.permissionPresets.set(result.agent.session, localTicket?.execution?.projectId ? 'workspace-write' : 'danger-full-access')
+    ctx.permissionPresets.set(result.agent.session, workerTicket?.execution?.projectId ? 'workspace-write' : 'danger-full-access')
     await ctx.sessionController.rename({ sessionId: id as SessionId, title })
     return result.agent
   }
