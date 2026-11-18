@@ -11,11 +11,11 @@ const state=JSON.parse(read('agent-handoff/STATE.json'))
 const getNum=(name,re)=>{const m=name.match(re);return m?Number(m[1]):-1}
 const largest=(names,re)=>Math.max(-1,...names.map(n=>getNum(n,re)))
 
-test('handoff index is a bounded explicit convergence state rather than a stale pending local task',()=>{
+test('handoff index has bounded state and explicitly named scoped work only',()=>{
   assert.equal(state.schema_version,1)
   assert.equal(state.branch,'feat/local-first-wechat-foundation')
   assert.equal(state.phase,'INTEGRATION_CONVERGENCE')
-  assert.equal(state.active_local_task,null)
+  assert.ok(state.active_local_task===null || /^OL-\d{8}-\d{3}$/.test(state.active_local_task))
   assert.equal(state.pending_online_ack,null)
   assert.equal(state.no_auto_dispatch,true)
   assert.equal(state.remote_automation,'PAUSED_BY_OPERATOR')
@@ -24,13 +24,16 @@ test('handoff index is a bounded explicit convergence state rather than a stale 
   assert.match(state.last_accepted_local.report_commit,/^[0-9a-f]{40}$/)
   assert.equal(state.last_accepted_local.verdict,'ALL_OFFLINE_PASS')
 })
-test('last accepted local task and result have committed proof, with no newer dispatched OL',()=>{
+test('last accepted result is acked and a newer OL is at most one and independently scoped',()=>{
   const id=state.last_accepted_local.task_id
   const result=state.last_accepted_local.result_id
   const taskN=getNum(id,/^OL-\d{8}-(\d{3})$/)
   assert.ok(taskN>0)
   assert.equal(taskN,getNum(result,/^LO-\d{8}-(\d{3})$/))
-  assert.equal(largest(readdirSync(path('agent-handoff/messages/to-local')), /-ol(\d{3})-/),taskN)
+  const pending=state.active_local_task
+  const latest=pending?getNum(pending,/^OL-\d{8}-(\d{3})$/):taskN
+  assert.ok(latest===taskN || latest===taskN+1)
+  assert.equal(largest(readdirSync(path('agent-handoff/messages/to-local')), /-ol(\d{3})-/),latest)
   assert.equal(largest(readdirSync(path('agent-handoff/messages/to-online')),/-lo(\d{3})-/),taskN)
   assert.ok(existsSync(path(state.last_accepted_local.online_ack)))
   assert.ok(read(state.last_accepted_local.online_ack).includes(result))
@@ -43,7 +46,12 @@ test('historical long documents remain losslessly archived and active state is s
     assert.ok(statSync(path(p)).size<12000,p+' too large: move history to archive')
   assert.ok(statSync(path('agent-handoff/archive/CURRENT_STATE-through-OL040-2026-11-14.md')).size>100000)
   assert.ok(statSync(path('agent-handoff/archive/WORK_QUEUE-through-OL040-2026-11-14.md')).size>100000)
-  assert.match(read('LOCAL_AGENT_TASK.md'),/NO ACTIVE TASK/)
+  if(state.active_local_task){
+    assert.ok(read('LOCAL_AGENT_TASK.md').includes(state.active_local_task))
+    assert.equal(state.local_batch.host_live_grant,'NOT_GRANTED')
+    assert.equal(state.local_batch.code_sha,state.integration_i1b.test_sha)
+    assert.ok(!existsSync(path('agent-handoff/receipts/local/'+state.active_local_task+'-done.md')))
+  }else assert.match(read('LOCAL_AGENT_TASK.md'),/NO ACTIVE TASK/)
   assert.match(read('agent-handoff/MESSAGE_PROTOCOL.md'),/operator pause overrides automatic CI-to-task dispatch/)
 })
 test('convergence roadmap and OS authorization document exist without announcing real Apply',()=>{
