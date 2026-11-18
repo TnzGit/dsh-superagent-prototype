@@ -45,9 +45,32 @@ function object(value: unknown, what: string): Record<string, unknown> {
     throw new Error('Invalid ' + what + ' object')
   return value as Record<string, unknown>
 }
+/**
+ * Reject keys that JSON.stringify would silently omit (non-enumerable or Symbol)
+ * and accessors that could change their value between validation and digest.
+ * A frozen ordinary object with own enumerable data properties remains valid.
+ */
 function keys(value: Record<string, unknown>, names: string[], what: string): void {
-  if (Object.keys(value).length !== names.length || Object.keys(value).some(k => !names.includes(k)))
-    throw new Error('Invalid ' + what + ' fields')
+  const owned = Reflect.ownKeys(value)
+  if (owned.length !== names.length || owned.some(k => {
+    if (typeof k !== 'string' || !names.includes(k)) return true
+    const descriptor = Object.getOwnPropertyDescriptor(value, k)
+    return !descriptor || !descriptor.enumerable || !Object.hasOwn(descriptor, 'value')
+  })) throw new Error('Invalid ' + what + ' fields')
+}
+/** The changes collection itself must have only dense own data entries and length. */
+function plainChanges(value: unknown): value is unknown[] {
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) return false
+  const owned = Reflect.ownKeys(value)
+  if (owned.length !== value.length + 1 || !owned.includes('length')) return false
+  return owned.every(k => {
+    if (k === 'length') return true
+    if (typeof k !== 'string' || !/^(0|[1-9][0-9]*)$/.test(k)) return false
+    const index = Number(k)
+    if (!Number.isSafeInteger(index) || index >= value.length) return false
+    const descriptor = Object.getOwnPropertyDescriptor(value, k)
+    return !!descriptor && descriptor.enumerable && Object.hasOwn(descriptor, 'value')
+  })
 }
 function sha(value: unknown): value is string { return typeof value === 'string' && SHA.test(value) }
 function bytes(value: unknown): value is number {
@@ -81,7 +104,7 @@ export function inspectProposedApplyPlan(input: unknown): InspectedApplyPlan {
   keys(plan, ['version', 'projectId', 'rootFingerprint', 'sourceRevision', 'changes'], 'plan')
   if (plan.version !== 1 || typeof plan.projectId !== 'string' || !ID.test(plan.projectId) ||
     !sha(plan.rootFingerprint) || typeof plan.sourceRevision !== 'string' || !REVISION.test(plan.sourceRevision) ||
-    !Array.isArray(plan.changes) || !plan.changes.length || plan.changes.length > MAX_FILES)
+    !plainChanges(plan.changes) || !plan.changes.length || plan.changes.length > MAX_FILES)
     throw new Error('Invalid proposed Apply scope or limits')
   const changes: ProposedApplyChange[] = []
   const paths = new Set<string>()

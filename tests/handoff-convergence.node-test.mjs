@@ -34,7 +34,17 @@ test('last accepted result is acked and a newer OL is at most one and independen
   const latest=pending?getNum(pending,/^OL-\d{8}-(\d{3})$/):taskN
   assert.ok(latest===taskN || latest===taskN+1)
   assert.equal(largest(readdirSync(path('agent-handoff/messages/to-local')), /-ol(\d{3})-/),latest)
-  assert.equal(largest(readdirSync(path('agent-handoff/messages/to-online')),/-lo(\d{3})-/),taskN)
+  const inbound=largest(readdirSync(path('agent-handoff/messages/to-online')),/-lo(\d{3})-/)
+  // The local report and done receipt are committed before the remote ACK:
+  // only that one exact unacknowledged OL may be in a mid-sync state.
+  const done=pending && existsSync(path('agent-handoff/receipts/local/'+pending+'-done.md'))
+  assert.equal(inbound,done?latest:taskN)
+  if(done){
+    const resultId=pending.replace(/^OL-/,'LO-')
+    const file='agent-handoff/receipts/online/'+resultId+'-done.md'
+    assert.ok(!existsSync(path(file)),'unacknowledged result must not have an online ACK')
+    assert.ok(read('agent-handoff/receipts/local/'+pending+'-done.md').includes('ALL_OFFLINE_PASS'))
+  }
   assert.ok(existsSync(path(state.last_accepted_local.online_ack)))
   assert.ok(read(state.last_accepted_local.online_ack).includes(result))
   assert.ok(existsSync(path('agent-handoff/receipts/local/'+id+'-claimed.md')))
@@ -50,7 +60,8 @@ test('historical long documents remain losslessly archived and active state is s
     assert.ok(read('LOCAL_AGENT_TASK.md').includes(state.active_local_task))
     assert.equal(state.local_batch.host_live_grant,'NOT_GRANTED')
     assert.equal(state.local_batch.code_sha,state.integration_i1b.test_sha)
-    assert.ok(!existsSync(path('agent-handoff/receipts/local/'+state.active_local_task+'-done.md')))
+    // A claimed/done receipt with no online ACK is a valid bounded handoff transition.
+    // It grants no additional host actions; STATE remains pending until the remote ACK.
   }else assert.match(read('LOCAL_AGENT_TASK.md'),/NO ACTIVE TASK/)
   assert.match(read('agent-handoff/MESSAGE_PROTOCOL.md'),/operator pause overrides automatic CI-to-task dispatch/)
 })

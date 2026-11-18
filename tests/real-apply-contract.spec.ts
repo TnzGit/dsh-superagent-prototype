@@ -84,3 +84,70 @@ test('P3 contract refuses malformed outer scope and never confuses SHA digest wi
   expect(inspectProposedApplyPlan(plan())).not.toHaveProperty('apply')
   expect(inspectProposedApplyPlan(plan())).not.toHaveProperty('operatorApproved')
 })
+
+
+test('P3 rejects non-enumerable extra keys on plan/change instead of digest-colliding', () => {
+  const trusted = inspectProposedApplyPlan(plan()).digest
+  const hiddenPlan = plan()
+  Object.defineProperty(hiddenPlan, 'unsignedApproval', { value: true, enumerable: false })
+  expect(Object.keys(hiddenPlan)).not.toContain('unsignedApproval')
+  expect(() => inspectProposedApplyPlan(hiddenPlan)).toThrow(/fields/)
+  const hiddenChange = plan()
+  Object.defineProperty(hiddenChange.changes[0], 'skipReview', { value: true, enumerable: false })
+  expect(() => inspectProposedApplyPlan(hiddenChange)).toThrow(/fields/)
+  const clean = inspectProposedApplyPlan(plan()).digest
+  expect(clean).toBe(trusted)
+})
+
+test('P3 rejects Symbol keys and accessors in proposal objects without invoking getters', () => {
+  const symbol = Symbol('invisible')
+  const withSymbol = plan()
+  withSymbol[symbol] = 'different'
+  expect(() => inspectProposedApplyPlan(withSymbol)).toThrow(/fields/)
+  const withChangeSymbol = plan()
+  withChangeSymbol.changes[1][symbol] = 'different'
+  expect(() => inspectProposedApplyPlan(withChangeSymbol)).toThrow(/fields/)
+  let calls = 0
+  const getterPlan = plan()
+  Object.defineProperty(getterPlan, 'projectId', {
+    get() { calls++; throw Error('SHOULD NOT RUN') }, enumerable: true
+  })
+  expect(() => inspectProposedApplyPlan(getterPlan)).toThrow(/fields/)
+  expect(calls).toBe(0)
+  const getterChange = plan()
+  Object.defineProperty(getterChange.changes[0], 'path', {
+    get() { calls++; throw Error('SHOULD NOT RUN') }, enumerable: true
+  })
+  expect(() => inspectProposedApplyPlan(getterChange)).toThrow(/fields/)
+  expect(calls).toBe(0)
+})
+
+test('P3 rejects hidden/symbolic/extra/sparse entries in changes array', () => {
+  const hidden = plan()
+  Object.defineProperty(hidden.changes, 'shadow', { value: 'private', enumerable: false })
+  expect(() => inspectProposedApplyPlan(hidden)).toThrow(/scope|limits/)
+  const symbolic = plan()
+  symbolic.changes[Symbol('extra')] = 'private'
+  expect(() => inspectProposedApplyPlan(symbolic)).toThrow(/scope|limits/)
+  const extra = plan()
+  extra.changes.extra = 'private'
+  expect(() => inspectProposedApplyPlan(extra)).toThrow(/scope|limits/)
+  const hole = plan()
+  delete hole.changes[1]
+  expect(() => inspectProposedApplyPlan(hole)).toThrow(/scope|limits/)
+  const exotic = plan()
+  Object.setPrototypeOf(exotic.changes, null)
+  expect(() => inspectProposedApplyPlan(exotic)).toThrow(/scope|limits/)
+})
+
+test('P3 accepts ordinary frozen own-data plan and refuses objects with inherited fields', () => {
+  const normal = plan()
+  normal.changes.forEach(Object.freeze)
+  Object.freeze(normal.changes)
+  Object.freeze(normal)
+  expect(inspectProposedApplyPlan(normal).digest).toMatch(/^[a-f0-9]{64}$/)
+  const inherited = Object.create({ projectId: 'fixture' })
+  Object.assign(inherited, plan())
+  delete inherited.projectId
+  expect(() => inspectProposedApplyPlan(inherited)).toThrow()
+})
