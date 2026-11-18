@@ -11,6 +11,7 @@ import { createHash } from 'node:crypto'
 
 const ID = /^[a-z0-9][a-z0-9_-]{0,63}$/
 const SHA = /^[a-f0-9]{64}$/
+const REVISION = /^(?:[a-f0-9]{40}|[a-f0-9]{64})$/
 const SEGMENT = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/
 const MAX_FILES = 24, MAX_FILE_BYTES = 64 * 1024 * 1024, MAX_TOTAL_BYTES = 256 * 1024 * 1024
 const FORBIDDEN = new Set(['.git', '.hg', '.svn', 'node_modules', 'vendor', '.env', '.aws', '.ssh',
@@ -79,7 +80,7 @@ export function inspectProposedApplyPlan(input: unknown): InspectedApplyPlan {
   const plan = object(input, 'plan')
   keys(plan, ['version', 'projectId', 'rootFingerprint', 'sourceRevision', 'changes'], 'plan')
   if (plan.version !== 1 || typeof plan.projectId !== 'string' || !ID.test(plan.projectId) ||
-    !sha(plan.rootFingerprint) || !sha(plan.sourceRevision) ||
+    !sha(plan.rootFingerprint) || typeof plan.sourceRevision !== 'string' || !REVISION.test(plan.sourceRevision) ||
     !Array.isArray(plan.changes) || !plan.changes.length || plan.changes.length > MAX_FILES)
     throw new Error('Invalid proposed Apply scope or limits')
   const changes: ProposedApplyChange[] = []
