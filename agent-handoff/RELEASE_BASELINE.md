@@ -30,3 +30,11 @@
 ## Further proof required
 
 Follow `docs/013-integration-acceptance.md` for isolated project-aware Ticket/Worker E2E and `docs/014-real-apply-boundary.md` for OS-specific execution design. `agent-handoff/REAL_APPLY_GATES.md` is still the hard execution authority limit, never replaced by CI evidence.
+
+
+## I1B/P3 verified 2026-11-18 integration candidate (NOT DEPLOYED)
+
+- Immutable new test/source SHA: 05937a3a8de5d020f55e6984bbd9660e03f4d3eb. Source CI #516 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44254449518 3/3; actual Linux/macOS I1A 2 + I1B fake-host 7 + P3 pure-plan contract 5 = 14/14 each; full Vitest 1222/1222, typecheck/build success.
+- I1B fake-host uses real Engine accept, DshExecutor effect/launch/prepareDirectory and disposable Git/non-Git source snapshots but FAKE Session/Agent transport; actual model/Weixin/DSH Session and full I1 not proven.
+- P3 proposed-plan contract is a pure rejection filter with no source I/O, OS helper, genuine authorization or Apply method. No registered source writes eligible.
+- New user-requested local handoff OL-20261118-041 is manual-only OFFLINE_SYNTHETIC_ONLY; see agent-handoff/HANDOFF-2026-11-18-I1B-MAC-BATCH.md. I2/I3 are NOT granted by GitHub text; old historical baseline 9adced9 and OL-040 ACK remain intact; PR #1 stays DRAFT.

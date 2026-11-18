@@ -39,3 +39,10 @@ Protect registered source trees, unrelated 3080 Sessions/Workspaces and producti
 ## Current recommendation
 
 Do Gate I1 integration first, then prototype this helper in an OS-isolated disposable environment; review its attack surface and only later consider approved real registered-project writes. Existing C6B2B6G shared fence is valuable fixture evidence, **not** a substitute for any helper gate.
+
+
+## Pure proposal contract milestone — no OS helper (2026-11-18)
+
+src/local-first/real-apply-contract.ts is a pure, side-effect-free proposed change-plan filter. It validates deterministic digest, sorted ASCII-only relative paths, case-fold duplicates, obvious secret names, size/mode/hash consistency and bounded operations. It provides NO filesystem API, operator principal/approval, one-shot nonce, OS helper, journal, backup, recovery or source Apply. tests/real-apply-contract.spec.ts 5/5 on Linux and macOS in CI #516 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44254449518.
+
+This digest is only plan correlation and cannot serve as a private capability. The OS helper matrix remains entirely pending: trusted root fd, fd-relative no-follow path resolution, ACL/xattr/flags/link checks, external writer quiescence, private authenticated per-transaction consent, durable pre-images, crash recovery, manual reconciliation and macOS adversarial evidence. Real Apply is NOT enabled.
