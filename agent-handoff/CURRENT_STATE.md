@@ -1,17 +1,15 @@
-# CURRENT_STATE — 2026-11-18 (LO-041 ACK and remote follow-up)
+# CURRENT_STATE — 2026-11-18 I1F remote source convergence
 
-Source of truth: STATE.json. OL-041 is CLOSED and online ACKed at agent-handoff/receipts/online/LO-20261118-041-done.md. LOCAL_AGENT_TASK.md says NO ACTIVE TASK; no OL-042. ChatGPT scheduled automation remains PAUSED; Mac scheduler was not reconfigured. All historical one-shot real-host grants are consumed.
+Read STATE.json first. OL-041 has been online ACKed and closed. There is ONE new manual-only OFFLINE task `OL-20261118-042`, with full handoff `agent-handoff/HANDOFF-2026-11-18-I1F-MAC-BATCH.md`; it has not yet been locally claimed. The operator-paused remote automation stays PAUSED, Mac scheduler status unchanged/unverified, no_auto_dispatch true, no I2/I3 or real source Apply permission. PR #1 is still DRAFT/unmerged.
 
-## Accepted local batch
+## Latest verified code (not deployed)
 
-- OL-041 pinned source 05937a3a8de5d020f55e6984bbd9660e03f4d3eb, CI #516 3/3; Mac report agent-reports/REPORT-ol041-i1b-mac-batch.md, report commit fc0744406d4464ec09daa6c17619ed4b1a698d69, local ALL_OFFLINE_PASS. Linux/macOS targeted I1A 2 + I1B fake-host 7 + P3 pure-contract 5 = 14/14; local targeted x3, Node 248/248, proxy 5/5, 1222/1222 full Vitest, 28/28 additional private synthetic checks. Host facts are local sanitized report evidence, not independent remote live measurements.
-- LO-041 report CI #530–533 red because local done+result preceded remote STATE ACK. Atomic ACK closure commit 62a46c09d258434a567f955d62340b8c6e940b33 restored green CI #534/#535 at the post-ACK state. Updated handoff tests now recognize this single explicit pending-ACK transition.
+- Exact source SHA `ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead`. [CI #550](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44325865819) 3/3 successful, both Linux/macOS explicitly executed **30/30 focused Vitest** (I1A 2, I1B 7, P3 pure 9, I1C AgentDelivery 5, I1D Sessions boundary 6, I1E vertical 1); Node **253/253** including native C inspector 5, proxy 5/5; full Vitest **1238/1238**, typecheck/build success.
+- I1D adds real Sessions.ensure active-Ticket and exact configured snapshot directory checks **before SessionController create**; validates local synthetic role-model selection, workspace-write permission and tool restriction, durable request dedup and fail-closed cases under simulated DSH host.
+- I1E composes actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery→isolated snapshot→preview→core Outbox once, still **simulated DSH SessionController/Agent** and **simulated Worker file edits**, no real model turn.
+- P3 adds experimental READ-ONLY C openat inspector and cross-platform five-test synthetic matrix. No write API, no production Runtime caller, no ACL/writer-quiescence guarantee, no authenticated Apply or crash recovery.
+- **Unresolved:** real recovered DSH Session workspace identity/authorization must be checked independently; requested Ticket directory string equality alone does NOT attest an existing Session's stored workspace. Actual DSH turn/model/Weixin Gate I1/2/3 remain NOT PROVEN. No source Apply.
 
-## New remote source acceptance
+## Next owner and evidence
 
-- **Newest verified remote source SHA:** `1b9fe55ce2e59d8e3a7e6c979101774bb9a72890`. [GitHub CI #539](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44289161705) 3/3 SUCCESS, both Linux/macOS ran I1A 2 + I1B fake-host 7 + P3 strengthened 9 + actual AgentDelivery with disposable fake DSH persistence/agent transport 5 = **23/23 focused** per OS; full Vitest **1231/1231**, typecheck/build PASS.
-- P3 hidden non-enumerable / Symbol / accessor / sneaky change-array field bypass in `src/local-first/real-apply-contract.ts` fixed using Reflect.ownKeys and own descriptor checking; four added refusal tests. The contract remains pure (no source IO, no real Apply capability).
-- I1C integration exercises the **real `AgentDelivery` class**, not the real DSH SessionController or Worker turn. Tests cover pending inbox dedup, durable history after simulated Session replacement, legacy sources, abort/authorization/disposed failure and inject. **Full Gate I1 not passed**; real `Sessions.ensure`, model turn, Worker tool permission + authentic review/Outbox and Weixin path remain unverified.
-- macOS OS helper remains BLOCKED: Node stdlib lacks native fd-relative openat; root inode path ABA, external writers, ACL/xattrs/uchg, crash partial writes and real private grants need independent OS-level engineering. NO real source Apply, no production Caller.
-
-PR #1 is DRAFT and unmerged. No remote work changed original 3080/3083/8123, real registered projects, settings or main. Next owner: remote I1 end-to-end integration and native Apply helper design; separately authorized host experiments only after further evidence.
+Local Agent receives only OL-042 via manual operator handoff, performs concentrated Mac regression and installed DSH API READ_ONLY investigation, no real-host actions. Expected sanitized LO-042 report/claimed/done receipts. Previous OL-041 local ALL_OFFLINE_PASS and online ACK at agent-handoff/receipts/online/LO-20261118-041-done.md; never replay. After LO-042 remote ACKs once and patches any actual DSH workspace identity issue with new CI; only a separately scoped private host grant can authorize future live I2/I3.
