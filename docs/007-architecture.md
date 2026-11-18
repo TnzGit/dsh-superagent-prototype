@@ -433,6 +433,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/policy.spec.ts` | Source scope, the gate, the admission table, Mandate revalidation, the Policy version, settings migrations and assessment outcomes |
 | `tests/local-ticket-selection.spec.ts` | Actual DshExecutor.prepare local project selection and fail-closed no-project path |
 | `tests/local-ticket-worker-preview.spec.ts` | Offline cross-module `DshExecutor.prepare` → disposable snapshot → isolated Worker-copy diff → sealed batch evidence → no-write `awaiting-human` audit checkpoint; not a live DSH Session or real Apply |
+| `tests/local-ticket-worker-session.spec.ts` | I1B disposable fake-host Engine receive/decide → real Executor launch/prepareDirectory → fake Session transport, Git/non-Git snapshots, replay/cancel/deny and result Outbox; no live model/Weixin/Apply |
 | `tests/weixin-native.spec.ts` | DSH-native iLink Source peer allowlist and owner-only credentials, tested with Vitest (no real QR) |
 | `tests/registry.spec.ts` | `SourceRegistry`: instances, validation, Policy parts, Channels and Thread context |
 | `tests/sources.spec.ts` | The Feishu and GitHub Sources on a `SourceContext`: translation, polls and read positions, the pull request rules, health |
