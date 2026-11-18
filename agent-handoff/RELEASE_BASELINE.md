@@ -18,9 +18,14 @@
 
 ## Pull request and deployment gate
 
-- [PR #1](https://github.com/TnzGit/dsh-superagent-prototype/pull/1) remains DRAFT and is currently marked non-mergeable (`mergeable_state=dirty`); at review compare feature was 585 commits ahead / one behind `main` with ~365 PR files changed. Main changed independently; do not assume GitHub green CI equals mergeable. Recheck current comparison before resolving conflict.
+- [PR #1](https://github.com/TnzGit/dsh-superagent-prototype/pull/1) remains DRAFT. The independent same-name GitHub Actions workflow add/add conflict has been resolved with ordinary two-parent merge `c11d1146b25bcf9cfab8d3cf4304957796cc3dec`, selecting the previously verified feature workflow. Compare now reports 0 behind main; GitHub `mergeable:true`. That is ONLY merge-conflict clearance: the large 590+ commit/370+ file research PR is still NOT code-reviewed, deployment-accepted or ready to merge.
 - Convergence plan: review source by subsystem (A: native Weixin/3080 bridge/model queue, B: registered project Ticket/Worker and preview, C: synthetic safety research and tests). Keep historical reports/hand-off archive distinct from product code during eventual PR cleanup. Never force-push or blindly squash the entire history here.
 - No merge into main, no production deployment, no new host side effects and no remote scheduler re-enable were authorized in this consolidation.
+
+## New convergence integration evidence (I1A only)
+
+- Actual `DshExecutor.prepare` project binding → synthetic registered non-Git snapshot → isolated Worker-copy modify/add/delete → digest preview → sealed out-of-source evidence → durable read-only `awaiting-human` audit now has one cross-module fixture acceptance test and a negative missing/invalid selector test.
+- Test SHA `6e9cf91154d018e2f3a61f597cf2171e711c50df`, source/test CI #498 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44248563551: Linux/macOS new Vitest 2/2, Node 248/248, proxy 5/5, 1210/1210 total Vitest and build SUCCESS. No actual DSH Worker Session, real model/Weixin, source Apply or host mutation was exercised.
 
 ## Further proof required
 

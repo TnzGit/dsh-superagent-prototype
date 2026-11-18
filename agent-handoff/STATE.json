@@ -34,5 +34,29 @@
     "docs/014-real-apply-boundary.md",
     "agent-handoff/RELEASE_BASELINE.md"
   ],
-  "no_auto_dispatch": true
+  "no_auto_dispatch": true,
+  "integration_i1a": {
+    "status": "OFFLINE_PARTIAL_PASS",
+    "test_sha": "6e9cf91154d018e2f3a61f597cf2171e711c50df",
+    "ci_run_number": 498,
+    "ci_run_id": 44248563551,
+    "os_jobs": "3_of_3_success",
+    "named_vitest_linux": 2,
+    "named_vitest_macos": 2,
+    "full_vitest": 1210,
+    "node_tests": 248,
+    "proxy_tests": 5,
+    "real_worker_session_run": false,
+    "real_weixin_run": false,
+    "real_source_apply_run": false,
+    "next": "I1B_TICKET_WORKER_SESSION_AND_OUTBOX_FAKE_HOST"
+  },
+  "pr_review": {
+    "number": 1,
+    "draft": true,
+    "conflict_resolved_by": "c11d1146b25bcf9cfab8d3cf4304957796cc3dec",
+    "behind_main": 0,
+    "review_ready": false,
+    "merged": false
+  }
 }

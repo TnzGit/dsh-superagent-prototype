@@ -11,7 +11,13 @@ Read `STATE.json` first. All historical detail, unchanged, was retained in `arch
 - **Last change:** new optional shared synthetic fence coordinates competing ledgers using the SAME owner-provided root, but independent roots, directory ABA replacement, same-user forgery and uncooperative writers remain bypasses. No production Apply integration.
 - **Online scheduled automation:** PAUSED by operator; leave disabled. Mac-side DSH scheduling state has not been inspected here.
 - **Live host:** no real project Apply, real Weixin activity, production Session/Workspace/DB/service or provider changes were made during this consolidation. C5.5B earlier validated a one-time real native Weixin-to-original-DSH-to-local-Qwen round trip, not a project Worker/Apply E2E.
-- **PR #1:** draft, divergent from `main` and currently GitHub marks mergeability `dirty`; no merge/rebase/force-push authorized by this consolidation.
+- **PR #1:** remains DRAFT and not review-ready, but its add/add CI workflow conflict was resolved with an ordinary two-parent merge `c11d1146b25bcf9cfab8d3cf4304957796cc3dec` preserving the feature's fully tested workflow. Compare now reports 0 behind main, GitHub `mergeable:true`. This is NOT a release/PR merge.
+
+## I1A integration evidence (accepted at source/test SHA `6e9cf91154d018e2f3a61f597cf2171e711c50df`)
+
+- [CI #498](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44248563551) complete SUCCESS, Linux core/macOS portability/typecheck-build 3/3. Both Linux and Mac actual job logs execute 2/2 new cross-module Vitest tests; Node 248/248, proxy 5/5, total Vitest 1210/1210 and build passed.
+- Actual `DshExecutor.prepare` Ticket project binding feeds the same `createProjectSnapshot` implementation as the directory preparer; isolated fixture Worker-copy edits yield sorted add/delete/modify preview, sealed private after-images and an `awaiting-human` read-only batch audit. Bad/missing selectors refuse. The source fixture bytes are unchanged.
+- **Limit:** this test does NOT call the private `DshExecutor.prepareDirectory` lifecycle, launch a real Worker Session, issue any model prompt, ingest/send real Weixin, or Apply changes. I1A is partial source-chain integration only; full I1 and I2 remain pending.
 
 ## Exact next work
 
