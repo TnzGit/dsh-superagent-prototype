@@ -106,9 +106,9 @@ Mac Agent ALL_OFFLINE_PASS report `85fbc5c868c3ed23308f15bcf0e5759d58e777ad` rec
 
 The OL-006/007/008/009 local results have been accepted with online LO-006/007/008/009 done receipts. The durable synthetic ledger pin initial acceptance is complete (CI #292; exact code 06de7c16599dc348857a0b0548135e458d5964e5). No real Apply, DSH Prompt or Weixin was authorized.
 
-## Current authorization — OL-041 CLOSED / NO ACTIVE LOCAL TASK (2026-11-18)
+## Current authorization — OL-041 CLOSED, one new manual-only OFFLINE OL-042 (2026-11-18)
 
-OL-20261114-040 finished with local `ALL_OFFLINE_PASS`; online `LO-20261114-040-done.md` ACK was published. ALL previous executable OL tasks through 040 are closed. `LOCAL_AGENT_TASK.md` explicitly has **NO ACTIVE TASK**; OL-20261118-041 is completed and accepted by online LO-041 ACK. All prior local tasks are closed. No GitHub message or scheduler tick by itself grants new execution. Do not replay an earlier claim, automatically perform a host test, restart a DSH service, or invent a new task. A later operator-scoped `type: task` and independent safety constraints are required.
+OL-20261114-040 finished with local `ALL_OFFLINE_PASS`; online `LO-20261114-040-done.md` ACK was published. ALL previous executable OL tasks through 040 are closed. `LOCAL_AGENT_TASK.md` explicitly has **one NEW manually handed-off OFFLINE task OL-20261118-042** after OL-041 acceptance. OL-042 is restricted to disposable synthetic + read-only host baseline, no real 3080/3083/8123/Weixin/registered-source action. No GitHub message or scheduler tick by itself grants execution. Do not replay an earlier claim, automatically perform a host test, restart a DSH service, or invent a new task. A later operator-scoped `type: task` and independent safety constraints are required.
 
 The user has paused the remote ChatGPT scheduled automation. Local DSH scheduler state has NOT been verified or modified here. A scheduled check (if still present) is read-only and must not dispatch from unchanged HEAD or a historical OL. Authoritative machine status: `agent-handoff/STATE.json`; current engineering plan: `docs/013-integration-acceptance.md` and `docs/014-real-apply-boundary.md`. Historical sections below are historical only, never a fresh authorization.
 
