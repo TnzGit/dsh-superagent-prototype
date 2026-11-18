@@ -1,24 +1,18 @@
-# CURRENT_STATE — concise authoritative state
+# CURRENT_STATE — 2026-11-18 authoritative concise status
 
-Read `STATE.json` first. All historical detail, unchanged, was retained in `archive/CURRENT_STATE-through-OL040-2026-11-14.md`. Old blocks in that archive are **not** active tasks.
+Read STATE.json first, root LOCAL_AGENT_TASK.md and agent-handoff/HANDOFF-2026-11-18-I1B-MAC-BATCH.md. Archive files retain history but are NOT active tasks.
 
-## Current (2026-11-18)
+## Remote source baseline and proof
 
-- **Phase:** `INTEGRATION_CONVERGENCE`; **owner:** remote ChatGPT; **active Mac task:** NONE; **unacked local result:** NONE.
-- **Last task:** `OL-20261114-040` (C6B2B6G) locally `ALL_OFFLINE_PASS` and online ACKed with `LO-20261114-040-done.md`; never replay.
-- **Pinned source:** `9adced9a40b5ef80c05d2d7916a54add65c6a8f0` (source CI #485, all 3 jobs success); local report commit `52234ceb80ec781ed3f18df8ac10ab5f2626e664` (CI #488 3/3). New documentation/validation commits after this do NOT change the pinned product source.
-- **Evidence at pinned source:** Linux and macOS 244/244 Node, 5/5 proxy per OS; 1208/1208 Vitest/build; independent Mac reports 62/62 ledger plus 1541/1541 bounded adversarial checks across four runs. These prove only named synthetic and mocked behavior.
-- **Last change:** new optional shared synthetic fence coordinates competing ledgers using the SAME owner-provided root, but independent roots, directory ABA replacement, same-user forgery and uncooperative writers remain bypasses. No production Apply integration.
-- **Online scheduled automation:** PAUSED by operator; leave disabled. Mac-side DSH scheduling state has not been inspected here.
-- **Live host:** no real project Apply, real Weixin activity, production Session/Workspace/DB/service or provider changes were made during this consolidation. C5.5B earlier validated a one-time real native Weixin-to-original-DSH-to-local-Qwen round trip, not a project Worker/Apply E2E.
-- **PR #1:** remains DRAFT and not review-ready, but its add/add CI workflow conflict was resolved with an ordinary two-parent merge `c11d1146b25bcf9cfab8d3cf4304957796cc3dec` preserving the feature's fully tested workflow. Compare now reports 0 behind main, GitHub `mergeable:true`. This is NOT a release/PR merge.
+- Latest I1B/P3 source SHA 05937a3a8de5d020f55e6984bbd9660e03f4d3eb; GitHub Actions #516 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44254449518 3/3 SUCCESS. Linux/macOS named I1A 2 + I1B fake-host 7 + P3 pure validator 5 = 14/14 each; full 1222/1222 Vitest, typecheck and build passed.
+- I1B fake host: actual Engine Ticket → actual DshExecutor queued launch/prepareDirectory → disposable Git/non-Git snapshot → FAKE Sessions/Agent transport → preview and core result dedup. Real DSH Sessions/AgentDelivery, real model turn, native Weixin and OS sandbox remain untested; full Gate I1 INCOMPLETE.
+- P3 proposal validator accepts bounded deterministic change plans and rejects obvious unsafe paths, aliases and metadata. No filesystem I/O, private authorization, OS helper, journal or Apply. All REAL_APPLY_GATES still block source writes.
+- C6B2B6G OL-040 was accepted and ACKed. Earlier C5.5B real Weixin/3080/local Qwen 6/6 was one-shot only and consumed; it did not perform a project edit.
 
-## I1A integration evidence (accepted at source/test SHA `6e9cf91154d018e2f3a61f597cf2171e711c50df`)
+## New one-time local handoff
 
-- [CI #498](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44248563551) complete SUCCESS, Linux core/macOS portability/typecheck-build 3/3. Both Linux and Mac actual job logs execute 2/2 new cross-module Vitest tests; Node 248/248, proxy 5/5, total Vitest 1210/1210 and build passed.
-- Actual `DshExecutor.prepare` Ticket project binding feeds the same `createProjectSnapshot` implementation as the directory preparer; isolated fixture Worker-copy edits yield sorted add/delete/modify preview, sealed private after-images and an `awaiting-human` read-only batch audit. Bad/missing selectors refuse. The source fixture bytes are unchanged.
-- **Limit:** this test does NOT call the private `DshExecutor.prepareDirectory` lifecycle, launch a real Worker Session, issue any model prompt, ingest/send real Weixin, or Apply changes. I1A is partial source-chain integration only; full I1 and I2 remain pending.
+- OL-20261118-041 (manual-only OFFLINE_SYNTHETIC_ONLY with READ_ONLY host baselines). Exact runbook above. Result LO-20261118-041 and redacted report expected; no local result is yet pending remote ACK.
+- Online scheduled automation PAUSED. Local DSH scheduler currently UNVERIFIED; no automatic dispatch. Live I2/I3 require full I1 and fresh separate private per-stage grants; this public handoff grants neither. Real registered project Apply FORBIDDEN.
+- PR #1 DRAFT/unmerged; merge conflict resolved but code review, real host validation and release blocked. No 3080/3083/8123 or main modifications made remotely.
 
-## Exact next work
-
-Complete repository-first integration acceptance and the separate OS Apply design, not another isolated synthetic ledger microtask. Follow `WORK_QUEUE.md`, `docs/013-integration-acceptance.md`, `docs/014-real-apply-boundary.md` and `RELEASE_BASELINE.md`. No new OL ID until a specifically scoped, safe independent Mac task is needed and authorized.
+Upon LO-041, remote must independently verify report, receipts, CI and safety invariants, ACK once, and then continue true Sessions/Worker integration and OS helper implementation. Unauthorized I2/I3 are not a failure of an otherwise clean offline batch.

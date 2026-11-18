@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online",
+  "owner": "remote_online_with_manual_local_batch",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -24,7 +24,7 @@
     "online_ack": "agent-handoff/receipts/online/LO-20261114-040-done.md",
     "verdict": "ALL_OFFLINE_PASS"
   },
-  "active_local_task": null,
+  "active_local_task": "OL-20261118-041",
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -32,7 +32,11 @@
   "current_deliverables": [
     "docs/013-integration-acceptance.md",
     "docs/014-real-apply-boundary.md",
-    "agent-handoff/RELEASE_BASELINE.md"
+    "agent-handoff/RELEASE_BASELINE.md",
+    "agent-handoff/HANDOFF-2026-11-18-I1B-MAC-BATCH.md",
+    "tests/local-ticket-worker-session.spec.ts",
+    "src/local-first/real-apply-contract.ts",
+    "tests/real-apply-contract.spec.ts"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -58,5 +62,35 @@
     "behind_main": 0,
     "review_ready": false,
     "merged": false
+  },
+  "local_batch": {
+    "task_id": "OL-20261118-041",
+    "code_sha": "05937a3a8de5d020f55e6984bbd9660e03f4d3eb",
+    "ci_run_number": 516,
+    "ci_run_id": 44254449518,
+    "scope": "OFFLINE_SYNTHETIC_ONLY_WITH_READ_ONLY_PREFLIGHT",
+    "host_live_grant": "NOT_GRANTED",
+    "real_source_apply": "FORBIDDEN",
+    "handoff": "agent-handoff/HANDOFF-2026-11-18-I1B-MAC-BATCH.md",
+    "report_expected": "agent-reports/REPORT-ol041-i1b-mac-batch.md"
+  },
+  "integration_i1b": {
+    "status": "FAKE_HOST_PARTIAL_PASS",
+    "test_sha": "05937a3a8de5d020f55e6984bbd9660e03f4d3eb",
+    "ci_run_id": 44254449518,
+    "linux_named_tests": 7,
+    "macos_named_tests": 7,
+    "actual_dsh_sessions": false,
+    "model_turn": false,
+    "real_weixin": false,
+    "real_source_apply": false
+  },
+  "p3_apply_contract": {
+    "status": "PURE_PROPOSAL_VALIDATOR_ONLY",
+    "test_sha": "05937a3a8de5d020f55e6984bbd9660e03f4d3eb",
+    "linux_named_tests": 5,
+    "macos_named_tests": 5,
+    "os_helper_implemented": false,
+    "real_apply_enabled": false
   }
 }

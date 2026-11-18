@@ -1,21 +1,17 @@
-# WORK_QUEUE — active convergence only
+# WORK_QUEUE — current integration delivery (2026-11-18)
 
-Historical 100+ KB queue retained verbatim at `archive/WORK_QUEUE-through-OL040-2026-11-14.md`. History is NOT current authority; `STATE.json` is the primary machine-readable state.
+Read STATE.json first; archives are historic, not authority.
 
-| Priority | Workstream | State / Owner | Exact exit gate |
+| Priority | Workstream | Status | Exit |
 | --- | --- | --- | --- |
-| P0 | C6B2B6G LO-040 ACK | DONE / remote | Local report + source/report CI verified; online receipt exists; OL-040 never replayed |
-| P1 | Freeze & curate baseline | DONE / remote | Immutable product source SHA and full old histories archived; current index and CI consistency check are green; main add/add workflow conflict resolved with normal merge |
-| P2 | Ticket → Worker integration | I1A OFFLINE_PARTIAL_PASS; I1B + I2 PENDING / remote | CI #498 3/3: actual DshExecutor.prepare project selector → isolated non-Git snapshot → three-file preview → sealed no-write audit; NEXT test actual Worker Session lifecycle, Ticket/Outbox correlation and Git path without real Apply |
-| P3 | Real Apply execution boundary | DESIGN DOCUMENTED, IMPLEMENTATION NOT STARTED / remote | OS-scoped helper protocol drafted in docs/014; still need actual isolated implementation, quiescence, durable backup/crash and private one-use capability, no real Apply eligible |
-| P4 | Release/PR readiness | MERGE CONFLICT RESOLVED / DRAFT REVIEW BLOCKED | ordinary merge c11d114 brought main into feature, `mergeable:true`, 0 behind; PR still 590+ commits / 370+ files and not review-ready; split/review/validate deploy before any merge |
-| Local Mac Agent | No active task | WAIT / local | Do not claim historical OL-040 or invent OL-041. Only newly and separately scoped future safe task is executable |
+| P0 | C6B2B6G / OL-040 | DONE/ACKed | Prior CI #485/#488 verified, never replay |
+| P1 | State convergence, PR conflict | DONE | short state, archived history, mergeable PR still Draft |
+| P2/I1A | prepare→snapshot→preview→audit | OFFLINE_PARTIAL_PASS | CI #498 2/2 each OS |
+| P2/I1B | Engine→actual Executor launch, fake Sessions | FAKE_HOST_PARTIAL_PASS | source 05937a3, CI #516 7/7 per OS; real Session/model not tested |
+| P2/Local | Concentrated Mac I1 readiness/P3 OS proof | OL-20261118-041 MANUAL OFFLINE TASK | once-only redacted LO-041 report and receipts, no live host |
+| P2/I2-I3 | Real disposable Worker/Weixin project tests | BLOCKED/NOT AUTHORIZED | full I1 pass plus fresh private per-stage human grants |
+| P3/contract | Pure proposed-plan validation | PASS_FILTER_ONLY | 5/5 each OS; no Apply or operator grant |
+| P3/helper | OS real Apply execution component | NOT IMPLEMENTED | fd-safe paths, writer quiescence, true one-use authority, backups/crash recovery |
+| P4 | PR review, split and release | DRAFT/BLOCKED | code review/real validation; no auto merge |
 
-## Delivery order
-
-1. P1 is complete; preserve immutable original product source baseline and verify any later modified HEAD via its OWN CI.
-2. I1A source-chain test now passes. Continue I1B with actual Worker-session lifecycle and one request-correlated preview/Outbox event under a fake host; add Git clone path and negative duplicate/restart coverage. Stage I2 needs separately scoped Mac authorization. Do not touch historical DSH Sessions or live Weixin.
-3. In parallel record P3 architectural and OS feasibility gates. A hash, lstat, realpath, advisory lock or public GitHub message is not a write capability.
-4. Re-review P4 only after the feature branch is acceptably scoped and integration evidence exists. Do not mark PR ready or merge automatically.
-
-**Stop conditions:** any production DSH/3080/3083/8123/Weixin/default-model/provider change, actual registered source mutation, or GitHub forced/rebased history is outside this consolidation. Do not restart the paused remote scheduled automation.
+Remote ChatGPT scheduler remains PAUSED, local scheduler state unverified, no auto dispatch. Local Agent may manually claim only this offline task, no original host modification. Remote resumes source progress after independently accepting LO-041.
