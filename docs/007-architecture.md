@@ -435,6 +435,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/local-ticket-selection.spec.ts` | Actual DshExecutor.prepare local project selection and fail-closed no-project path |
 | `tests/local-ticket-worker-preview.spec.ts` | Offline cross-module `DshExecutor.prepare` → disposable snapshot → isolated Worker-copy diff → sealed batch evidence → no-write `awaiting-human` audit checkpoint; not a live DSH Session or real Apply |
 | `tests/real-apply-contract.spec.ts` | P3 pure proposal-contract refusals: path aliases, secret files, metadata/byte limits, sorting, digest; no source writes or authorization |
+| `research/os-path-inspector.c` + `tests/os-path-inspector.node-test.mjs` | Test-only POSIX read-only fd-rooted `openat` no-follow prototype; disposable Linux/macOS fixture refusals; no Apply or production ABI |
 | `tests/local-vertical-real-sessions.spec.ts` | I1E real Engine→DshExecutor→Sessions.ensure→AgentDelivery→isolated change preview→core Outbox; simulated DSH controller/persistence and no model turn/real Apply |
 | `tests/local-sessions-worker-boundary.spec.ts` | I1D actual Sessions.ensure/initializeRoleModel/AgentDelivery worker lifecycle on a disposable DSH SessionController/agent context; source and host untouched |
 | `tests/local-agent-delivery-session.spec.ts` | I1C actual AgentDelivery under synthetic DSH event/persistence agent transport; dedup, restart/history, abort/authorization, legacy and notice semantics, no real model or source writes |
