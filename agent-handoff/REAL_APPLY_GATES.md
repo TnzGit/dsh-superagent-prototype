@@ -17,13 +17,13 @@ All gates must pass for the exact real project and exact files. If any fails, th
 7. **Verification:** recheck scope and pre/post-image identities at the permitted boundary, run safe tests, retain redacted reports (no private paths, content, hashes from real source, credentials or real peer IDs), and stop on any deviation.
 8. **One-shot guardrails:** the decision to use standing permission can apply only to a qualifying scoped project operation after all above gates pass. Never escalate to a general purpose write API, bypass a required local private approval, or change 3080/3083/8123, Weixin, global model/provider settings or production database.
 
-## Next actions while gates are not met
+## Next actions while gates are not met (updated 2026-11-18)
 
-- Remote online agent continues C6B2B4C/C6B2B4D source-only and synthetic adversarial development, implements and validates defensive restrictions, drafts a narrow runbook and informs the operator of concrete safety blockers when needed.
-- Local Agent can conduct only tasks explicitly scoped in current `LOCAL_AGENT_TASK.md`. The current OL-004 is still **synthetic-only**. This standing-intent record does NOT secretly expand its scope.
-- A later distinct, privacy-safe to-local task may authorize read-only examination of a **specifically selected real registered project**, but may not start or auto-issue a real write from an untrusted GitHub message.
-- No real Apply has been run as a consequence of the operator's broad statement. Do not claim otherwise.
-
+- Current status is **CONVERGENCE / NO ACTIVE LOCAL TASK**. OL-040 accepted and ACKed. No previous OL task, including old OL-004 or OL-010, remains authorized for execution.
+- Prioritize integration acceptance of the existing Ticket → isolated Worker → bounded snapshot → diff/preview → review chain, without source Apply or live host operation. See `docs/013-integration-acceptance.md`.
+- Design and independently test an OS-specific narrowly scoped helper/protocol before even considering a real Apply. See `docs/014-real-apply-boundary.md` and all eight gates above. These planning documents are not operator-signed per-transaction capabilities.
+- A future local host-only test needs a new scoped task, a genuine disposable registered test project and controlled staging preflight; the existing public GitHub docs cannot authorize that test or any real source write.
+- No real project Apply has been carried out under the standing general permission; never infer production readiness from synthetic approval-ledger CI.
 ## Honesty rule
 
 "Operator broadly approved reasonable Apply" and "this exact real transaction has valid capability and safety proof" are different claims. Always report both independently.

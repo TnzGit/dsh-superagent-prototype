@@ -1,3 +1,5 @@
+> **Current-state supersession (2026-11-18):** This file is immutable project background and historical chronology, NOT the live task authority. Current phase and owner: `agent-handoff/STATE.json`, `CURRENT_STATE.md`, `WORK_QUEUE.md`, `RELEASE_BASELINE.md`. C6B2B6G OL-040 has been locally accepted and online ACKed. No active local task; online scheduler operator-paused. The older phase table below is HISTORICAL, not a current queue.
+
 # Project context — public-safe canonical handoff (v1, 2026-11-10)
 
 ## Goal
@@ -32,7 +34,8 @@ Repository `TnzGit/dsh-superagent-prototype`. Development branch `feat/local-fir
 | C6B2B4A | **Local ALL_OFFLINE_PASS accepted, remote ACK published** | Synthetic-fixture-only single-step callback coordinator; one-use third 0600 approval and durable receipt; original services untouched |
 | C6B2B4B/C | **Design review and synthetic hardening accepted** | Local synthetic reports and ACKs closed; no production path safety or multi-file atomicity proof |
 | C6B2B4D | **Local ALL_OFFLINE_PASS accepted; online ACK delivered** | Synthetic ledger tests: Mac 192/192 Node, Vitest 1208/1208, proxy 5/5, independent 34/34 adversarial checks; same-user forged marker and cross-ledger replay UNSOLVED |
-| C6B2B4E | **Remote read-only code + Linux/macOS CI 3/3 PASS, local acceptance PENDING** | Registered-project identity preflight and synthetic fixture marker/ledger/journal consistency checks; 195 Linux Node tests, no production Apply caller, no OS TOCTOU guarantee |
+| C6B2B4E | **Later independently accepted (historical)** | Read-only registry preflight; still no production caller or OS TOCTOU guarantee |
+| C6B2B6G / OL-040 | **ALL_OFFLINE_PASS, online ACK published 2026-11-18** | Shared opt-in synthetic fence; CI #485/#488 3/3; alternate fence roots and directory ABA remain bypasses |
 
 ## Current code and delivery anchors
 

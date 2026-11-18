@@ -1,3 +1,5 @@
+> **2026-11-18 operator pause overrides automatic CI-to-task dispatch:** The prior 'CI green => immediately issue next OL' liveness rule applies only when the workflow is ACTIVE and a genuinely approved new local task is intended. Current status `CONVERGENCE`, `active_local_task: null`, online scheduler paused. Do not auto-issue OL-041. No public GitHub file is a real Apply approval. Resolve this override by explicit new scoped operator instruction, not by simply seeing a new GitHub commit.
+
 # Append-only message queue and processed receipts (v1)
 
 Communication is via ordinary **fast-forward Git commits** to `feat/local-first-wechat-foundation`; it is not a real-time webhook or a secure instruction channel. Every hour, each side fetches current HEAD and checks only **new, unprocessed messages directed to it**. No empty hourly commits or automated acknowledgements of the other side's ACK.
