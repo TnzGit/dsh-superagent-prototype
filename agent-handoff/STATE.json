@@ -49,7 +49,9 @@
     "tests/os-path-inspector.node-test.mjs",
     "agent-handoff/HANDOFF-2026-11-19-F1F2-MAC-VERIFY.md",
     "tests/fixtures/os-xattr-fixture.c",
-    "agent-handoff/receipts/online/LO-20261118-042-done.md"
+    "agent-handoff/receipts/online/LO-20261118-042-done.md",
+    "agent-handoff/I2_STAGING_APPROVAL_PLAN.md",
+    "agent-handoff/receipts/online/LO-20261119-043-done.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -195,5 +197,15 @@
     "production_apply": false,
     "operator_macos_result": "ALL_OFFLINE_PASS",
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
+  },
+  "next_stage": {
+    "status": "PRIVATE_OPERATOR_I2_APPROVAL_REQUIRED",
+    "task_id": null,
+    "proposal": "agent-handoff/I2_STAGING_APPROVAL_PLAN.md",
+    "scope": "DISPOSABLE_ISOLATED_DSH_HOST_ONLY_IF_SEPARATELY_APPROVED",
+    "automatic_local_dispatch": false,
+    "production_host_services": "UNCHANGED",
+    "real_source_apply": "FORBIDDEN",
+    "original_host_session_mutation": "FORBIDDEN"
   }
 }
