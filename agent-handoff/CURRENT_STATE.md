@@ -12,3 +12,9 @@ Machine authority `agent-handoff/STATE.json`. OL-044 CLOSED/ACKED at `agent-hand
 ## Next REMOTE owner only
 
 Research actual installed DSH sandbox backend and `ctx.approval.request`/headless approval APIs; engineer a STRICTLY OFFLINE fix/protocol and tests for a safe file-tool-only staging profile or genuinely attested outer OS boundary. Avoid approving `danger-full-access`, defaulting to unconfined tools or monkey-patching original 3080. Do not create or auto-dispatch OL-045. A NEW one-shot live I2 would need fresh private human approval after independently verified technical gates; I3 and real Apply remain forbidden.
+
+## Remote OFFLINE remediation candidate (verified source; no new live stage)
+
+- New exact opt-in code SHA `e458afc2ee6261a1ba3106e2f1de1c4df9c97f86`, [CI #641](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44575812654) **3/3 success**. Linux/hosted macOS Node **255/255**, focus **37/37** per OS, full Vitest **1245/1245**, proxy **5/5**, TypeScript/build PASS.
+- `DSH_SUPERAGENT_I2_STAGING_FS_ONLY=1` applies **only to registered-project Worker**: `read/write/edit/glob/grep` allowed, bash/pwsh/jobs/web/skill/subagents denied at listing and tool-use guard. Default/unset (including other values) is unchanged; F2 Ticket/Workspace guards and `workspace-write` permission remain. This is a deny-only logical restriction, **not OS confinement** or a permit for an original host.
+- Upstream DSH `dsh-user-approval` has `policy: never` with deterministic `rejected` before headless answerer dispatch; `dsh-fs-sandbox` offers in-process native file edit tools. Their COMPATIBILITY and effective per-session mounts/override with the operator-installed 0.2.2-rc.1 have **NOT** been rechecked for OL-044's next-stage context. Exact research/stop gates: `docs/015-i2-seatbelt-headless-remediation.md`. No new local OL, no fresh live grant, no sandbox bypass.
