@@ -44,4 +44,17 @@
 
 ## F. Suggested next remote task
 
+## G. Report-commit CI redness — pre-existing convergence-assertion mismatch (returned to remote owner)
+
+The done-commit CI (#631, run 44570958602, head `920aa5d`) failed `local-first-core` and `macos-portability` (1/3 green: `dsh-typecheck-and-build`) on **one** test: `tests/handoff-convergence.node-test.mjs:46` (test at :27, "last accepted result is acked and a newer OL is at most one and independently scoped"):
+
+```
+AssertionError [ERR_ASSERTION]: The expression evaluated to a falsy value:
+  assert.ok(read('agent-handoff/receipts/local/'+pending+'-done.md').includes('ALL_OFFLINE_PASS'))
+```
+
+Minimal repro: with `active_local_task = OL-20261119-044` and its done receipt present (mid-sync state), the test requires that receipt to contain the literal `ALL_OFFLINE_PASS`. The OL-044 runbook explicitly forbids that label for a live-model I2 ("NEVER mark ALL_OFFLINE_PASS for a live-model I2"), so an honest `I2_PARTIAL_NO_EDIT` receipt can never satisfy the current assertion. The mismatch is in the remote-owned convergence test's assumption, not in this task's content: every prior OL was offline-only, so the guard hardcodes one verdict class.
+
+Requested remote fix (do not be resolved by local source edits): relax the mid-sync assertion to accept the task's declared verdict class for a live-model scoped task (e.g. match the receipt's own `verdict:` field against the set allowed by the active task's scope), keeping `ALL_OFFLINE_PASS` for offline-only scopes. No local product source was modified.
+
 A new uniquely-scoped milestone that (a) makes the runtime sandbox backend selection aware of an already-enforced outer boundary (or provides a headless approval answerer path), and only then (b) dispatches a fresh one-shot I2 staging task. This attempt's one-shot consent is consumed regardless of verdict.
