@@ -1,6 +1,6 @@
 # I2 isolated DSH Worker staging — proposed human approval boundary (NON-EXECUTABLE)
 
-**Status 2026-11-19: DRAFT PLAN / NO PRIVATE OPERATOR GRANT / NO OL-044 TASK.** This is a public-safe design and review artifact. It is NOT a command to a Mac agent, a SessionController instruction, permission to call 127.0.0.1:8123, or an Apply capability. It does not change original DSH services, Workspaces, Sessions, provider/model defaults, native Weixin/relay or registered source. Do not copy approval tokens or sensitive host identity into GitHub.
+**Status 2026-11-19: design reference; ONE conditional manual OL-044 was issued after private operator agreement. This PUBLIC PLAN alone grants nothing.** This is a public-safe design and review artifact. It is NOT a command to a Mac agent, a SessionController instruction, permission to call 127.0.0.1:8123, or an Apply capability. It does not change original DSH services, Workspaces, Sessions, provider/model defaults, native Weixin/relay or registered source. Do not copy approval tokens or sensitive host identity into GitHub.
 
 ## Baseline: what is and is not accepted
 
@@ -29,7 +29,7 @@ In that disposable sandbox, with a harmless program (NOT an LLM Agent), attempt 
 
 ### I2-P2: ONE bounded genuine Worker request, disposable data only
 
-**Only once the operator separately authorizes exactly this staging invocation**, start ONE new disposable DSH SessionController/Worker in isolated sandbox using a NEW unique Session ID (no original Session/Workspace resume or migration), one synthetic registered local project (e.g. a disposable 2-file README fixture) and the already functioning loopback local-only Qwen queue route. This is an actual *model inference* and *Session mutation*, even though isolated; it requires private per-stage consent. Limit: one Ticket, one Worker, one simple text edit in the disposable *copy* only, a short bounded token/step/time budget, no remote shell/network/cloud, no prompts from Weixin, no any original source Apply.
+**Only after the operator directly forwards the matching OL-044 Prompt AND full sandbox/route/budget preflight PASSES**, start ONE new disposable DSH SessionController/Worker in isolated sandbox using a NEW unique Session ID (no original Session/Workspace resume or migration), one synthetic registered local project (e.g. a disposable 2-file README fixture) and the already functioning loopback local-only Qwen queue route. This is an actual *model inference* and *Session mutation*, even though isolated; it requires private per-stage consent. Limit: one Ticket, one Worker, one simple text edit in the disposable *copy* only, a short bounded token/step/time budget, no remote shell/network/cloud, no prompts from Weixin, no any original source Apply.
 
 Proof to collect privately: Trigger request identity→Ticket id→new Session id + attested Workspace id/canonical cwd→model route proof (local-only)→actual tool invocation/child process audit→copy-only changed bytes and generated diff→review-required record→one result/Outbox entry. No external native Weixin send, no Git push, no automatic model retry after ambiguity. If no actual tool invocation happened, label partial, not E2E. Reuse/correlation and Exit must be checked without issuing a second model turn on an ambiguous response.
 
@@ -51,4 +51,8 @@ Suggested approval type to discuss privately: \`PRIVATE_I2_DISPOSABLE_DSH_WORKER
 
 ## What remote can do before approval
 
-Read source/API contracts, improve synthetic integration tests, clarify acceptance criteria and review CI. Write a public-safe approval PLAN only. **Do not create a runnable \`OL-044\` or any operator Mac task by inspecting this plan or seeing a green GitHub CI.** Online automation stays PAUSED_BY_OPERATOR until the operator explicitly asks to change it.
+Read source/API contracts, improve synthetic integration tests, clarify acceptance criteria and review CI. Write a public-safe approval PLAN only. **OL-044 is now the single manual-only conditional task, not permission from GitHub or CI. Do not auto-dispatch it or issue OL-045. Detailed execution hard-gates are in HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md.** Online automation stays PAUSED_BY_OPERATOR until the operator explicitly asks to change it.
+
+## 2026-11-19 supersession
+
+The operator privately agreed to ONE new isolated DSH Worker and local 8123 model test. The sole executable handoff is the operator-forwarded OL-044 Prompt plus the runbook's proven OS sandbox, model-only route and metered one-shot limits. This plan is only technical reference; no original host/Weixin/real Apply permissions, no automatic dispatch or standing grant.
