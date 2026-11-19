@@ -120,7 +120,7 @@ export class Sessions {
     })
     ctx.on('agent/created', async ({ agent }) => {
       const ticketId = ticketOfSession(agent.id)
-      const ticket = ticketId && this.host.store.tickets.get(ticketId)
+      const ticket = ticketId === undefined ? undefined : this.host.store.tickets.get(ticketId)
       // A newly created DSH Agent may be emitted BEFORE the workspace account
       // is attached, and a restored Agent may belong to a different workspace.
       // Neither may receive Ticket tools/prompts through this event. Only
