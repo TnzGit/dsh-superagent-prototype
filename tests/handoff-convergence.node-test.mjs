@@ -28,8 +28,11 @@ const I2_VERDICTS=new Set([
   'I2_BLOCKED_MODEL_ROUTE',
   'I2_BLOCKED_BUDGET_ENFORCEMENT',
 ])
+const OFFLINE_VERDICTS=new Set([
+  'ALL_OFFLINE_PASS', 'OFFLINE_BLOCKED_API', 'OFFLINE_BLOCKED_ENV', 'OFFLINE_FAIL'
+])
 const scopeVerdict=(scope,verdict)=>
-  scope==='OFFLINE_SYNTHETIC_ONLY' ? verdict==='ALL_OFFLINE_PASS'
+  scope==='OFFLINE_SYNTHETIC_ONLY' ? OFFLINE_VERDICTS.has(verdict)
   : scope===I2_SCOPE ? I2_VERDICTS.has(verdict)
   : false
 const field=(body,name)=>{
@@ -138,6 +141,11 @@ test('convergence roadmap and OS authorization document exist without announcing
 test('verdict guards reject dishonest pass/partial mixing and prose marker spoofing',()=>{
   assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','ALL_OFFLINE_PASS'),true)
   assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','I2_PARTIAL_NO_EDIT'),false)
+  assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','OFFLINE_BLOCKED_API'),true)
+  assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','OFFLINE_BLOCKED_ENV'),true)
+  assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','OFFLINE_FAIL'),true)
+  assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','OFFLINE_ANYTHING'),false)
+  assert.equal(scopeVerdict(I2_SCOPE,'OFFLINE_BLOCKED_API'),false)
   assert.equal(scopeVerdict(I2_SCOPE,'I2_PARTIAL_NO_EDIT'),true)
   assert.equal(scopeVerdict(I2_SCOPE,'I2_ISOLATED_STAGING_PASS'),true)
   assert.equal(scopeVerdict(I2_SCOPE,'ALL_OFFLINE_PASS'),false)
