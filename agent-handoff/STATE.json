@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online",
+  "owner": "remote_online_with_one_manual_I2_local_batch",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -28,7 +28,7 @@
     "online_ack": "agent-handoff/receipts/online/LO-20261119-043-done.md",
     "verdict": "ALL_OFFLINE_PASS"
   },
-  "active_local_task": null,
+  "active_local_task": "OL-20261119-044",
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -51,7 +51,8 @@
     "tests/fixtures/os-xattr-fixture.c",
     "agent-handoff/receipts/online/LO-20261118-042-done.md",
     "agent-handoff/I2_STAGING_APPROVAL_PLAN.md",
-    "agent-handoff/receipts/online/LO-20261119-043-done.md"
+    "agent-handoff/receipts/online/LO-20261119-043-done.md",
+    "agent-handoff/HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -79,20 +80,25 @@
     "merged": false
   },
   "local_batch": {
-    "task_id": "OL-20261119-043",
-    "status": "ACCEPTED_AND_CLOSED",
-    "scope": "OFFLINE_SYNTHETIC_ONLY_WITH_READ_ONLY_HOST_BASELINE",
-    "code_sha": "6c75c43f43b9133f8796b628155cc278c2025838",
-    "ci_run_id": 44461402757,
-    "ci_run_number": 584,
+    "task_id": "OL-20261119-044",
+    "status": "PENDING_MANUAL_HANDOFF",
+    "scope": "CONDITIONAL_ONE_SHOT_OS_ISOLATED_DISPOSABLE_DSH_I2",
+    "code_sha": "c0da76b14f4893397428c025670f731e0629555d",
+    "ci_run_id": 44482434876,
+    "ci_run_number": 618,
     "host_live_grant": "NOT_GRANTED",
+    "isolated_staging_operator_consent": "EXPLICIT_IN_THIS_CHAT_MANUAL_PROMPT_REQUIRED",
     "real_source_apply": "FORBIDDEN",
-    "handoff": "agent-handoff/HANDOFF-2026-11-19-F1F2-MAC-VERIFY.md",
-    "report_expected": "agent-reports/REPORT-ol043-f1f2-mac-verify.md",
-    "result_expected": "LO-20261119-043",
-    "online_ack": "agent-handoff/receipts/online/LO-20261119-043-done.md",
-    "report_commit": "0645388000bf9ec9938b970adbadbb3620264973",
-    "local_claim_sha": "3150397956a2d9595e3e072a5a87294cf08d464b"
+    "original_3080_3083_mutation": "FORBIDDEN",
+    "original_8123": "INFERENCE_ONLY_NO_CONFIG_CHANGE",
+    "max_worker_tickets": 1,
+    "max_real_workers": 1,
+    "max_model_requests": 6,
+    "max_tool_actions": 10,
+    "max_live_minutes": 15,
+    "handoff": "agent-handoff/HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md",
+    "report_expected": "agent-reports/REPORT-ol044-i2-isolated-worker.md",
+    "result_expected": "LO-20261119-044"
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -199,13 +205,15 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "PRIVATE_OPERATOR_I2_APPROVAL_REQUIRED",
-    "task_id": null,
+    "status": "CONDITIONAL_OPERATOR_CONSENT_REQUIRES_DIRECT_MANUAL_AGENT_HANDOFF_AND_OS_PREFLIGHT",
+    "task_id": "OL-20261119-044",
     "proposal": "agent-handoff/I2_STAGING_APPROVAL_PLAN.md",
-    "scope": "DISPOSABLE_ISOLATED_DSH_HOST_ONLY_IF_SEPARATELY_APPROVED",
+    "runbook": "agent-handoff/HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md",
+    "scope": "ONE_NEW_DISPOSABLE_OS_ISOLATED_DSH_WORKER_LOCAL_8123_MODEL",
     "automatic_local_dispatch": false,
     "production_host_services": "UNCHANGED",
     "real_source_apply": "FORBIDDEN",
-    "original_host_session_mutation": "FORBIDDEN"
+    "original_host_session_mutation": "FORBIDDEN",
+    "no_weixin": true
   }
 }
