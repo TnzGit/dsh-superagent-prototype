@@ -118,7 +118,18 @@ export class Sessions {
       this.retryHealth.observe(agent.id, event)
       this.updateModelHealth()
     })
-    ctx.on('agent/created', async ({ agent }) => { await this.decorate(agent); return undefined })
+    ctx.on('agent/created', async ({ agent }) => {
+      const ticketId = ticketOfSession(agent.id)
+      const ticket = ticketId && this.host.store.tickets.get(ticketId)
+      // A newly created DSH Agent may be emitted BEFORE the workspace account
+      // is attached, and a restored Agent may belong to a different workspace.
+      // Neither may receive Ticket tools/prompts through this event. Only
+      // Sessions.ensure, AFTER the read-only membership attestation, may
+      // decorate a registered-project Worker.
+      if (ticket?.execution?.projectId) return undefined
+      await this.decorate(agent)
+      return undefined
+    })
     // Opening a Session in DSH's Web UI before its first turn may select the default preset for it: select ours again. After
     // its first turn DSH refuses any selection, which leaves it as it is.
     ctx.inject(['agentPresets'], child => {
@@ -334,7 +345,25 @@ export class Sessions {
     const allow = WORK_TOOLS.filter(name => agent.ctx.tools.get(name, parent))
     return [agent.ctx.tools.restrict({ allow }), agent.ctx.tools.guard(() => {
       const current = store.tickets.get(ticketId)
-      return !current || !liveTicket(current) ? 'Ticket ended; new work needs a new authorized ticket' : undefined
+      if (!current || !liveTicket(current)) return 'Ticket ended; new work needs a new authorized ticket'
+      if (current.execution?.projectId) {
+        const expected = current.execution.directory
+        if (!expected || agent.session.header.cwd !== expected)
+          return 'Worker Session no longer has the Ticket snapshot directory'
+        // The DSH WorkspaceRegistry list is a synchronous cached, filtered
+        // projection. Check it at tool-use time as well as at ensure/prompt;
+        // a deleted or reassigned Workspace must not keep old worker tools.
+        // Subagents inherit the worker's directory but need not themselves be
+        // accounted in the parent's Workspace sessionIds list.
+        if (agent.id === workerSessionId(ticketId)) {
+          try {
+            const owner = this.ctx.workspaceRegistry.list().find(workspace =>
+              workspace.path === expected && workspace.sessionIds.includes(agent.id as SessionId))
+            if (!owner) return 'Worker Session lost its registered Workspace ownership'
+          } catch { return 'Worker Session Workspace ownership cannot be verified' }
+        }
+      }
+      return undefined
     })]
   }
   /**
