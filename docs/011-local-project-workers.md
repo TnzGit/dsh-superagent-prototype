@@ -61,3 +61,8 @@ The native Weixin Source, context tokens and existing local Qwen queue proxy rem
 4. Repeat with a clean Git test project and check clone `origin` removed; negative tests for unknown ID, missing selector, dirty Git root and symlinked content. Keep cloud disabled.
 5. Compare exact worker model route/provider against `localqwen`; confirm it passes via the single-slot proxy. Record times, errors and idempotency/restart behavior, plus method to revert staging config.
 6. Report failures (not local rewrites) to the remote ChatGPT. Production project approval/apply should **not** be enabled by this test.
+
+
+## 2026-11-19 I2 stage-safety supersession
+
+Earlier `Stage C operator checks` above and example Weixin task were initial architecture proposals, NOT current authorizations. F1/F2 were accepted only offline in OL-043, now ACKed; there is **NO ACTIVE LOCAL TASK or live host grant**. The first true DSH Worker I2 must run as a **separate, OS-isolated disposable DSH instance** with a scratch fixture project. `workspace-write` does NOT constitute subprocess OS confinement. No existing 3080 Session prompt, Weixin send, 3083/8123 restart, global provider/default mutation or registered project source Apply is authorized. A fresh PRIVATE one-shot human grant, exact staging executable and isolation preflight are required before a separate DSH instance start or live 8123 inference. See `agent-handoff/I2_STAGING_APPROVAL_PLAN.md`; this supersedes the early suggestion to directly send a real Weixin task for I2. I3 is a separate later gate; real Apply stays forbidden.
