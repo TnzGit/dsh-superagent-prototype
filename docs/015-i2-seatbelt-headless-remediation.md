@@ -1,6 +1,6 @@
 # 015 — I2 Seatbelt nesting and headless approval remediation (OFFLINE DESIGN; no live grant)
 
-**2026-11-20. Status: remote offline safety design + deny-only source option, NOT a genuine I2 success.** Read the truthful OL-044 report at `agent-reports/REPORT-ol044-i2-isolated-worker.md` and ACK `agent-handoff/receipts/online/LO-20261119-044-done.md`. One-shot OL-044 consent is **CONSUMED**. No executable OL-045; no automatic dispatch, model call, new DSH Instance, Weixin or real Apply is authorized by this document.
+**2026-11-20. Status: remote offline safety design + deny-only source option, NOT a genuine I2 success.** Read the truthful OL-044 report at `agent-reports/REPORT-ol044-i2-isolated-worker.md` and ACK `agent-handoff/receipts/online/LO-20261119-044-done.md`. One-shot OL-044 consent is **CONSUMED**. A separate strictly manual OFFLINE/READ_ONLY installed-DSH API audit OL-20261120-045 has now been published (runbook in agent-handoff/HANDOFF-2026-11-20-OL045-DSH-FS-APPROVAL-API-OFFLINE.md), but no model call, live DSH instance, original host mutation, automatic dispatch, Weixin or real Apply is authorized.
 
 ## Confirmed OL-044 failure and what we MUST NOT do
 

@@ -106,7 +106,10 @@ Mac Agent ALL_OFFLINE_PASS report `85fbc5c868c3ed23308f15bcf0e5759d58e777ad` rec
 
 The OL-006/007/008/009 local results have been accepted with online LO-006/007/008/009 done receipts. The durable synthetic ledger pin initial acceptance is complete (CI #292; exact code 06de7c16599dc348857a0b0548135e458d5964e5). No real Apply, DSH Prompt or Weixin was authorized.
 
-## Current authorization — LO-044 ACKed PARTIAL; NO ACTIVE TASK (2026-11-20)
+## Current authorization — LO-044 ACKed PARTIAL; one manual-only OFFLINE OL-045 (2026-11-20)
+
+**Current supersession:** OL-20261120-045 is only an operator-manually forwarded OFFLINE_SYNTHETIC/READ_ONLY installed DSH source/types audit; no real DSH instance startup, model/8123 inference, any original 3080/3083/8123 operation, Weixin or Apply. It can report truthful ALL_OFFLINE_PASS, OFFLINE_BLOCKED_API, OFFLINE_BLOCKED_ENV or OFFLINE_FAIL. OL-044's live model consent is consumed permanently. Old instructions below are historical and cannot widen this task.
+
 
 OL-20261114-040 finished with local `ALL_OFFLINE_PASS`; online `LO-20261114-040-done.md` ACK was published. ALL previous executable OL tasks through 040 are closed. `LOCAL_AGENT_TASK.md` explicitly has **NO ACTIVE LOCAL TASK.** OL-20261119-044 was manually run ONCE and ACKed as I2_PARTIAL_NO_EDIT. Its actual local-model one-shot authorization is CONSUMED, not reusable by future GitHub edits. The outer Seatbelt probe passed but nested DSH sandbox failed; approval asked without a headless answerer and no edit/review occurred. Remote owns offline-only source remediation; any next live I2 requires NEW explicit scoped private operator authorization. No original 3080/3083/8123 CONFIG, Weixin, history or registered source Apply is authorized. No GitHub message or scheduler tick by itself grants execution. Do not replay an earlier claim, automatically perform a host test, restart a DSH service, or invent a new task. A later operator-scoped `type: task` and independent safety constraints are required.
 
