@@ -143,6 +143,6 @@ test('verdict guards reject dishonest pass/partial mixing and prose marker spoof
   assert.equal(scopeVerdict(I2_SCOPE,'ALL_OFFLINE_PASS'),false)
   assert.equal(scopeVerdict(I2_SCOPE,'I2_BYPASS_PRODUCTION'),false)
   assert.equal(scopeVerdict('UNKNOWN_FUTURE_SCOPE','I2_PARTIAL_NO_EDIT'),false)
-  assert.throws(()=>field('verdict: I2_PARTIAL_NO_EDIT\\nverdict: ALL_OFFLINE_PASS','verdict'))
+  assert.throws(()=>field(['verdict: I2_PARTIAL_NO_EDIT','verdict: ALL_OFFLINE_PASS'].join(String.fromCharCode(10)),'verdict'))
   assert.throws(()=>field('the body says ALL_OFFLINE_PASS','verdict'))
 })
