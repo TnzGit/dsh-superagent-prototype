@@ -60,6 +60,16 @@ declare module '@deepseek-ai/cordis' {
  */
 const WORK_TOOLS = ['read', 'write', 'edit', 'read_image', 'glob', 'grep', 'bash', 'pwsh', 'job_output', 'job_list', 'job_kill', 'web_search',
   'web_fetch', 'skill', 'todo_write', 'subagent', 'list_subagent_models', 'send_message', 'list_agents', 'interrupt_agent']
+/**
+ * DENY-ONLY, EXPLICIT OPT-IN fixture-I2 tool profile. It removes shell, jobs,
+ * web, skills and subagent surfaces from registered-project Workers. It does
+ * NOT change the DSH permission preset, override its sandbox backend, grant
+ * file writes, attest external OS confinement, or authorize any model turn.
+ * The one-shot operator + external Seatbelt boundary remain mandatory.
+ */
+const I2_STAGING_FS_ONLY_ENV = 'DSH_SUPERAGENT_I2_STAGING_FS_ONLY'
+const I2_STAGING_FILE_TOOLS = ['read', 'write', 'edit', 'glob', 'grep'] as const
+const I2_STAGING_FILE_SET: ReadonlySet<string> = new Set(I2_STAGING_FILE_TOOLS)
 /** What the main Session is told when it would wait: what it waits for comes to it, and a waiting step holds back the next. */
 const NO_WAIT = 'Reports, follow_up notices, new candidates and a background job\'s end with its output arrive by themselves as messages; '
   + 'end the turn instead of waiting for them.'
@@ -342,8 +352,17 @@ export class Sessions {
   private workOnly(agent: Agent, ticketId: string): (() => void)[] {
     const store = this.host.store
     const parent = scopeParentOf(agent)
-    const allow = WORK_TOOLS.filter(name => agent.ctx.tools.get(name, parent))
-    return [agent.ctx.tools.restrict({ allow }), agent.ctx.tools.guard(() => {
+    const registeredProject = store.tickets.get(ticketId)?.execution?.projectId !== undefined
+    const stagedFileToolsOnly = registeredProject && process.env[I2_STAGING_FS_ONLY_ENV] === '1'
+    // Selecting an I2 fixture profile can ONLY REMOVE tools. The normal
+    // runtime and legacy non-project workers keep their exact former set.
+    const names = stagedFileToolsOnly ? I2_STAGING_FILE_TOOLS : WORK_TOOLS
+    const allow = names.filter(name => agent.ctx.tools.get(name, parent))
+    return [agent.ctx.tools.restrict({ allow }), agent.ctx.tools.guard(execution => {
+      // A denied shell MUST NOT reach DSH's nested Seatbelt runner or its
+      // danger-full-access approval path, even if tool listing is stale.
+      if (stagedFileToolsOnly && !I2_STAGING_FILE_SET.has(execution?.name ?? ''))
+        return 'I2 isolated fixture Worker allows native file tools only; shell, jobs, network and subagents are denied'
       const current = store.tickets.get(ticketId)
       if (!current || !liveTicket(current)) return 'Ticket ended; new work needs a new authorized ticket'
       if (current.execution?.projectId) {

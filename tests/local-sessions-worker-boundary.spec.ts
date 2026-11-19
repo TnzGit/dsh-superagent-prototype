@@ -271,3 +271,39 @@ test('I1F worker tool guard fails closed when Workspace membership is deleted af
   expect(f.delivery).toHaveLength(0)
   f.sessions.dispose()
 })
+
+test('I2 staging opt-in restricts ONLY registered fixture Worker to native file tools; no shell/approval route', async () => {
+  vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY', '1')
+  try {
+    const f = fixture(), id = workerSessionId(f.ticketId)
+    await f.sessions.ensure(id, f.workspace, 'Fixture Worker', 'worker')
+    const allowed = f.toolRestrictions.find(x => x.id === id)?.allow
+    expect(allowed).toEqual(['read', 'write', 'edit', 'glob', 'grep'])
+    for (const denied of ['bash','pwsh','job_output','job_kill','web_search','subagent','skill','list_agents']) {
+      expect(f.toolGuards[0].fn({ name: denied })).toMatch(/native file tools only/)
+    }
+    for (const permitted of allowed) expect(f.toolGuards[0].fn({ name: permitted })).toBeUndefined()
+    expect(f.toolGuards[0].fn({})).toMatch(/native file tools only/)
+    // Explicit mode does not widen permissions or provider routes.
+    expect(f.permissions).toEqual([{ id, value: 'workspace-write' }])
+    expect(f.modelResolutions).toEqual([{provider:'fixture-local-only',model:'qwen-test'}])
+    expect(f.globalDefault).toEqual({provider:'existing-production-default',model:'unchanged'})
+    f.sessions.dispose()
+  } finally {
+    vi.unstubAllEnvs()
+  }
+})
+
+test('I2 file-only opt-in cannot silently affect normal Worker tools when disabled', async () => {
+  vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY', 'false')
+  try {
+    const f = fixture(), id = workerSessionId(f.ticketId)
+    await f.sessions.ensure(id, f.workspace, 'Normal Worker', 'worker')
+    expect(f.toolRestrictions[0].allow).toContain('bash')
+    expect(f.toolRestrictions[0].allow).toContain('subagent')
+    expect(f.toolGuards[0].fn({ name: 'bash' })).toBeUndefined()
+    f.sessions.dispose()
+  } finally {
+    vi.unstubAllEnvs()
+  }
+})
