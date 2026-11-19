@@ -75,6 +75,8 @@ function fixture(options = {}) {
   }
   const context = {
     agents: { get: id => agents.get(id) },
+    inject: () => {},
+
     on: (name, callback) => {
       listeners.set(name, [...listeners.get(name) ?? [], callback])
       return () => listeners.set(name, (listeners.get(name) ?? []).filter(fn => fn !== callback))
@@ -88,7 +90,8 @@ function fixture(options = {}) {
     },
     workspaceRegistry: {
       create: async cwd => { workspaces.push(cwd); if (options.failWorkspace) throw Error('workspace registration unavailable'); return workspaceRecord },
-      resolveByPath: async cwd => cwd === workspace && !options.missingWorkspace ? workspaceRecord : undefined
+      resolveByPath: async cwd => cwd === workspace && !options.missingWorkspace ? workspaceRecord : undefined,
+      list: () => options.missingWorkspace ? [] : [workspaceRecord]
     },
     permissionPresets: { set: (session, value) => permissions.push({ id: session.id, value }) },
     llm: { resolveCallConfig: async route => { modelResolutions.push(route); if (options.badRoute) throw Error('No local-only model route'); return route } },
@@ -114,7 +117,7 @@ function fixture(options = {}) {
   }
   const sessions = new Sessions(host)
   return { sessions, ticketId, workspace, tickets, agents, context, history,
-    created, renamed, delivery, permissions, toolRestrictions, toolGuards, modelResolutions, workspaces, workspaceRecord, globalDefault,
+    created, renamed, delivery, permissions, toolRestrictions, toolGuards, modelResolutions, workspaces, workspaceRecord, listeners, globalDefault,
     get flushes() { return flushes }, makeAgent, ticket }
 }
 
@@ -242,4 +245,29 @@ test('I1F workspace registration failure refuses without creating a Session or g
   expect(f.created).toHaveLength(0)
   expect(f.permissions).toHaveLength(0)
   expect(f.delivery).toHaveLength(0)
+})
+
+test('I1F project Worker agent/created event never decorates before ownership attestation', async () => {
+  const f=fixture(), id=workerSessionId(f.ticketId)
+  f.sessions.install()
+  const agent=f.makeAgent(id,'/other-project')
+  const listeners=f.listeners.get('agent/created') ?? []
+  expect(listeners.length).toBeGreaterThanOrEqual(1)
+  for (const listener of listeners) await listener({agent})
+  expect(f.toolRestrictions).toHaveLength(0)
+  expect(f.toolGuards).toHaveLength(0)
+  expect(f.permissions).toHaveLength(0)
+  expect(f.modelResolutions).toHaveLength(0)
+})
+
+test('I1F worker tool guard fails closed when Workspace membership is deleted after ensure', async () => {
+  const f=fixture(), id=workerSessionId(f.ticketId)
+  await f.sessions.ensure(id,f.workspace,'Worker','worker')
+  expect(f.toolGuards).toHaveLength(1)
+  expect(f.toolGuards[0].fn()).toBeUndefined()
+  f.workspaceRecord.sessionIds.splice(0)
+  expect(f.toolGuards[0].fn()).toMatch(/lost its registered Workspace/)
+  await expect(f.sessions.prompt(id,'assignment:'+f.ticketId,'replay','queue')).rejects.toThrow(/Workspace identity/)
+  expect(f.delivery).toHaveLength(0)
+  f.sessions.dispose()
 })

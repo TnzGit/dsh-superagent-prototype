@@ -51,7 +51,8 @@ test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery
     permissionPresets:{set:(session,preset)=>permissions.push({sessionId:session.id,preset})},
     workspaceRegistry:{
       create:async cwd=>{workspaces.push(cwd);const workspace={id:'offline-workspace-'+workspaces.length,path:cwd,sessionIds:[]};workspaceEntities.set(cwd,workspace);return workspace},
-      resolveByPath:async cwd=>workspaceEntities.get(cwd)
+      resolveByPath:async cwd=>workspaceEntities.get(cwd),
+      list:()=>[...workspaceEntities.values()]
     },
     sessionPersistence:{
       flush:async()=>{flushes++},
