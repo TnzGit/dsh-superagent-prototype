@@ -134,6 +134,34 @@ export class Sessions {
       if (status === 'idle' && !this.host.closing()) { this.retryHealth.clear(agent.id); this.updateModelHealth() }
     })
   }
+  /**
+   * A resolved Worker Session may be a RESTORED DSH session with the same id but
+   * a different stored Workspace. Attest its immutable header and the DSH
+   * WorkspaceRegistry's ACCOUNTED membership, never just the requested cwd.
+   *
+   * DSH uses canonical path-string identity, not inode/dev identity. This
+   * check closes accidental cross-workspace Session reattachment; it does NOT
+   * make snapshot paths race-free, isolate noncooperating writers, or authorize
+   * source Apply. The latter still requires a separate native OS helper.
+   */
+  private async assertProjectWorkerWorkspace(sessionId: string, agent: Agent): Promise<void> {
+    const ticketId = ticketOfSession(sessionId)
+    if (ticketId === undefined) return
+    const ticket = this.host.store.tickets.get(ticketId)
+    if (!ticket || !liveTicket(ticket))
+      throw new Error('Worker Session requires an active existing Ticket')
+    if (!ticket.execution?.projectId) return
+    const expected = ticket.execution.directory
+    if (!expected) throw new Error('Worker Session has no isolated snapshot directory')
+    // resolveByPath is read-only and performs the same realpath canon as DSH's
+    // WorkspaceRegistry.create. Do not create/attach a Workspace to repair a
+    // missing Session account or silently move a foreign Session.
+    const workspace = await this.ctx.workspaceRegistry.resolveByPath(expected)
+    if (!workspace || workspace.path !== expected ||
+        agent.id !== sessionId || agent.session.header.cwd !== expected ||
+        !workspace.sessionIds.includes(sessionId as SessionId))
+      throw new Error('Worker Session Workspace identity does not match the Ticket snapshot')
+  }
   /** Resolves or creates a role-bound Session. Registered project workers may run only for an active Ticket in its selected snapshot. */
   async ensure(id: string, cwd: string, title: string, role: 'orchestrator' | 'worker'): Promise<Agent> {
     // Fail closed BEFORE creating or resolving an Agent: a name resembling a Worker
@@ -155,6 +183,7 @@ export class Sessions {
       result = await ctx.sessionController.resolveAgent(id as SessionId)
     }
     if ('error' in result) throw result.error
+    if (role === 'worker') await this.assertProjectWorkerWorkspace(id, result.agent)
     const settings = this.host.store.settings()
     await initializeRoleModel(ctx, result.agent, role === 'orchestrator' ? settings.eval.model : settings.executor.model)
     await this.decorate(result.agent)
@@ -166,13 +195,16 @@ export class Sessions {
   /** Returns whether `sessionId` already holds the message delivered under `requestId`, or `false` if the session does not exist. */
   async holds(sessionId: string, requestId: string): Promise<boolean> {
     const result = await this.ctx.sessionController.resolveAgent(sessionId as SessionId)
-    return !('error' in result) && await this.agentDelivery.holds(result.agent, key(requestId))
+    if ('error' in result) return false
+    await this.assertProjectWorkerWorkspace(sessionId, result.agent)
+    return await this.agentDelivery.holds(result.agent, key(requestId))
   }
   /** Deliver a message once per request id: to the next turn, the current one, or `inject`ed with its label without waking the agent. */
   async prompt(sessionId: string, requestId: string, text: string, mode: 'queue' | 'steer' | { inject: string }, authorize?: () => void,
     accepted?: () => void): Promise<void> {
     const result = await this.ctx.sessionController.resolveAgent(sessionId as SessionId)
     if ('error' in result) throw result.error
+    await this.assertProjectWorkerWorkspace(sessionId, result.agent)
     await this.agentDelivery.send(result.agent, key(requestId), text, mode, this.host.lifetime, authorize, accepted)
   }
   /** The id of the message `prompt` delivers under `requestId`, which DSH's inbox events name it by. */
