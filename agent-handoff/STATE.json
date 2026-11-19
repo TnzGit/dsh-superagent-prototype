@@ -25,7 +25,7 @@
     "report_ci_run_id": 44334331355,
     "report_ci_status": "SUCCESS_3_OF_3",
     "online_ack": "agent-handoff/receipts/online/LO-20261118-042-done.md",
-    "verdict": "ALL_OFFLINE_PASS_WITH_4_OPERATOR_MAC_NODE_FAILURES_RECORDED"
+    "verdict": "ALL_OFFLINE_PASS"
   },
   "active_local_task": null,
   "pending_online_ack": null,
@@ -86,7 +86,13 @@
     "result_expected": "LO-20261118-042",
     "online_ack": "agent-handoff/receipts/online/LO-20261118-042-done.md",
     "local_claim_sha": "2d1475352632b760b82e1b40b1c6c2f033a2a847",
-    "report_commit": "6c067c4ce577749a974ca218213893482ebf299a"
+    "report_commit": "6c067c4ce577749a974ca218213893482ebf299a",
+    "operator_macos_native_node": {
+      "pass": 249,
+      "fail": 4,
+      "total": 253,
+      "finding": "F1 provenance stamp; full Node list NOT all green on operator Mac"
+    }
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
