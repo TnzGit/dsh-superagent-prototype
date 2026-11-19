@@ -26,6 +26,7 @@ function fixture(options = {}) {
   }
   const tickets = new Map(options.noTicket ? [] : [[ticketId, ticket]])
   const agents = new Map(), history = new Map(), listeners = new Map()
+  const workspaceRecord = { id: 'workspace-fixture-1', path: workspace, sessionIds: [] }
   const workspaces = [], created = [], renamed = [], delivery = [], permissions = [], toolRestrictions = [], toolGuards = [], modelResolutions = [], notifications = []
   const globalDefault = Object.freeze({ provider: 'existing-production-default', model: 'unchanged' })
   let flushes = 0
@@ -33,10 +34,10 @@ function fixture(options = {}) {
     executor: { model: options.noRoleModel ? null : { provider: 'fixture-local-only', model: 'qwen-test' } },
     eval: { model: null }
   })
-  const makeAgent = id => {
+  const makeAgent = (id, cwd = workspace) => {
     const events = [], cleanup = [], agentHandlers = new Map()
     const session = {
-      id, header: { agentPreset: WORKER_PRESET },
+      id, header: { agentPreset: WORKER_PRESET, cwd },
       snapshotEvents: () => [...events], requestHeader: () => null,
       append: (type, data) => { const ev = { type, data }; events.push(ev); return ev }
     }
@@ -82,10 +83,13 @@ function fixture(options = {}) {
     logger: { warn: () => {} },
     sessionController: {
       resolveAgent: async id => agents.has(id) ? { agent: agents.get(id) } : { error: { code: 'session/not-found' } },
-      create: async args => { created.push(args); makeAgent(args.sessionId) },
+      create: async args => { created.push(args); makeAgent(args.sessionId); workspaceRecord.sessionIds.push(args.sessionId) },
       rename: async args => { renamed.push(args) }
     },
-    workspaceRegistry: { create: async cwd => { workspaces.push(cwd); return { id: 'workspace-fixture-'+workspaces.length } } },
+    workspaceRegistry: {
+      create: async cwd => { workspaces.push(cwd); if (options.failWorkspace) throw Error('workspace registration unavailable'); return workspaceRecord },
+      resolveByPath: async cwd => cwd === workspace && !options.missingWorkspace ? workspaceRecord : undefined
+    },
     permissionPresets: { set: (session, value) => permissions.push({ id: session.id, value }) },
     llm: { resolveCallConfig: async route => { modelResolutions.push(route); if (options.badRoute) throw Error('No local-only model route'); return route } },
     sessionPersistence: {
@@ -110,7 +114,7 @@ function fixture(options = {}) {
   }
   const sessions = new Sessions(host)
   return { sessions, ticketId, workspace, tickets, agents, context, history,
-    created, renamed, delivery, permissions, toolRestrictions, toolGuards, modelResolutions, workspaces, globalDefault,
+    created, renamed, delivery, permissions, toolRestrictions, toolGuards, modelResolutions, workspaces, workspaceRecord, globalDefault,
     get flushes() { return flushes }, makeAgent, ticket }
 }
 
@@ -202,4 +206,40 @@ test('I1D bad model route fails before grant, rename or AgentDelivery', async ()
   expect(f.delivery).toHaveLength(0)
   expect(f.renamed).toHaveLength(0)
   expect(f.globalDefault.model).toBe('unchanged')
+})
+
+test('I1F restored foreign Worker Session fails before model init, tools, permissions or rename', async () => {
+  const f = fixture(), id = workerSessionId(f.ticketId)
+  f.makeAgent(id, '/foreign-registered-project/other-workspace')
+  f.workspaceRecord.sessionIds.push(id)
+  await expect(f.sessions.ensure(id, f.workspace, 'Worker', 'worker')).rejects.toThrow(/Workspace identity/)
+  expect(f.modelResolutions).toHaveLength(0)
+  expect(f.permissions).toHaveLength(0)
+  expect(f.renamed).toHaveLength(0)
+  expect(f.toolRestrictions).toHaveLength(0)
+  expect(f.created).toHaveLength(0)
+  await expect(f.sessions.prompt(id, 'assignment:'+f.ticketId, 'wrong target', 'queue')).rejects.toThrow(/Workspace identity/)
+  expect(f.delivery).toHaveLength(0)
+  await expect(f.sessions.holds(id, 'assignment:'+f.ticketId)).rejects.toThrow(/Workspace identity/)
+})
+
+test('I1F matching cwd but no WorkspaceRegistry membership or missing registered workspace fails closed', async () => {
+  const f = fixture(), id=workerSessionId(f.ticketId)
+  f.makeAgent(id)
+  await expect(f.sessions.ensure(id, f.workspace, 'Worker','worker')).rejects.toThrow(/Workspace identity/)
+  expect(f.permissions).toHaveLength(0)
+  const missing = fixture({ missingWorkspace: true })
+  const mid=workerSessionId(missing.ticketId)
+  await expect(missing.sessions.ensure(mid, missing.workspace, 'Worker','worker')).rejects.toThrow(/Workspace identity/)
+  expect(missing.created).toHaveLength(1) // Explicit create may occur; never proceed to role model or permission.
+  expect(missing.permissions).toHaveLength(0)
+  expect(missing.modelResolutions).toHaveLength(0)
+})
+
+test('I1F workspace registration failure refuses without creating a Session or granting permissions', async () => {
+  const f=fixture({ failWorkspace: true }), id=workerSessionId(f.ticketId)
+  await expect(f.sessions.ensure(id, f.workspace, 'Worker','worker')).rejects.toThrow(/workspace registration unavailable/)
+  expect(f.created).toHaveLength(0)
+  expect(f.permissions).toHaveLength(0)
+  expect(f.delivery).toHaveLength(0)
 })

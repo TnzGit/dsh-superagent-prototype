@@ -32,7 +32,7 @@ test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery
   writeFileSync(join(source,'.env'), 'FIXTURE SECRET EXCLUDED\n', {mode:0o600})
   const registry = new LocalProjectRegistry([projectHome], [{id:'fixture',root:source,kind:'local'}])
   const repo = new MemoryRepositories(), effects = new Map(), queue = []
-  const agents = new Map(), history = new Map(), events = new Map()
+  const agents = new Map(), history = new Map(), events = new Map(), workspaceEntities = new Map()
   const modelCalls=[], madeSessions=[], workspaces=[], permissions=[], restrictions=[], guards=[], deliveries=[], outbox=[]
   let flushes = 0, engine
   const settings = SettingsSchema.parse({sources:{github:{enabled:false,config:{}}}})
@@ -49,16 +49,19 @@ test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery
     }},
     llm:{resolveCallConfig:async cfg=>{modelCalls.push(cfg);return cfg}},
     permissionPresets:{set:(session,preset)=>permissions.push({sessionId:session.id,preset})},
-    workspaceRegistry:{create:async cwd=>{workspaces.push(cwd);return{id:'offline-workspace-'+workspaces.length}}},
+    workspaceRegistry:{
+      create:async cwd=>{workspaces.push(cwd);const workspace={id:'offline-workspace-'+workspaces.length,path:cwd,sessionIds:[]};workspaceEntities.set(cwd,workspace);return workspace},
+      resolveByPath:async cwd=>workspaceEntities.get(cwd)
+    },
     sessionPersistence:{
       flush:async()=>{flushes++},
       open:async id=>({read:async(offset,limit)=>({events:(history.get(id)??[]).slice(offset,offset+limit)}),
         async [Symbol.asyncDispose]() {}})
     }
   }
-  const createAgent=(id,preset)=>{
+  const createAgent=(id,preset,cwd)=>{
     const storedEvents=[], hooks=[]
-    const session={id,header:{agentPreset:preset},
+    const session={id,header:{agentPreset:preset,cwd},
       snapshotEvents:()=>[...storedEvents],requestHeader:()=>null,
       append:(type,data)=>{const evt={type,data};storedEvents.push(evt);return evt}
     }
@@ -87,7 +90,7 @@ test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery
   }
   context.sessionController={
     resolveAgent:async id=>agents.has(id)?{agent:agents.get(id)}:{error:{code:'session/not-found'}},
-    create:async opts=>{madeSessions.push(opts);createAgent(opts.sessionId,opts.agentPreset)},
+    create:async opts=>{madeSessions.push(opts);const workspace=workspaceEntities.get(workspaces.at(-1));createAgent(opts.sessionId,opts.agentPreset,workspace?.path);workspace?.sessionIds.push(opts.sessionId)},
     rename:async()=>{}
   }
   const store={tickets:repo.tickets,triggers:repo.triggers,
