@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online_with_manual_offline_local_batch",
+  "owner": "remote_online",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -17,17 +17,18 @@
     "vitest_tests": 1208
   },
   "last_accepted_local": {
-    "task_id": "OL-20261118-042",
-    "result_id": "LO-20261118-042",
-    "report_commit": "6c067c4ce577749a974ca218213893482ebf299a",
-    "source_code_sha": "ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead",
-    "source_ci_run_id": 44325865819,
-    "report_ci_run_id": 44334331355,
+    "task_id": "OL-20261119-043",
+    "result_id": "LO-20261119-043",
+    "report_commit": "0645388000bf9ec9938b970adbadbb3620264973",
+    "claim_commit": "3150397956a2d9595e3e072a5a87294cf08d464b",
+    "source_code_sha": "6c75c43f43b9133f8796b628155cc278c2025838",
+    "source_ci_run_id": 44461402757,
+    "report_ci_run_id": 44476080849,
     "report_ci_status": "SUCCESS_3_OF_3",
-    "online_ack": "agent-handoff/receipts/online/LO-20261118-042-done.md",
+    "online_ack": "agent-handoff/receipts/online/LO-20261119-043-done.md",
     "verdict": "ALL_OFFLINE_PASS"
   },
-  "active_local_task": "OL-20261119-043",
+  "active_local_task": null,
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -77,7 +78,7 @@
   },
   "local_batch": {
     "task_id": "OL-20261119-043",
-    "status": "PENDING_MANUAL_HANDOFF",
+    "status": "ACCEPTED_AND_CLOSED",
     "scope": "OFFLINE_SYNTHETIC_ONLY_WITH_READ_ONLY_HOST_BASELINE",
     "code_sha": "6c75c43f43b9133f8796b628155cc278c2025838",
     "ci_run_id": 44461402757,
@@ -86,7 +87,10 @@
     "real_source_apply": "FORBIDDEN",
     "handoff": "agent-handoff/HANDOFF-2026-11-19-F1F2-MAC-VERIFY.md",
     "report_expected": "agent-reports/REPORT-ol043-f1f2-mac-verify.md",
-    "result_expected": "LO-20261119-043"
+    "result_expected": "LO-20261119-043",
+    "online_ack": "agent-handoff/receipts/online/LO-20261119-043-done.md",
+    "report_commit": "0645388000bf9ec9938b970adbadbb3620264973",
+    "local_claim_sha": "3150397956a2d9595e3e072a5a87294cf08d464b"
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -123,9 +127,13 @@
     "focus_tests_per_os": 35,
     "full_vitest": 1243,
     "proxy_tests_per_os": 5,
-    "operator_macos_provenance_retest": "PENDING_MANUAL_OL043",
+    "operator_macos_provenance_retest": "OL043_LOCAL_PASS_254_OF_254",
     "native_os_real_apply": false,
-    "real_dsh_model_turn": false
+    "real_dsh_model_turn": false,
+    "operator_macos_focused": "35_OF_35_THREE_REPEATS",
+    "operator_macos_native": "6_OF_6_THREE_REPEATS",
+    "operator_macos_full_vitest": "1243_OF_1243",
+    "installed_dsh_api": "READ_ONLY_COMPATIBLE_0_2_2_RC_1"
   },
   "integration_i1c": {
     "status": "REAL_AGENT_DELIVERY_DISPOSABLE_TRANSPORT_PASS_NOT_REAL_SESSION",
@@ -168,10 +176,11 @@
     "acl_or_external_writer_guarantee": false,
     "authenticated_apply_capability": false,
     "crash_recovery": false,
-    "operator_macos_26_3_positive_native_cases": "PENDING_RETEST",
+    "operator_macos_26_3_positive_native_cases": "PASS_6_OF_6_THREE_REPEATS",
     "source_ci": "PASS_3_OF_3",
-    "acl_inspection": "NOT_IMPLEMENTED",
-    "ci_run_id": 44461402757
+    "acl_inspection": "UNIMPLEMENTED_OBSERVED_FALSE_ACCEPT_ON_ACL",
+    "ci_run_id": 44461402757,
+    "operator_macos_node": "PASS_254_OF_254"
   },
   "integration_i1f": {
     "status": "RESTORED_SESSION_WORKSPACE_ACCOUNT_GUARD_OFFLINE_PASS",
@@ -183,6 +192,8 @@
     "agent_created_decorate_deferred": true,
     "tool_use_guard": true,
     "os_path_inode_race_proof": false,
-    "production_apply": false
+    "production_apply": false,
+    "operator_macos_result": "ALL_OFFLINE_PASS",
+    "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   }
 }

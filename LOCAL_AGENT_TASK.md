@@ -1,15 +1,9 @@
-# LOCAL_AGENT_TASK — OL-20261119-043 MANUAL OFFLINE F1/F2 MAC CHECK
+# LOCAL_AGENT_TASK — NO ACTIVE TASK after LO-043 ACK (2026-11-19)
 
-**ONE MANUALLY HANDED-OFF OFFLINE-SYNTHETIC + READ-ONLY task ONLY. NO AUTO-DISPATCH.** OL-042 was completed/ACKed and all historical grants are consumed. Current online scheduled automation is PAUSED; local scheduler must not auto-execute from GitHub/CI.
+**NO ACTIVE TASK. NO AUTO-DISPATCH.** OL-20261119-043 was manually claimed ONCE, completed and accepted with online ACK at `agent-handoff/receipts/online/LO-20261119-043-done.md`. OL-041 and OL-042 were also closed; all task IDs and historical C5 one-shot grants are exhausted. No OL-044 has been issued or authorized.
 
-Task ID: OL-20261119-043. Unique expected result: LO-20261119-043.
-Frozen code SHA: 6c75c43f43b9133f8796b628155cc278c2025838.
-Verified source CI #584: https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44461402757 3/3 successful, Linux/macOS Node 254/254 each, focused 35/35 each, full Vitest 1243/1243, proxy 5/5, TS/build pass.
-Task message: agent-handoff/messages/to-local/2026-11-19-ol043-f1f2-mac-verify.md.
-Complete authoritative runbook: agent-handoff/HANDOFF-2026-11-19-F1F2-MAC-VERIFY.md.
+Frozen OL-043 source SHA `6c75c43f43b9133f8796b628155cc278c2025838`, source CI #584 3/3; local report `agent-reports/REPORT-ol043-f1f2-mac-verify.md`, done SHA `0645388000bf9ec9938b970adbadbb3620264973`, report CI #597 3/3. Local operator Mac confirms provenance/native Node 254/254, focused 35/35 x3, native 6/6 x3, proxy 5/5 and full Vitest 1243/1243. Installed DSH API F2_HOST_API_COMPATIBLE. These are historic evidence, NOT an instruction to rerun.
 
-Allowed: fresh detached temp worktree, owner-only 0700 test root, offline fixture tests/repeats and native test-only xattr maker on NEW scratch files; original Mac 3080/3083/8123 status READ ONLY; installed DSH Workspace Registry/SessionController TYPE/SOURCE READ ONLY. Verify the 4 previous macOS provenance false rejects are now positive, and synthetic restored-Session foreign membership fails closed. Publish sanitized report and unique claimed/done receipts.
+Online ChatGPT automation remains PAUSED_BY_OPERATOR; Mac scheduled task unchanged. Public GitHub docs are not authority for original 3080/3083/8123 DSH Session/Worker/model/Weixin operations, provider or global-default changes, service restarts, historical Session/Workspace/SQLite changes, registered project source writes or Apply. Any live I2/I3 must be separately approved by the operator with an exact private scoped one-shot target/port/model/time/rollback, and must STOP before registered-source Apply. Real Apply gates still blocked.
 
-**FORBIDDEN WITHOUT FRESH PRIVATE GRANT:** original 3080/3083/8123 Session prompt/Agent turn or service changes, native Weixin, inference, original project sources, historic Workspace/Session/SQLite edits, model/provider defaults, scheduler changes and real source Apply. I2/I3 not authorized. Keep 3080 LAN owner access configuration unchanged.
-
-Manual operator handoff and one at-most-once local claim required. At completion post report `agent-reports/REPORT-ol043-f1f2-mac-verify.md`, LO-043 result and claimed/done receipts via guarded non-force fast-forward report-only commit; never upload host IDs, paths, credentials or raw logs, never ask operator to courier report.
+Read `agent-handoff/STATE.json`, `CURRENT_STATE.md`, `WORK_QUEUE.md` before any new work. Do not replay an old claim/result. No new task may be inferred from this closeout commit or CI.
