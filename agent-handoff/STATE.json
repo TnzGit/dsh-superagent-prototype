@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-19",
+  "updated_utc": "2026-11-20",
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online_with_one_manual_I2_local_batch",
+  "owner": "remote_online",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -17,18 +17,20 @@
     "vitest_tests": 1208
   },
   "last_accepted_local": {
-    "task_id": "OL-20261119-043",
-    "result_id": "LO-20261119-043",
-    "report_commit": "0645388000bf9ec9938b970adbadbb3620264973",
-    "claim_commit": "3150397956a2d9595e3e072a5a87294cf08d464b",
-    "source_code_sha": "6c75c43f43b9133f8796b628155cc278c2025838",
-    "source_ci_run_id": 44461402757,
-    "report_ci_run_id": 44476080849,
-    "report_ci_status": "SUCCESS_3_OF_3",
-    "online_ack": "agent-handoff/receipts/online/LO-20261119-043-done.md",
-    "verdict": "ALL_OFFLINE_PASS"
+    "task_id": "OL-20261119-044",
+    "result_id": "LO-20261119-044",
+    "claim_commit": "a28587b9222cf871c7b083fecb42a11af01d9e89",
+    "report_commit": "f2aca2c0ab6cdccde286ecae9853aaf16418879f",
+    "source_code_sha": "c0da76b14f4893397428c025670f731e0629555d",
+    "source_ci_run_id": 44482434876,
+    "report_ci_run_id": 44571609628,
+    "report_ci_status": "FAIL_1_OF_3_REMOTE_HARDCODED_VERDICT_ASSERTION",
+    "online_ack": "agent-handoff/receipts/online/LO-20261119-044-done.md",
+    "scope": "CONDITIONAL_I2_OS_ISOLATED_DISPOSABLE_STAGING_ONE_SHOT",
+    "verdict": "I2_PARTIAL_NO_EDIT",
+    "live_one_shot_consumed": true
   },
-  "active_local_task": "OL-20261119-044",
+  "active_local_task": null,
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -52,7 +54,10 @@
     "agent-handoff/receipts/online/LO-20261118-042-done.md",
     "agent-handoff/I2_STAGING_APPROVAL_PLAN.md",
     "agent-handoff/receipts/online/LO-20261119-043-done.md",
-    "agent-handoff/HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md"
+    "agent-handoff/HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md",
+    "agent-handoff/receipts/online/LO-20261119-044-done.md",
+    "agent-reports/REPORT-ol044-i2-isolated-worker.md",
+    "tests/handoff-convergence.node-test.mjs"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -81,7 +86,7 @@
   },
   "local_batch": {
     "task_id": "OL-20261119-044",
-    "status": "PENDING_MANUAL_HANDOFF",
+    "status": "ACKED_CLOSED_PARTIAL",
     "scope": "CONDITIONAL_ONE_SHOT_OS_ISOLATED_DISPOSABLE_DSH_I2",
     "code_sha": "c0da76b14f4893397428c025670f731e0629555d",
     "ci_run_id": 44482434876,
@@ -98,7 +103,11 @@
     "max_live_minutes": 15,
     "handoff": "agent-handoff/HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md",
     "report_expected": "agent-reports/REPORT-ol044-i2-isolated-worker.md",
-    "result_expected": "LO-20261119-044"
+    "result_expected": "LO-20261119-044",
+    "online_ack": "agent-handoff/receipts/online/LO-20261119-044-done.md",
+    "report_commit": "f2aca2c0ab6cdccde286ecae9853aaf16418879f",
+    "local_claim_sha": "a28587b9222cf871c7b083fecb42a11af01d9e89",
+    "operator_consent_consumed": true
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -205,15 +214,38 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "CONDITIONAL_OPERATOR_CONSENT_REQUIRES_DIRECT_MANUAL_AGENT_HANDOFF_AND_OS_PREFLIGHT",
-    "task_id": "OL-20261119-044",
-    "proposal": "agent-handoff/I2_STAGING_APPROVAL_PLAN.md",
-    "runbook": "agent-handoff/HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md",
-    "scope": "ONE_NEW_DISPOSABLE_OS_ISOLATED_DSH_WORKER_LOCAL_8123_MODEL",
-    "automatic_local_dispatch": false,
-    "production_host_services": "UNCHANGED",
-    "real_source_apply": "FORBIDDEN",
-    "original_host_session_mutation": "FORBIDDEN",
-    "no_weixin": true
+    "status": "REMOTE_OFFLINE_REMEDIATION_ONLY_AWAIT_FRESH_PRIVATE_I2_GRANT",
+    "task_id": null,
+    "operator_live_authorization": "CONSUMED",
+    "one_shot_retry": false,
+    "remote_automation": "PAUSED_BY_OPERATOR",
+    "original_host_services": "UNCHANGED",
+    "no_weixin": true,
+    "no_real_apply": true,
+    "needed": [
+      "nested_seatbelt_backend_resolution",
+      "headless_approval_fail_closed_contract",
+      "scope_aware_handoff_CI"
+    ]
+  },
+  "integration_i2": {
+    "status": "I2_PARTIAL_NO_EDIT",
+    "one_shot_consumed": true,
+    "source_sha": "c0da76b14f4893397428c025670f731e0629555d",
+    "report_commit": "f2aca2c0ab6cdccde286ecae9853aaf16418879f",
+    "actual_disposable_dsh_worker": true,
+    "real_local_model_turn": true,
+    "main_model_requests": 1,
+    "worker_model_requests": 2,
+    "worker_tool_actions": 3,
+    "os_seatbelt_probe": "LOCAL_AGENT_REPORTED_PASS",
+    "sandbox_nesting": "SANDBOX_UNAVAILABLE",
+    "headless_approval": "ASKED_UNANSWERED",
+    "diff_review_record": false,
+    "outbox_pending_acks": 1,
+    "weixin_send": false,
+    "original_source_apply": false,
+    "host_drift": "LOCAL_AGENT_REPORTED_ZERO",
+    "next": "REMOTE_OFFLINE_SANDBOX_AND_APPROVAL_DESIGN_ONLY"
   }
 }

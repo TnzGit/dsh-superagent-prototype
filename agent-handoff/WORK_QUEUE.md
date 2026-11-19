@@ -1,14 +1,15 @@
-# WORK_QUEUE — 2026-11-19 after one-shot I2 operator consent
+# WORK_QUEUE — 2026-11-20 OL-044 concluded PARTIAL
 
-STATE.json controls active work; remote scheduling PAUSED and no auto-dispatch. PR #1 Draft; no main/deploy changes.
+No active local task, no pending ACK; online automation operator-PAUSED. Historic grants consumed, no automatic OL-045. PR #1 DRAFT.
 
-| Priority | Work | Status / acceptance |
+| Priority | Work | Exit |
 | --- | --- | --- |
-| P0 | OL-043 F1/F2 local Mac | CLOSED, online ACK, 254/254 Node, 35/35 focus x3, 1243/1243 Vitest, no host drift |
-| P0 | OL-20261119-044 disposable true DSH Worker I2 | **ONE MANUAL CONDITIONAL I2 TASK**. Human direct Prompt, exact source `c0da76b14f4893397428c025670f731e0629555d`, [CI #618](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44482434876). Runbook `agent-handoff/HANDOFF-2026-11-19-OL044-I2-DISPOSABLE-DSH-ONE-SHOT.md`. OS and child-process isolation MUST pass before one model turn; otherwise I2_BLOCKED_* report, never unsafe fallback |
-| P1 | I2 true Worker/tool lineage | NOT PROVEN UNTIL local run has genuine Agent/tool invocation + isolated copy-only diff/review/Outbox, model-only 8123, original host zero drift |
-| P2 | I3 native Weixin | NOT AUTHORIZED, requires separate private approval and accepted I2 |
-| P3 | Real registered-source Apply | FORBIDDEN; native OS helper ACL/inode/dev/external writer/journal/one-shot capability missing |
-| P4 | PR #1 | DRAFT, no release/merge/deploy |
+| P0 | OL-044 real disposable I2 | **CLOSED/ACKED, I2_PARTIAL_NO_EDIT**. Genuine Worker turn and OS preflight, but bash failed DSH nested Seatbelt sandbox, approval asked without answerer, no edit/diff/review. One-shot CONSUMED; zero original host drift per report |
+| P0 | Handoff CI false offline-only verdict | Remote scoped receipt parser with strict I2 partial/pass/block enum, negative tests committed; verify Linux/macOS CI then freeze |
+| P1 | Nested Seatbelt backend / headless approval | REMOTE OFFLINE RESEARCH, no live grant. Prefer files-only Worker capabilities + explicit deny-on-headless-approval in isolated staging after installed DSH API compatibility testing; never auto-escalate or disable outer OS confinement |
+| P1 | Genuine I2 edit/diff/review | BLOCKED until a new solution and NEW privately operator-approved disposable one-shot; no automatic retry |
+| P2 | I3 native Weixin | NOT AUTHORIZED, after independently accepted I2 only |
+| P3 | OS real Apply | NOT IMPLEMENTED: ACL, inode/dev root identity, noncooperating writers, private capability and crash journal remain blocked |
+| P4 | PR review/main deployment | DRAFT unmerged, no approval |
 
-No automatic OL-045. The new one-shot approval does not touch original 3080/3083/8123 config, original Workspaces/Sessions, native Weixin or actual registered projects.
+Do not touch original 3080/3083/8123 configs/Session/Workspace/SQLite, Weixin, model defaults or registered source; no real Apply.
