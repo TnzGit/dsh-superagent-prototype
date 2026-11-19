@@ -11,6 +11,45 @@ const state=JSON.parse(read('agent-handoff/STATE.json'))
 const getNum=(name,re)=>{const m=name.match(re);return m?Number(m[1]):-1}
 const largest=(names,re)=>Math.max(-1,...names.map(n=>getNum(n,re)))
 
+/*
+ * A done receipt is a structured statement of a scoped outcome, NOT a magic
+ * pass string somewhere in arbitrary prose. Offline and operator-authorized I2
+ * live staging have disjoint, explicitly allowlisted verdict classes.
+ */
+const I2_SCOPE='CONDITIONAL_I2_OS_ISOLATED_DISPOSABLE_STAGING_ONE_SHOT'
+const I2_STATE_SCOPE='CONDITIONAL_ONE_SHOT_OS_ISOLATED_DISPOSABLE_DSH_I2'
+const I2_VERDICTS=new Set([
+  'I2_ISOLATED_STAGING_PASS',
+  'I2_PARTIAL_NO_EDIT',
+  'I2_PARTIAL_NO_REAL_TOOL_TURN',
+  'I2_AMBIGUOUS_FREEZE',
+  'I2_BLOCKED_NO_OS_ISOLATION',
+  'I2_BLOCKED_STARTUP_API_UNKNOWN',
+  'I2_BLOCKED_MODEL_ROUTE',
+  'I2_BLOCKED_BUDGET_ENFORCEMENT',
+])
+const scopeVerdict=(scope,verdict)=>
+  scope==='OFFLINE_SYNTHETIC_ONLY' ? verdict==='ALL_OFFLINE_PASS'
+  : scope===I2_SCOPE ? I2_VERDICTS.has(verdict)
+  : false
+const field=(body,name)=>{
+  const prefix=name+': '
+  const matches=body.split(/\r?\n/).filter(line=>line.startsWith(prefix))
+  assert.equal(matches.length,1,'expected exactly one '+name+' field')
+  const value=matches[0].slice(prefix.length).trim()
+  assert.match(value,/^[A-Za-z0-9_.-]+$/,'malformed '+name+' field')
+  return value
+}
+const doneReceipt=(id)=>{
+  const body=read('agent-handoff/receipts/local/'+id+'-done.md')
+  assert.equal(field(body,'message_id'),id)
+  assert.equal(field(body,'status'),'done')
+  const scope=field(body,'scope'), verdict=field(body,'verdict')
+  assert.ok(scopeVerdict(scope,verdict),'invalid done verdict '+verdict+' for scope '+scope)
+  assert.match(field(body,'code_sha'),/^[0-9a-f]{40}$/)
+  return {scope,verdict,sha:field(body,'code_sha')}
+}
+
 test('handoff index has bounded state and explicitly named scoped work only',()=>{
   assert.equal(state.schema_version,1)
   assert.equal(state.branch,'feat/local-first-wechat-foundation')
@@ -22,7 +61,10 @@ test('handoff index has bounded state and explicitly named scoped work only',()=
   assert.equal(state.real_apply,'GATED_NO_PRODUCTION_CALLER_OR_GRANT')
   assert.match(state.source_baseline_sha,/^[0-9a-f]{40}$/)
   assert.match(state.last_accepted_local.report_commit,/^[0-9a-f]{40}$/)
-  assert.equal(state.last_accepted_local.verdict,'ALL_OFFLINE_PASS')
+  assert.ok(scopeVerdict(
+    doneReceipt(state.last_accepted_local.task_id).scope,
+    state.last_accepted_local.verdict
+  ),'last accepted verdict must be legal for the original task scope')
 })
 test('last accepted result is acked and a newer OL is at most one and independently scoped',()=>{
   const id=state.last_accepted_local.task_id
@@ -43,13 +85,25 @@ test('last accepted result is acked and a newer OL is at most one and independen
     const resultId=pending.replace(/^OL-/,'LO-')
     const file='agent-handoff/receipts/online/'+resultId+'-done.md'
     assert.ok(!existsSync(path(file)),'unacknowledged result must not have an online ACK')
-    assert.ok(read('agent-handoff/receipts/local/'+pending+'-done.md').includes('ALL_OFFLINE_PASS'))
+    const receipt=doneReceipt(pending)
+    assert.equal(receipt.sha,state.local_batch.code_sha)
+    if(state.local_batch.scope===I2_STATE_SCOPE) assert.equal(receipt.scope,I2_SCOPE)
+    else assert.equal(receipt.scope,'OFFLINE_SYNTHETIC_ONLY')
+    const resultMessages=readdirSync(path('agent-handoff/messages/to-online')).filter(name=>
+      name.includes('-lo'+pending.slice(-3)+'-'))
+    assert.equal(resultMessages.length,1,'exactly one local result for completed task')
+    const resultBody=read('agent-handoff/messages/to-online/'+resultMessages[0])
+    assert.equal(field(resultBody,'message_id'),resultId)
+    assert.equal(field(resultBody,'verdict'),receipt.verdict)
   }
   assert.ok(existsSync(path(state.last_accepted_local.online_ack)))
   assert.ok(read(state.last_accepted_local.online_ack).includes(result))
   assert.ok(existsSync(path('agent-handoff/receipts/local/'+id+'-claimed.md')))
   assert.ok(existsSync(path('agent-handoff/receipts/local/'+id+'-done.md')))
-  assert.ok(read('agent-handoff/receipts/local/'+id+'-done.md').includes('ALL_OFFLINE_PASS'))
+  const accepted=doneReceipt(id)
+  assert.equal(accepted.verdict,state.last_accepted_local.verdict)
+  if(state.last_accepted_local.source_code_sha)
+    assert.equal(accepted.sha,state.last_accepted_local.source_code_sha)
 })
 test('historical long documents remain losslessly archived and active state is short',()=>{
   for(const p of ['agent-handoff/CURRENT_STATE.md','agent-handoff/WORK_QUEUE.md'])
@@ -79,4 +133,16 @@ test('convergence roadmap and OS authorization document exist without announcing
   assert.match(read('agent-handoff/REAL_APPLY_GATES.md'),/NO REAL APPLY EXECUTION ENABLED/)
   const workflow=read('.github/workflows/local-first-core.yml')
   assert.equal((workflow.match(/tests\/handoff-convergence\.node-test\.mjs/g)||[]).length,2)
+})
+
+test('verdict guards reject dishonest pass/partial mixing and prose marker spoofing',()=>{
+  assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','ALL_OFFLINE_PASS'),true)
+  assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','I2_PARTIAL_NO_EDIT'),false)
+  assert.equal(scopeVerdict(I2_SCOPE,'I2_PARTIAL_NO_EDIT'),true)
+  assert.equal(scopeVerdict(I2_SCOPE,'I2_ISOLATED_STAGING_PASS'),true)
+  assert.equal(scopeVerdict(I2_SCOPE,'ALL_OFFLINE_PASS'),false)
+  assert.equal(scopeVerdict(I2_SCOPE,'I2_BYPASS_PRODUCTION'),false)
+  assert.equal(scopeVerdict('UNKNOWN_FUTURE_SCOPE','I2_PARTIAL_NO_EDIT'),false)
+  assert.throws(()=>field('verdict: I2_PARTIAL_NO_EDIT\\nverdict: ALL_OFFLINE_PASS','verdict'))
+  assert.throws(()=>field('the body says ALL_OFFLINE_PASS','verdict'))
 })
