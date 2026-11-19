@@ -1,18 +1,15 @@
-# WORK_QUEUE — I1F handoff (2026-11-18)
+# WORK_QUEUE — remote work after OL-042 ACK (2026-11-19)
 
-Machine authority STATE.json, historical documents archived. No automatic local dispatch or host grants.
+No active local task, no pending ACK; online automation operator-PAUSED and auto-dispatch prohibited. See STATE.json.
 
-| Stage | State | Exit / next owner |
+| Priority | Workstream | Current status / acceptance |
 | --- | --- | --- |
-| OL-041 Mac offline | CLOSED, ONLINE ACK | All offline accepted, not real I2/I3 |
-| I1A/I1B/I1C fake/partial lifecycle | PASS with boundaries | Real core modules partially connected; genuine DSH host still untested |
-| I1D Sessions.ensure gate | REMOTE PASS | Active ticket + exact project directory prechecks, 6/6 tests each OS at CI #550 |
-| I1E Engine→Executor→Sessions→Delivery→preview→Outbox | REMOTE OFFLINE PARTIAL PASS | One complete synthetic-source vertical test each OS, not true Agent turn |
-| P3 native read-only openat research | REMOTE PASS RESEARCH-ONLY | Linux/macOS five synthetic tests, no source writer/ACL/exclusive writer/capability |
-| OL-20261118-042 Mac readiness | **ONE MANUAL OFFLINE TASK** / local | Run comprehensive `agent-handoff/HANDOFF-2026-11-18-I1F-MAC-BATCH.md`, report LO-042, no live 3080/3083/8123 |
-| Existing DSH Session reattachment identity | BLOCKER / local read-only API research then remote code | Attest stored session's Workspace ID equals exact isolated Ticket workspace; forbid wrong-workspace reuse |
-| Full true I1 → genuine I2/I3 | INCOMPLETE / gated | Actual DSH Agent turn, model/tool enforcement, native request/reply; fresh private human grants |
-| OS production Apply | NOT IMPLEMENTED / BLOCKED | Native write helper, external writer exclusion, private one-use authority, metadata/backup/crash proof |
-| PR #1 release | DRAFT / NOT MERGED | Code review, genuine staging approval and release decision |
+| P0 | OL-042 Mac offline | CLOSED, ACKed LO-042; report CI #565 3/3; Mac Node native 4 failing cases explicitly recorded |
+| P0/F1 | Native read-only inspector rejects macOS com.apple.provenance | REMOTE FIX PENDING: exact recognized system stamp only, keep all unknown/user xattrs denied; add synthetic Mac regression and reverify operator Mac |
+| P0/F2 | Recovered DSH Worker Session Workspace identity | BLOCKED CONFIRMED: current ensure trusts resolveAgent; remote patch to compare Session header cwd, resolved registry Workspace membership and expected snapshot, error before any permission/model/prompt/rename; missing APIs fail closed |
+| P1 | Full I1 synthetic source vertical | PARTIAL PASS, CI #550; actual SessionController/Agent/model/tool turn remains untested |
+| P2 | Operator Mac follow-up for F1/F2 | NOT DISPATCHED; only after fixes and CI, requires fresh operator manual authorization; no live host by default |
+| P3 | Native OS real Apply helper | DESIGN ONLY, NO WRITE API; ACL, provenance, fd identity, external writer quiescence, one-shot private approval, journal/recovery remain blocked |
+| P4 | I2/I3 and PR release | NOT AUTHORIZED / Draft unmerged |
 
-Verified remote code `ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead`, [CI #550](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44325865819) 3/3, 30 focused/253 Node/1238 Vitest. Mac stage may record NOT_AUTHORIZED for I2/I3 without failing offline OL-042. No OL-043 or scheduled dispatch implied.
+No original 3080/3083/8123 session, Weixin, provider, model default or real source Apply can be operated from these public files.

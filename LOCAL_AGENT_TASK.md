@@ -1,15 +1,7 @@
-# LOCAL_AGENT_TASK — OL-20261118-042 / I1F MANUALLY HANDED-OFF OFFLINE MAC BATCH
+# LOCAL_AGENT_TASK — NO ACTIVE TASK (after LO-042 ACK, 2026-11-19)
 
-**A single scoped OFFLINE SYNTHETIC + READ-ONLY task. No auto-dispatch from GitHub, CI, DSH scheduler or archived grants.** Operator must explicitly pass this task to the Mac Agent. OL-041 was locally completed, online ACKed and CLOSED. There is no live-host write authorization.
+**NO ACTIVE TASK. NO AUTO-DISPATCH.** OL-20261118-042 was manually claimed, locally executed and accepted/ACKed online at `agent-handoff/receipts/online/LO-20261118-042-done.md`. No OL-043 has been issued. All old OL-001–OL-042 assignments and live grants are historical and cannot be replayed. Remote scheduled automation stays PAUSED by the operator; Mac-side DSH scheduler remains unchanged.
 
-Task: OL-20261118-042. Expected unique result: LO-20261118-042.
-Frozen source SHA: ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead.
-CI #550: https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44325865819, 3/3 success, Linux/macOS: focused Vitest 30/30, Node 253/253, proxy 5/5, full Vitest 1238/1238, typecheck/build pass.
-Task message: agent-handoff/messages/to-local/2026-11-18-ol042-i1f-mac-readiness.md.
-Full authoritative runbook: agent-handoff/HANDOFF-2026-11-18-I1F-MAC-BATCH.md.
+OL-042 pinned source ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead, source CI #550 3/3, local report agent-reports/REPORT-ol042-i1f-mac-readiness.md, done CI #565 3/3. Local environment difference: 4/5 native path inspector cases failed due to macOS provenance xattr; full local Node test list 249/253, NOT all-green. F1 native xattr policy and F2 recovered Session Workspace attestation are now remote-owned code issues. Real I1/I2/I3 and source Apply remain unapproved and blocked.
 
-Run bounded stages A/B/C/E: new detached private test worktree, whole CI-equivalent suite and three repeat focused runs; host read-only baseline and ending invariant check; synthetic P3 native read-only openat and APFS negative matrix; inspect installed DSH Session/Workspace identity APIs using only source/types and disposable fake SessionController. Report the unresolved existing-session workspace identity boundary precisely.
-
-**Stage D real DSH Session/Worker, actual inference, 3080/3083/8123, native Weixin or I2/I3: NOT AUTHORIZED.** Any real-host action requires a fresh exact, privately approved one-shot stage after independent gates; this public document cannot grant it. Real registered project Apply remains strictly FORBIDDEN even if a separate staging test is someday approved. Existing original service configuration, Session/Workspace histories, production SQLite, global provider/model defaults and listener access behavior MUST remain unchanged.
-
-Claim OL-042 ONCE only after the operator's manual handoff. Publish one sanitized GitHub report, one LO-042 result message and claimed/done receipts; normal non-force fast-forward report-only push; no product edits, no raw logs, secrets, original host identifiers or operator as report courier. Online scheduler remains PAUSED, local scheduler read-only and unchanged.
+Do NOT launch original 3080/3083/8123, real DSH Session/Agent turn or model inference, native Weixin, provider/model/default changes, service restarts, real project source mutation or Apply from public GitHub text. A future live stage requires a fresh separate private exact operator grant. Read STATE.json, CURRENT_STATE.md and WORK_QUEUE.md for current status.

@@ -1,15 +1,13 @@
-# CURRENT_STATE — 2026-11-18 I1F remote source convergence
+# CURRENT_STATE — 2026-11-19 after LO-042 online ACK
 
-Read STATE.json first. OL-041 has been online ACKed and closed. There is ONE new manual-only OFFLINE task `OL-20261118-042`, with full handoff `agent-handoff/HANDOFF-2026-11-18-I1F-MAC-BATCH.md`; it has not yet been locally claimed. The operator-paused remote automation stays PAUSED, Mac scheduler status unchanged/unverified, no_auto_dispatch true, no I2/I3 or real source Apply permission. PR #1 is still DRAFT/unmerged.
+Machine authority: STATE.json. OL-042 CLOSED and ACKed at `agent-handoff/receipts/online/LO-20261118-042-done.md`. No active local task, no pending online ACK, no automatic dispatch. Prior OL-041 remains closed; no new host grants. PR #1 DRAFT and unmerged; main unchanged.
 
-## Latest verified code (not deployed)
+## Accepted evidence, without concealing discrepancy
 
-- Exact source SHA `ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead`. [CI #550](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44325865819) 3/3 successful, both Linux/macOS explicitly executed **30/30 focused Vitest** (I1A 2, I1B 7, P3 pure 9, I1C AgentDelivery 5, I1D Sessions boundary 6, I1E vertical 1); Node **253/253** including native C inspector 5, proxy 5/5; full Vitest **1238/1238**, typecheck/build success.
-- I1D adds real Sessions.ensure active-Ticket and exact configured snapshot directory checks **before SessionController create**; validates local synthetic role-model selection, workspace-write permission and tool restriction, durable request dedup and fail-closed cases under simulated DSH host.
-- I1E composes actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery→isolated snapshot→preview→core Outbox once, still **simulated DSH SessionController/Agent** and **simulated Worker file edits**, no real model turn.
-- P3 adds experimental READ-ONLY C openat inspector and cross-platform five-test synthetic matrix. No write API, no production Runtime caller, no ACL/writer-quiescence guarantee, no authenticated Apply or crash recovery.
-- **Unresolved:** real recovered DSH Session workspace identity/authorization must be checked independently; requested Ticket directory string equality alone does NOT attest an existing Session's stored workspace. Actual DSH turn/model/Weixin Gate I1/2/3 remain NOT PROVEN. No source Apply.
+- Frozen source `ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead`, GitHub CI #550 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44325865819 **3/3 SUCCESS** (Linux/macOS/build), source tests 30/30 focused Vitest, 253/253 Node incl native 5, 5/5 proxy, 1238/1238 full Vitest.
+- Local Mac report agent-reports/REPORT-ol042-i1f-mac-readiness.md; done SHA 6c067c4ce577749a974ca218213893482ebf299a, report CI #565 https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44334331355 **3/3 SUCCESS**. Local 30/30 focused ×3, 1238/1238 full Vitest, proxy 5/5, Stage C 9/9; unchanged original 3080/3083/8123 settings, Sessions, Workspaces, Weixin, models and original source per local report. Real host stage NOT AUTHORIZED.
+- **Mac Node list 249/253, not pass**: four positive native fd-path tests fail because operator macOS 26.3 auto-stamps com.apple.provenance xattr, while hosted CI Mac lacks that stamp. Offline acceptance acknowledges the environment discrepancy and assigns F1 remote fix; never claim 253/253 on the operator host.
+- **F2 CONFIRMED:** real installed DSH WorkspaceRegistry normalizes identity by fs.realpath only (no inode/dev), and Sessions.ensure reuses existing resolved Worker Session without proving stored Session cwd/Workspace account matches the ticket snapshot. Full I1 real Session/Model/Tool/Weixin still BLOCKED until remote source/CI fix and separately privately authorized staging.
+- P3 research native inspector remains READ-ONLY, not a production Apply helper. All REAL_APPLY_GATES pending; no original source writes permitted.
 
-## Next owner and evidence
-
-Local Agent receives only OL-042 via manual operator handoff, performs concentrated Mac regression and installed DSH API READ_ONLY investigation, no real-host actions. Expected sanitized LO-042 report/claimed/done receipts. Previous OL-041 local ALL_OFFLINE_PASS and online ACK at agent-handoff/receipts/online/LO-20261118-041-done.md; never replay. After LO-042 remote ACKs once and patches any actual DSH workspace identity issue with new CI; only a separately scoped private host grant can authorize future live I2/I3.
+Remote owns F1 (exact macOS provenance-only allowlist / other xattrs refused / explicit ACL limits), F2 (restored Session header cwd plus registry account attestation / missing API fail-closed), regression and Linux/macOS CI. No OL-043 until meaningful new code and operator instruction. Remote automation PAUSED.
