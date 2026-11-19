@@ -62,14 +62,45 @@ static int plain_file(const struct stat *st) {
     return S_ISREG(st->st_mode) && st->st_uid == geteuid() &&
            st->st_nlink == 1 && (st->st_mode & 022) == 0;
 }
-/* Reject nontrivial xattrs; no ACL absence claim is made by this research code. */
+/*
+ * This is ONLY a research/read-only compatibility check, NOT OS authorization.
+ * macOS 26 may stamp every newly-created ordinary file with the system-managed
+ * com.apple.provenance attribute. Permit exactly that attribute NAME on Darwin;
+ * refuse every other xattr (including ACL-like/user-provided attributes).
+ *
+ * Do not equate a recognized name with trusted contents, and do not claim
+ * ACLs/flags, external writers or same-user tampering are secured by this check.
+ * A bounded second read rejects races/list changes and malformed name lists.
+ */
 static int no_extended_attributes(int fd) {
 #ifdef __APPLE__
-    ssize_t n = flistxattr(fd, NULL, 0, 0);
+    const ssize_t needed = flistxattr(fd, NULL, 0, 0);
 #else
-    ssize_t n = flistxattr(fd, NULL, 0);
+    const ssize_t needed = flistxattr(fd, NULL, 0);
 #endif
-    return n == 0;
+    if (needed < 0 || needed > 8192) return 0;
+    if (needed == 0) return 1;
+#ifndef __APPLE__
+    /* Linux has no macOS provenance exception. */
+    return 0;
+#else
+    char names[8192];
+    const ssize_t actual = flistxattr(fd, names, (size_t)needed, 0);
+    if (actual != needed) return 0;
+    size_t at = 0;
+    int provenance = 0;
+    while (at < (size_t)actual) {
+        size_t remaining = (size_t)actual - at;
+        const char *end = memchr(names + at, '\0', remaining);
+        if (!end) return 0;
+        size_t n = (size_t)(end - (names + at));
+        if (n != strlen("com.apple.provenance") ||
+            memcmp(names + at, "com.apple.provenance", n) != 0 ||
+            ++provenance != 1) return 0;
+        at += n + 1;
+    }
+    return at == (size_t)actual;
+#endif
 }
 static int no_special_flags(const struct stat *st) {
 #ifdef __APPLE__

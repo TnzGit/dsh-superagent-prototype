@@ -76,6 +76,23 @@ test('P3-native prototype rejects hardlinks, group/world writable files, directo
     assert.deepEqual(inspect('safe/good.txt'),{code:0,stdout:'OK'})
   })
 })
+test('P3-native prototype rejects unknown user xattrs, even if macOS has system provenance',()=>{
+  fixture(({temp,nested,inspect})=>{
+    const setter=join(temp,'fixture-xattr-maker')
+    const sourceXattr=join(dirname(dirname(fileURLToPath(import.meta.url))),'tests','fixtures','os-xattr-fixture.c')
+    const compiled=spawnSync(process.env.CC || 'cc',
+      ['-std=c11','-Wall','-Wextra','-Werror','-O2',sourceXattr,'-o',setter],
+      {encoding:'utf8',timeout:45000})
+    assert.equal(compiled.status,0,'Fixture xattr writer must compile on macOS/Linux: '+(compiled.stderr??'').slice(0,600))
+    const target=join(nested,'good.txt')
+    const before=readFileSync(target)
+    assert.deepEqual(inspect('safe/good.txt'),{code:0,stdout:'OK'})
+    const wrote=spawnSync(setter,[target],{encoding:'utf8',timeout:5000})
+    assert.equal(wrote.status,0,'Only a disposable test fixture gets the synthetic attribute')
+    assert.deepEqual(inspect('safe/good.txt'),{code:2,stdout:'REJECT'})
+    assert.deepEqual(readFileSync(target),before)
+  })
+})
 test('P3-native prototype rejects changed directory permissions and stays read-only on failure',()=>{
   fixture(({nested,inspect})=>{
     chmodSync(nested,0o777)
