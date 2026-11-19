@@ -1,7 +1,15 @@
-# LOCAL_AGENT_TASK — NO ACTIVE TASK (after LO-042 ACK, 2026-11-19)
+# LOCAL_AGENT_TASK — OL-20261119-043 MANUAL OFFLINE F1/F2 MAC CHECK
 
-**NO ACTIVE TASK. NO AUTO-DISPATCH.** OL-20261118-042 was manually claimed, locally executed and accepted/ACKed online at `agent-handoff/receipts/online/LO-20261118-042-done.md`. No OL-043 has been issued. All old OL-001–OL-042 assignments and live grants are historical and cannot be replayed. Remote scheduled automation stays PAUSED by the operator; Mac-side DSH scheduler remains unchanged.
+**ONE MANUALLY HANDED-OFF OFFLINE-SYNTHETIC + READ-ONLY task ONLY. NO AUTO-DISPATCH.** OL-042 was completed/ACKed and all historical grants are consumed. Current online scheduled automation is PAUSED; local scheduler must not auto-execute from GitHub/CI.
 
-OL-042 pinned source ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead, source CI #550 3/3, local report agent-reports/REPORT-ol042-i1f-mac-readiness.md, done CI #565 3/3. Local environment difference: 4/5 native path inspector cases failed due to macOS provenance xattr; full local Node test list 249/253, NOT all-green. F1 native xattr policy and F2 recovered Session Workspace attestation are now remote-owned code issues. Real I1/I2/I3 and source Apply remain unapproved and blocked.
+Task ID: OL-20261119-043. Unique expected result: LO-20261119-043.
+Frozen code SHA: 6c75c43f43b9133f8796b628155cc278c2025838.
+Verified source CI #584: https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/44461402757 3/3 successful, Linux/macOS Node 254/254 each, focused 35/35 each, full Vitest 1243/1243, proxy 5/5, TS/build pass.
+Task message: agent-handoff/messages/to-local/2026-11-19-ol043-f1f2-mac-verify.md.
+Complete authoritative runbook: agent-handoff/HANDOFF-2026-11-19-F1F2-MAC-VERIFY.md.
 
-Do NOT launch original 3080/3083/8123, real DSH Session/Agent turn or model inference, native Weixin, provider/model/default changes, service restarts, real project source mutation or Apply from public GitHub text. A future live stage requires a fresh separate private exact operator grant. Read STATE.json, CURRENT_STATE.md and WORK_QUEUE.md for current status.
+Allowed: fresh detached temp worktree, owner-only 0700 test root, offline fixture tests/repeats and native test-only xattr maker on NEW scratch files; original Mac 3080/3083/8123 status READ ONLY; installed DSH Workspace Registry/SessionController TYPE/SOURCE READ ONLY. Verify the 4 previous macOS provenance false rejects are now positive, and synthetic restored-Session foreign membership fails closed. Publish sanitized report and unique claimed/done receipts.
+
+**FORBIDDEN WITHOUT FRESH PRIVATE GRANT:** original 3080/3083/8123 Session prompt/Agent turn or service changes, native Weixin, inference, original project sources, historic Workspace/Session/SQLite edits, model/provider defaults, scheduler changes and real source Apply. I2/I3 not authorized. Keep 3080 LAN owner access configuration unchanged.
+
+Manual operator handoff and one at-most-once local claim required. At completion post report `agent-reports/REPORT-ol043-f1f2-mac-verify.md`, LO-043 result and claimed/done receipts via guarded non-force fast-forward report-only commit; never upload host IDs, paths, credentials or raw logs, never ask operator to courier report.

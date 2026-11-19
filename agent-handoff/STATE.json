@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online",
+  "owner": "remote_online_with_manual_offline_local_batch",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -27,7 +27,7 @@
     "online_ack": "agent-handoff/receipts/online/LO-20261118-042-done.md",
     "verdict": "ALL_OFFLINE_PASS"
   },
-  "active_local_task": null,
+  "active_local_task": "OL-20261119-043",
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -45,7 +45,10 @@
     "tests/local-sessions-worker-boundary.spec.ts",
     "tests/local-vertical-real-sessions.spec.ts",
     "research/os-path-inspector.c",
-    "tests/os-path-inspector.node-test.mjs"
+    "tests/os-path-inspector.node-test.mjs",
+    "agent-handoff/HANDOFF-2026-11-19-F1F2-MAC-VERIFY.md",
+    "tests/fixtures/os-xattr-fixture.c",
+    "agent-handoff/receipts/online/LO-20261118-042-done.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -73,26 +76,17 @@
     "merged": false
   },
   "local_batch": {
-    "task_id": "OL-20261118-042",
-    "code_sha": "ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead",
-    "ci_run_id": 44325865819,
-    "ci_run_number": 550,
-    "scope": "OFFLINE_SYNTHETIC_ONLY_WITH_READ_ONLY_PRODUCTION_PREFLIGHT",
-    "status": "ACCEPTED_AND_CLOSED",
+    "task_id": "OL-20261119-043",
+    "status": "PENDING_MANUAL_HANDOFF",
+    "scope": "OFFLINE_SYNTHETIC_ONLY_WITH_READ_ONLY_HOST_BASELINE",
+    "code_sha": "6c75c43f43b9133f8796b628155cc278c2025838",
+    "ci_run_id": 44461402757,
+    "ci_run_number": 584,
     "host_live_grant": "NOT_GRANTED",
     "real_source_apply": "FORBIDDEN",
-    "handoff": "agent-handoff/HANDOFF-2026-11-18-I1F-MAC-BATCH.md",
-    "report_expected": "agent-reports/REPORT-ol042-i1f-mac-readiness.md",
-    "result_expected": "LO-20261118-042",
-    "online_ack": "agent-handoff/receipts/online/LO-20261118-042-done.md",
-    "local_claim_sha": "2d1475352632b760b82e1b40b1c6c2f033a2a847",
-    "report_commit": "6c067c4ce577749a974ca218213893482ebf299a",
-    "operator_macos_native_node": {
-      "pass": 249,
-      "fail": 4,
-      "total": 253,
-      "finding": "F1 provenance stamp; full Node list NOT all green on operator Mac"
-    }
+    "handoff": "agent-handoff/HANDOFF-2026-11-19-F1F2-MAC-VERIFY.md",
+    "report_expected": "agent-reports/REPORT-ol043-f1f2-mac-verify.md",
+    "result_expected": "LO-20261119-043"
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -120,17 +114,18 @@
     "remote_fix_sha": "1b9fe55ce2e59d8e3a7e6c979101774bb9a72890"
   },
   "remote_followup": {
-    "status": "I1D_I1E_AND_NATIVE_READ_ONLY_CI_PASS",
-    "source_sha": "ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead",
-    "ci_run_id": 44325865819,
-    "ci_run_number": 550,
+    "status": "F1_F2_SOURCE_FIX_CI_PASS",
+    "source_sha": "6c75c43f43b9133f8796b628155cc278c2025838",
+    "ci_run_id": 44461402757,
+    "ci_run_number": 584,
     "os_jobs": "3_of_3_success",
-    "focus_tests_per_os": 30,
-    "full_vitest": 1238,
-    "node_tests_per_os": 253,
+    "node_tests_per_os": 254,
+    "focus_tests_per_os": 35,
+    "full_vitest": 1243,
     "proxy_tests_per_os": 5,
-    "actual_dsh_agent_turn": false,
-    "actual_model_inference": false
+    "operator_macos_provenance_retest": "PENDING_MANUAL_OL043",
+    "native_os_real_apply": false,
+    "real_dsh_model_turn": false
   },
   "integration_i1c": {
     "status": "REAL_AGENT_DELIVERY_DISPOSABLE_TRANSPORT_PASS_NOT_REAL_SESSION",
@@ -164,17 +159,30 @@
     "real_source_apply": false
   },
   "p3_native": {
-    "status": "READ_ONLY_NATIVE_OPENAT_RESEARCH_CI_PASS",
-    "source_sha": "ad61a3cfdbd393fd6cfaa30ee02aa4b345de7ead",
+    "status": "MACOS_PROVENANCE_NAME_ONLY_ALLOWLIST_SOURCE_CI_PASS_OPERATOR_UNVERIFIED",
+    "source_sha": "6c75c43f43b9133f8796b628155cc278c2025838",
     "ci_run_number": 550,
-    "tests_each_os": 5,
+    "tests_each_os": 6,
     "no_write_api": true,
     "no_runtime_callers": true,
     "acl_or_external_writer_guarantee": false,
     "authenticated_apply_capability": false,
     "crash_recovery": false,
-    "operator_macos_26_3_positive_native_cases": "FAIL_4_OF_5_DUE_TO_SYSTEM_PROVENANCE_XATTR",
+    "operator_macos_26_3_positive_native_cases": "PENDING_RETEST",
     "source_ci": "PASS_3_OF_3",
-    "acl_inspection": "NOT_IMPLEMENTED"
+    "acl_inspection": "NOT_IMPLEMENTED",
+    "ci_run_id": 44461402757
+  },
+  "integration_i1f": {
+    "status": "RESTORED_SESSION_WORKSPACE_ACCOUNT_GUARD_OFFLINE_PASS",
+    "source_sha": "6c75c43f43b9133f8796b628155cc278c2025838",
+    "tests_each_os": 11,
+    "actual_DSH_host": false,
+    "session_identity_header_cwd": true,
+    "workspaceRegistry_membership": true,
+    "agent_created_decorate_deferred": true,
+    "tool_use_guard": true,
+    "os_path_inode_race_proof": false,
+    "production_apply": false
   }
 }
