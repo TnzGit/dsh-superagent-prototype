@@ -1,6 +1,6 @@
 # I2 isolated DSH Worker staging — proposed human approval boundary (NON-EXECUTABLE)
 
-**Status 2026-11-19: design reference; ONE conditional manual OL-044 was issued after private operator agreement. This PUBLIC PLAN alone grants nothing.** This is a public-safe design and review artifact. It is NOT a command to a Mac agent, a SessionController instruction, permission to call 127.0.0.1:8123, or an Apply capability. It does not change original DSH services, Workspaces, Sessions, provider/model defaults, native Weixin/relay or registered source. Do not copy approval tokens or sensitive host identity into GitHub.
+**Status 2026-11-20: HISTORICAL APPROVAL PLAN. OL-044 was executed once and ACKed I2_PARTIAL_NO_EDIT; its human consent is CONSUMED. NO CURRENT LIVE TASK.** This is a public-safe design and review artifact. It is NOT a command to a Mac agent, a SessionController instruction, permission to call 127.0.0.1:8123, or an Apply capability. It does not change original DSH services, Workspaces, Sessions, provider/model defaults, native Weixin/relay or registered source. Do not copy approval tokens or sensitive host identity into GitHub.
 
 ## Baseline: what is and is not accepted
 
@@ -29,7 +29,7 @@ In that disposable sandbox, with a harmless program (NOT an LLM Agent), attempt 
 
 ### I2-P2: ONE bounded genuine Worker request, disposable data only
 
-**Only after the operator directly forwards the matching OL-044 Prompt AND full sandbox/route/budget preflight PASSES**, start ONE new disposable DSH SessionController/Worker in isolated sandbox using a NEW unique Session ID (no original Session/Workspace resume or migration), one synthetic registered local project (e.g. a disposable 2-file README fixture) and the already functioning loopback local-only Qwen queue route. This is an actual *model inference* and *Session mutation*, even though isolated; it requires private per-stage consent. Limit: one Ticket, one Worker, one simple text edit in the disposable *copy* only, a short bounded token/step/time budget, no remote shell/network/cloud, no prompts from Weixin, no any original source Apply.
+**HISTORICAL OL-044 plan (not reusable): only after an operator-direct Prompt and sandbox preflight could the original once-approved task start** ONE new disposable DSH SessionController/Worker in isolated sandbox using a NEW unique Session ID (no original Session/Workspace resume or migration), one synthetic registered local project (e.g. a disposable 2-file README fixture) and the already functioning loopback local-only Qwen queue route. This is an actual *model inference* and *Session mutation*, even though isolated; it requires private per-stage consent. Limit: one Ticket, one Worker, one simple text edit in the disposable *copy* only, a short bounded token/step/time budget, no remote shell/network/cloud, no prompts from Weixin, no any original source Apply.
 
 Proof to collect privately: Trigger request identity→Ticket id→new Session id + attested Workspace id/canonical cwd→model route proof (local-only)→actual tool invocation/child process audit→copy-only changed bytes and generated diff→review-required record→one result/Outbox entry. No external native Weixin send, no Git push, no automatic model retry after ambiguity. If no actual tool invocation happened, label partial, not E2E. Reuse/correlation and Exit must be checked without issuing a second model turn on an ambiguous response.
 
@@ -56,3 +56,8 @@ Read source/API contracts, improve synthetic integration tests, clarify acceptan
 ## 2026-11-19 supersession
 
 The operator privately agreed to ONE new isolated DSH Worker and local 8123 model test. The sole executable handoff is the operator-forwarded OL-044 Prompt plus the runbook's proven OS sandbox, model-only route and metered one-shot limits. This plan is only technical reference; no original host/Weixin/real Apply permissions, no automatic dispatch or standing grant.
+
+
+## 2026-11-20 FINAL supersession — OL-044 consumed, new repair plan
+
+LO-044 was acknowledged online as **I2_PARTIAL_NO_EDIT**, not accepted as a successful I2 Worker edit. The validated outer Seatbelt boundary prevented host writes/egress; inner DSH bash tried to nest Seatbelt and failed with SANDBOX_UNAVAILABLE, then the default headless ask path did not settle and no file edit occurred. This previous proposal and the OL-044 runbook are now historical evidence, NOT instruction or authority to replay. No active local task or live grant exists. Remote research-only remediation and the opt-in deny-only native file-tool profile are specified in `docs/015-i2-seatbelt-headless-remediation.md`; any genuine next model turn requires a new private operator scope. Keep all production services, original source and real Apply unchanged.
