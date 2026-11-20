@@ -464,9 +464,16 @@ test('I2 staging owned report tools are never granted to detached subagents or a
   vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY','1')
   try {
     const f=fixture({workerTools:stagedFixtureTools}), id=workerSessionId(f.ticketId)
+    f.sessions.install()
     await f.sessions.ensure(id,f.workspace,'Fixture Worker','worker')
     const guard=f.toolGuards.filter(x=>x.id===id && x.active).at(-1).fn
     expect(guard({name:'orchestrator_report'})).toBeUndefined()
+    const child=f.makeAgent('detached-child-fixture')
+    child.session.header.parentSession=id
+    for (const listener of f.listeners.get('agent/created') ?? []) await listener({agent:child})
+    const childGuard=f.toolGuards.filter(x=>x.id===child.id && x.active).at(-1).fn
+    expect(childGuard({name:'orchestrator_report'})).toMatch(/native file and exact ticket reporting tools only/)
+    expect(childGuard({name:'orchestrator_ack'})).toMatch(/native file and exact ticket reporting tools only/)
     f.ticket.ended={by:'human',outcome:'stopped',at:'2026-11-20T00:00:00Z'}
     for(const name of ['orchestrator_ack','orchestrator_report','orchestrator_read','edit'])
       expect(guard({name})).toMatch(/Ticket ended/)
