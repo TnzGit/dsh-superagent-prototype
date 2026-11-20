@@ -30,7 +30,7 @@ function fixture(options = {}) {
   const workspaceRecord = { id: 'workspace-fixture-1', path: workspace, sessionIds: [] }
   const workspaces = [], created = [], renamed = [], delivery = [], permissions = [], toolRestrictions = [], toolGuards = [], modelResolutions = [], notifications = [], registeredTools = []
   const globalDefault = Object.freeze({ provider: 'existing-production-default', model: 'unchanged' })
-  let flushes = 0
+  let flushes = 0, resolveSkills = () => {}
   const settings = () => ({
     executor: { model: options.noRoleModel ? null : { provider: 'fixture-local-only', model: 'qwen-test' } },
     eval: { model: null }
@@ -53,13 +53,26 @@ function fixture(options = {}) {
       inject: (_services, callback) => {
         const scope = { skills: { register: () => () => {} } }
         callback(scope)
-        return Object.assign(Promise.resolve(), { dispose: async () => {} })
+        const wait = options.deferSkills
+          ? new Promise(resolve => { resolveSkills = resolve })
+          : Promise.resolve()
+        return Object.assign(wait, { dispose: async () => {} })
       },
       tools: {
         get: name => ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'subagent', 'schedule_task', 'send_session'].includes(name),
         register: spec => { registeredTools.push({id,name:spec.name}); return () => {} },
-        restrict: opts => { toolRestrictions.push({ id, allow: [...opts.allow] }); return () => {} },
-        guard: fn => { toolGuards.push({ id, fn }); return () => {} }
+        restrict: opts => {
+          const entry = { id, allow: [...opts.allow] }
+          Object.defineProperty(entry,'active',{value:true,writable:true,enumerable:false})
+          toolRestrictions.push(entry)
+          return () => { entry.active = false }
+        },
+        guard: fn => {
+          const entry = { id, fn }
+          Object.defineProperty(entry,'active',{value:true,writable:true,enumerable:false})
+          toolGuards.push(entry)
+          return () => { entry.active = false }
+        }
       },
       on: (name, handler) => { agentHandlers.set(name, handler); return () => agentHandlers.delete(name) },
       effect: callback => { cleanup.push(callback()) }
@@ -113,13 +126,14 @@ function fixture(options = {}) {
       tickets: { get: id => tickets.get(id) },
       settings, get: () => undefined, set: () => {}, keys: () => []
     },
-    effects, health: { set: () => {} }, environment: () => [], tools: () => options.mainTools ?? [],
+    effects, health: { set: () => {} }, environment: () => [],
+    tools: (_agent, ticket) => ticket ? (options.workerTools ?? []) : (options.mainTools ?? []),
     prompts: { current: () => cfg, version: () => cfg, skills: () => [], compose: () => 'only-fixture-prompt' }
   }
   const sessions = new Sessions(host)
   return { sessions, ticketId, workspace, tickets, agents, context, history,
     created, renamed, delivery, permissions, toolRestrictions, toolGuards, modelResolutions, workspaces, workspaceRecord, listeners, globalDefault, registeredTools,
-    get flushes() { return flushes }, makeAgent, ticket }
+    get flushes() { return flushes }, releaseSkills: () => resolveSkills(), makeAgent, ticket }
 }
 
 test('I1D actual Sessions.ensure creates role-bound worker with exact workspace, safe preset and local-only role model', async () => {
@@ -278,13 +292,13 @@ test('I2 staging opt-in restricts ONLY registered fixture Worker to native file 
   try {
     const f = fixture(), id = workerSessionId(f.ticketId)
     await f.sessions.ensure(id, f.workspace, 'Fixture Worker', 'worker')
-    const allowed = f.toolRestrictions.find(x => x.id === id)?.allow
+    const allowed = f.toolRestrictions.filter(x => x.id === id && x.active).at(-1)?.allow
     expect(allowed).toEqual(['read', 'write', 'edit', 'glob', 'grep'])
     for (const denied of ['bash','pwsh','job_output','job_kill','web_search','subagent','skill','list_agents']) {
-      expect(f.toolGuards[0].fn({ name: denied })).toMatch(/native file tools only/)
+      expect(f.toolGuards.filter(x => x.id === id && x.active).at(-1).fn({ name: denied })).toMatch(/native file and exact ticket reporting tools only/)
     }
-    for (const permitted of allowed) expect(f.toolGuards[0].fn({ name: permitted })).toBeUndefined()
-    expect(f.toolGuards[0].fn({})).toMatch(/native file tools only/)
+    for (const permitted of allowed) expect(f.toolGuards.filter(x => x.id === id && x.active).at(-1).fn({ name: permitted })).toBeUndefined()
+    expect(f.toolGuards.filter(x => x.id === id && x.active).at(-1).fn({})).toMatch(/native file and exact ticket reporting tools only/)
     // Explicit mode does not widen permissions or provider routes.
     expect(f.permissions).toEqual([{ id, value: 'workspace-write' }])
     expect(f.modelResolutions).toEqual([{provider:'fixture-local-only',model:'qwen-test'}])
@@ -350,6 +364,112 @@ test('I2 staging flag absent preserves production Router tools, shell guard, and
     expect(f.toolGuards[0].fn({name:'orchestrator_settings_save',arguments:{}})).toBeUndefined()
     expect(f.toolGuards[0].fn({name:'bash',arguments:{command:'pwd',timeoutMs:30000}})).toBeUndefined()
     expect(f.permissions).toEqual([{id,value:'danger-full-access'}])
+    f.sessions.dispose()
+  }finally{vi.unstubAllEnvs()}
+})
+
+const STAGED_OWNED_REPORT_NAMES = [
+  'orchestrator_read','orchestrator_ack','orchestrator_thread_unrelated',
+  'orchestrator_thread_follow','orchestrator_trigger_handback','orchestrator_report'
+]
+const stagedFixtureTools = [...STAGED_OWNED_REPORT_NAMES,'orchestrator_settings_save'].map(name=>({
+  name,description:'synthetic owned fixture tool',schema:z.object({}),execute:async()=>({})
+}))
+
+test('I2 Worker agent/created installs provisional deny-all before a model, without decorating or leaking stale tools', async () => {
+  vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY','1')
+  try {
+    const f=fixture({workerTools:stagedFixtureTools}),id=workerSessionId(f.ticketId)
+    f.sessions.install()
+    const agent=f.makeAgent(id)
+    for(const cb of f.listeners.get('agent/created') ?? []) await cb({agent})
+    expect(f.registeredTools).toEqual([])
+    expect(f.modelResolutions).toEqual([])
+    expect(f.toolRestrictions.filter(x=>x.active).map(x=>x.allow)).toEqual([[]])
+    const earlyGuard=f.toolGuards.find(x=>x.active)
+    expect(earlyGuard.fn({name:'bash'})).toMatch(/not prepared/)
+    expect(earlyGuard.fn({name:'edit'})).toMatch(/not prepared/)
+    await expect(f.sessions.prompt(id,'assignment:'+f.ticketId,'unauthorized early','queue'))
+      .rejects.toThrow(/not prepared/)
+    expect(f.delivery).toHaveLength(0)
+    expect(f.permissions).toHaveLength(0)
+    f.sessions.dispose()
+    expect(earlyGuard.active).toBe(false)
+  }finally{vi.unstubAllEnvs()}
+})
+
+test('I2 staged Worker binds native scope before async skill injection/model resolution, and only then admits exact six owned ticket tools', async () => {
+  vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY','1')
+  try {
+    const f=fixture({deferSkills:true,workerTools:stagedFixtureTools})
+    const id=workerSessionId(f.ticketId)
+    const model=f.context.llm.resolveCallConfig
+    let seenEarlyModel=false
+    f.context.llm.resolveCallConfig=async route=>{
+      const active=f.toolRestrictions.filter(x=>x.id===id && x.active)
+      expect(active.map(x=>x.allow)).toContainEqual(['read','write','edit','glob','grep'])
+      expect(active.map(x=>x.allow)).toContainEqual([])
+      expect(f.toolGuards.filter(x=>x.id===id && x.active).every(x=>
+        /not prepared/.test(x.fn({name:'bash'})) || /file and exact ticket/.test(x.fn({name:'bash'})))).toBe(true)
+      seenEarlyModel=true
+      return model(route)
+    }
+    const preparing=f.sessions.ensure(id,f.workspace,'Bounded Fixture Worker','worker')
+    // One tick lets the real async WorkspaceRegistry and session controller
+    // resolve; the new staged scope must exist before deferred skill mount.
+    for(let i=0;i<10 && f.toolRestrictions.length<2;i++) await Promise.resolve()
+    const active=f.toolRestrictions.filter(x=>x.id===id && x.active)
+    expect(active.map(x=>x.allow)).toContainEqual([])
+    expect(active.map(x=>x.allow)).toContainEqual(['read','write','edit','glob','grep'])
+    const stageGuard=f.toolGuards.at(-1)
+    expect(stageGuard.fn({name:'edit'})).toMatch(/not prepared/)
+    await expect(f.sessions.prompt(id,'assignment:'+f.ticketId,'too early','queue')).rejects.toThrow(/not prepared/)
+    expect(f.delivery).toHaveLength(0)
+    f.releaseSkills()
+    await preparing
+    expect(seenEarlyModel).toBe(true)
+    expect(f.toolRestrictions.filter(x=>x.id===id && x.active).map(x=>x.allow))
+      .toEqual([['read','write','edit','glob','grep']])
+    expect(f.registeredTools.filter(x=>x.id===id).map(x=>x.name)).toEqual(STAGED_OWNED_REPORT_NAMES)
+    for(const name of [...STAGED_OWNED_REPORT_NAMES,'read','write','edit','glob','grep'])
+      expect(stageGuard.fn({name})).toBeUndefined()
+    for(const name of ['bash','pwsh','subagent','orchestrator_settings_save','job_output','web_search','orchestrator_reply',''])
+      expect(stageGuard.fn({name})).toMatch(/native file and exact ticket/)
+    expect(f.permissions).toEqual([{id,value:'workspace-write'}])
+    await f.sessions.prompt(id,'assignment:'+f.ticketId,'now permitted','queue')
+    expect(f.delivery).toHaveLength(1)
+    f.workspaceRecord.sessionIds.splice(0)
+    for(const name of ['edit','orchestrator_report','orchestrator_ack','orchestrator_read'])
+      expect(stageGuard.fn({name})).toMatch(/lost its registered Workspace/)
+    f.sessions.dispose()
+  }finally{vi.unstubAllEnvs()}
+})
+
+test('I2 must reject restored Worker with earlier inference rather than declaring it pre-inference ready', async () => {
+  vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY','1')
+  try {
+    const f=fixture(),id=workerSessionId(f.ticketId)
+    const a=f.makeAgent(id)
+    f.workspaceRecord.sessionIds.push(id)
+    a.session.append('request/header',{provider:'fixture',model:'already-started'})
+    await expect(f.sessions.ensure(id,f.workspace,'Restored Worker','worker')).rejects.toThrow(/already started inference/)
+    expect(f.permissions).toHaveLength(0)
+    expect(f.modelResolutions).toHaveLength(0)
+    expect(f.toolRestrictions).toHaveLength(0)
+    f.sessions.dispose()
+  }finally{vi.unstubAllEnvs()}
+})
+
+test('I2 staging owned report tools are never granted to detached subagents or a missing Ticket', async () => {
+  vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY','1')
+  try {
+    const f=fixture({workerTools:stagedFixtureTools}), id=workerSessionId(f.ticketId)
+    await f.sessions.ensure(id,f.workspace,'Fixture Worker','worker')
+    const guard=f.toolGuards.filter(x=>x.id===id && x.active).at(-1).fn
+    expect(guard({name:'orchestrator_report'})).toBeUndefined()
+    f.ticket.ended={by:'human',outcome:'stopped',at:'2026-11-20T00:00:00Z'}
+    for(const name of ['orchestrator_ack','orchestrator_report','orchestrator_read','edit'])
+      expect(guard({name})).toMatch(/Ticket ended/)
     f.sessions.dispose()
   }finally{vi.unstubAllEnvs()}
 })
