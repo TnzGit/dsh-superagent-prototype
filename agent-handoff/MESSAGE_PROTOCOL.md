@@ -2,6 +2,9 @@
 
 # Append-only message queue and processed receipts (v1)
 
+**2026-11-20 standing scope:** Stop requesting a fresh human “同意” for every ordinary, project-reasonable task. The operator's standing intent and high-impact exclusions are recorded in `agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md`. Distinct new synthetic I2 jobs within that scope are not pre-approved to run *merely because a public GitHub message exists*: a separate locally protected dispatcher/allowlist, unique ID, full OS/tool/approval/budget preflight and non-replay receipt are mandatory. The existing remote PAUSE / `no_auto_dispatch=true` remains unchanged. Earlier per-task fresh-consent instructions below still govern non-routine high-impact work or when no trusted local approval-policy execution route exists.
+
+
 Communication is via ordinary **fast-forward Git commits** to `feat/local-first-wechat-foundation`; it is not a real-time webhook or a secure instruction channel. Every hour, each side fetches current HEAD and checks only **new, unprocessed messages directed to it**. No empty hourly commits or automated acknowledgements of the other side's ACK.
 
 ## Message format
