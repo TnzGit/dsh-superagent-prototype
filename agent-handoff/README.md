@@ -1,5 +1,8 @@
 # Remote ChatGPT ↔ Local Mac Agent: persistent handoff
 
+**Standing operator scope (2026-11-20):** routine project development/offline checks and future fresh OS-isolated synthetic-copy I2 work within strict safety gates are approved by default without repeated ChatGPT requests; see `agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md`. This is NOT public GitHub execution authority. Local auto-dispatch is still disabled, remote scheduler operator-PAUSED, original 3080/3083/8123/Weixin/real Apply protected. OL-044 and OL-046 consumed; no new OL ID here.
+
+
 **Read me FIRST in any new ChatGPT conversation.** This folder is in the public GitHub repository `TnzGit/dsh-superagent-prototype`, on the **feature branch** `feat/local-first-wechat-foundation` (not default `main`). A new session should fetch the *latest branch HEAD*, never guess a sandbox path or rely solely on prior chat memory.
 
 ## Stateless bootstrap (in this order)
