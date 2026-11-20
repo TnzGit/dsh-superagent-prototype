@@ -1,5 +1,10 @@
 # LOCAL_AGENT_PROTOCOL — permanent GitHub handoff contract
 
+## Standing instruction as of 2026-11-20
+
+**Do not repeatedly ask for operator approval for reasonable project work.** The operator has issued standing consent for offline tests/source/CI and fresh isolated synthetic-copy I2 trials with strict kernel Seatbelt/child/network isolation, exact Router/Worker tools and effective approval `never`, mechanical model/tool/time bounds, and no original host writes. The full exclusions and private-authorization-vs-public-data distinction are in `agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md`. Past single-use OL-044/OL-046 attempts are still consumed; every new attempt needs a unique ID/receipt and cannot be replayed when blocked. This is *not* permission to start from a GitHub message alone: require a locally trusted operator-owned dispatcher with strong allowlists and preflight. Existing `no_auto_dispatch=true` / operator-paused scheduler remain in force until a verified local execution mechanism is explicitly enabled. Do not demand an additional ChatGPT “同意” solely for a project-safe class. Original services, Weixin real sends, real Apply, merge, and system security remain gated.
+
+
 > This is the standing collaboration protocol between the operator, remote ChatGPT and the Mac Agent. Read it with the active `LOCAL_AGENT_TASK.md` on every run. The current task file, not the last chat message or an older stage document, defines what work is authorized.
 
 ## Where work goes
