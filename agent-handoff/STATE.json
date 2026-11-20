@@ -132,14 +132,14 @@
     "remote_fix_sha": "1b9fe55ce2e59d8e3a7e6c979101774bb9a72890"
   },
   "remote_followup": {
-    "status": "OL045_DSH_INSTALLED_API_STATIC_COMPAT_ACCEPTED",
-    "source_sha": "e458afc2ee6261a1ba3106e2f1de1c4df9c97f86",
-    "ci_run_id": 44575812654,
-    "ci_run_number": 641,
+    "status": "I2_ROUTER_AND_WORKER_DENY_ONLY_SOURCE_CI_PASS",
+    "source_sha": "f5f3fc025b6af88ae2c6b16ba828747cccbf9e92",
+    "ci_run_id": 44672019486,
+    "ci_run_number": 667,
     "os_jobs": "3_of_3_success",
     "node_tests_per_os": 255,
-    "focus_tests_per_os": 37,
-    "full_vitest": 1245,
+    "focus_tests_per_os": 39,
+    "full_vitest": 1247,
     "proxy_tests_per_os": 5,
     "operator_macos_provenance_retest": "OL043_LOCAL_PASS_254_OF_254",
     "native_os_real_apply": false,
@@ -150,7 +150,8 @@
     "installed_dsh_api": "0_2_2_RC_1_APPROVAL_NEVER_FS_IN_PROCESS_CONFIRMED_BY_LOCAL_READ_ONLY",
     "real_i2_edit": false,
     "next_live_grant": "NOT_GRANTED",
-    "operator_macos_fs_only_verification": "SYNTHETIC_SOURCE_ONLY"
+    "operator_macos_fs_only_verification": "SYNTHETIC_SOURCE_ONLY",
+    "operator_macos_router_stage": "NOT_TESTED"
   },
   "integration_i1c": {
     "status": "REAL_AGENT_DELIVERY_DISPOSABLE_TRANSPORT_PASS_NOT_REAL_SESSION",
@@ -214,14 +215,22 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "REMOTE_OFFLINE_ROUTER_SHELL_DENY_ONLY_REMEDIATION",
+    "status": "REMOTE_I2_SOURCE_READY_HUMAN_DECISION_REQUIRED_NO_LIVE_GRANT",
     "task_id": null,
     "operator_live_authorization": "OL044_CONSUMED",
     "requires_new_private_human_grant": true,
     "no_auto_dispatch": true,
-    "real_source_apply": "FORBIDDEN",
-    "real_weixin": "FORBIDDEN",
-    "no_current_local_task": true
+    "source_sha": "f5f3fc025b6af88ae2c6b16ba828747cccbf9e92",
+    "source_ci_run_id": 44672019486,
+    "preflight": [
+      "reverify_installed_DSH_0_2_2_RC_1",
+      "attest_effective_router_and_worker_tools",
+      "attest_approval_policy_never_both_sessions",
+      "prove_outer_Seatbelt_child_and_egress",
+      "meter_8123_requests_tools_duration"
+    ],
+    "no_real_apply": true,
+    "no_weixin": true
   },
   "integration_i2": {
     "status": "I2_PARTIAL_NO_EDIT",
@@ -248,6 +257,13 @@
     "native_edit_under_outer_seatbelt": "NOT_TESTED",
     "installed_dsh_approval_policy": "STATIC_NEVER_COMPAT_LOCAL_REPORT",
     "installed_dsh_fs_sandbox": "STATIC_IN_PROCESS_NATIVE_FILES_COMPAT_LOCAL_REPORT",
-    "router_shell_blocker": "UNRESTRICTED_IN_I2_STAGING_PROFILE"
+    "router_shell_blocker": "OPT_IN_SOURCE_GUARD_CI_PASS_INSTALLED_RUNTIME_UNTESTED",
+    "router_readonly_staging": true,
+    "router_only_local_tools": [
+      "orchestrator_route",
+      "orchestrator_read"
+    ],
+    "router_guard_code_sha": "f5f3fc025b6af88ae2c6b16ba828747cccbf9e92",
+    "router_guard_ci_run_id": 44672019486
   }
 }
