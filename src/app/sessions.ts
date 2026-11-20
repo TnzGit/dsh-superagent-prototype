@@ -70,6 +70,10 @@ const WORK_TOOLS = ['read', 'write', 'edit', 'read_image', 'glob', 'grep', 'bash
 const I2_STAGING_FS_ONLY_ENV = 'DSH_SUPERAGENT_I2_STAGING_FS_ONLY'
 const I2_STAGING_FILE_TOOLS = ['read', 'write', 'edit', 'glob', 'grep'] as const
 const I2_STAGING_FILE_SET: ReadonlySet<string> = new Set(I2_STAGING_FILE_TOOLS)
+/** The ONLY bundle-local tools a fixture-I2 Router needs. All others, including
+ * settings, retry, reply and prompt writes, are withheld in this profile. */
+const I2_STAGING_ROUTER_TOOL_SET: ReadonlySet<string> = new Set(['orchestrator_route', 'orchestrator_read'])
+const I2_STAGING_ROUTER_DENIAL = 'I2 isolated fixture Router allows routing and read-only ticket context only; shell, jobs, settings and other tools are denied'
 /** What the main Session is told when it would wait: what it waits for comes to it, and a waiting step holds back the next. */
 const NO_WAIT = 'Reports, follow_up notices, new candidates and a background job\'s end with its output arrive by themselves as messages; '
   + 'end the turn instead of waiting for them.'
@@ -209,7 +213,12 @@ export class Sessions {
     await initializeRoleModel(ctx, result.agent, role === 'orchestrator' ? settings.eval.model : settings.executor.model)
     await this.decorate(result.agent)
     // Registered local-project Tickets run only in a disposable snapshot, not with unrestricted host write access.
-    ctx.permissionPresets.set(result.agent.session, workerTicket?.execution?.projectId ? 'workspace-write' : 'danger-full-access')
+    // A fresh isolated I2 Router performs routing only; it must never carry
+    // the normal unrestricted Session permission preset. This cannot elevate
+    // an existing Session's authority and leaves production defaults alone.
+    const stagedRouter = role === 'orchestrator' && process.env[I2_STAGING_FS_ONLY_ENV] === '1'
+    ctx.permissionPresets.set(result.agent.session, stagedRouter ? 'read-only'
+      : workerTicket?.execution?.projectId ? 'workspace-write' : 'danger-full-access')
     await ctx.sessionController.rename({ sessionId: id as SessionId, title })
     return result.agent
   }
@@ -321,10 +330,26 @@ export class Sessions {
     // Bail out if the agent was disposed while awaiting the skill scope.
     if (this.bindings.get(agent) !== binding) return
     const register = this.registerTool(agent, binding)
-    for (const tool of host.tools(agent, ticket)) register(tool.name, tool.description, tool.schema, tool.execute)
+    // The I2 flag is explicit, fixture-only and deny-only; never silently
+    // mount original master maintenance/settings/retry/reply surfaces in
+    // the isolated model-driven Router. Normal production registration is
+    // byte-for-byte equivalent when the flag is absent.
+    const stagedRouter = master && process.env[I2_STAGING_FS_ONLY_ENV] === '1'
+    for (const tool of host.tools(agent, ticket)) {
+      if (stagedRouter && !I2_STAGING_ROUTER_TOOL_SET.has(tool.name)) continue
+      register(tool.name, tool.description, tool.schema, tool.execute)
+    }
     if (master) {
-      binding.disposers.push(agent.ctx.tools.restrict({ allow: ['skill', 'bash', 'read', 'read_image', 'job_output', 'job_list', 'job_kill'] }),
-        agent.ctx.tools.guard(execution => noWait(execution, () => this.routed(agent))))
+      const inheritAllow = stagedRouter ? [] : ['skill', 'bash', 'read', 'read_image', 'job_output', 'job_list', 'job_kill']
+      binding.disposers.push(agent.ctx.tools.restrict({ allow: inheritAllow }),
+        agent.ctx.tools.guard(execution => {
+          // A stale/hidden direct call must not enter DSH's nested Seatbelt
+          // bash runner or an approval escalation even when tool discovery
+          // was previously cached. Only the two owned routing tools remain.
+          if (stagedRouter)
+            return I2_STAGING_ROUTER_TOOL_SET.has(execution?.name ?? '') ? undefined : I2_STAGING_ROUTER_DENIAL
+          return noWait(execution, () => this.routed(agent))
+        }))
     } else {
       // An Executor Session keeps the profile's work tools it has, which DSH requires to be known; its own tools are not masked.
       binding.disposers.push(...this.workOnly(agent, ticket!.id))

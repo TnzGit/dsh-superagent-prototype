@@ -9,6 +9,7 @@
  * the real Sessions.workOnly implementation.
  */
 import { expect, test, vi } from 'vitest'
+import { z } from 'zod'
 vi.mock('@deepseek-ai/dsh-scope', async importOriginal => ({
   ...await importOriginal(), scopeParentOf: () => undefined
 }))
@@ -27,7 +28,7 @@ function fixture(options = {}) {
   const tickets = new Map(options.noTicket ? [] : [[ticketId, ticket]])
   const agents = new Map(), history = new Map(), listeners = new Map()
   const workspaceRecord = { id: 'workspace-fixture-1', path: workspace, sessionIds: [] }
-  const workspaces = [], created = [], renamed = [], delivery = [], permissions = [], toolRestrictions = [], toolGuards = [], modelResolutions = [], notifications = []
+  const workspaces = [], created = [], renamed = [], delivery = [], permissions = [], toolRestrictions = [], toolGuards = [], modelResolutions = [], notifications = [], registeredTools = []
   const globalDefault = Object.freeze({ provider: 'existing-production-default', model: 'unchanged' })
   let flushes = 0
   const settings = () => ({
@@ -56,7 +57,7 @@ function fixture(options = {}) {
       },
       tools: {
         get: name => ['read', 'write', 'edit', 'glob', 'grep', 'bash', 'subagent', 'schedule_task', 'send_session'].includes(name),
-        register: () => () => {},
+        register: spec => { registeredTools.push({id,name:spec.name}); return () => {} },
         restrict: opts => { toolRestrictions.push({ id, allow: [...opts.allow] }); return () => {} },
         guard: fn => { toolGuards.push({ id, fn }); return () => {} }
       },
@@ -112,12 +113,12 @@ function fixture(options = {}) {
       tickets: { get: id => tickets.get(id) },
       settings, get: () => undefined, set: () => {}, keys: () => []
     },
-    effects, health: { set: () => {} }, environment: () => [], tools: () => [],
+    effects, health: { set: () => {} }, environment: () => [], tools: () => options.mainTools ?? [],
     prompts: { current: () => cfg, version: () => cfg, skills: () => [], compose: () => 'only-fixture-prompt' }
   }
   const sessions = new Sessions(host)
   return { sessions, ticketId, workspace, tickets, agents, context, history,
-    created, renamed, delivery, permissions, toolRestrictions, toolGuards, modelResolutions, workspaces, workspaceRecord, listeners, globalDefault,
+    created, renamed, delivery, permissions, toolRestrictions, toolGuards, modelResolutions, workspaces, workspaceRecord, listeners, globalDefault, registeredTools,
     get flushes() { return flushes }, makeAgent, ticket }
 }
 
@@ -306,4 +307,49 @@ test('I2 file-only opt-in cannot silently affect normal Worker tools when disabl
   } finally {
     vi.unstubAllEnvs()
   }
+})
+
+const fixtureRouterTools = [
+  'orchestrator_route','orchestrator_read','orchestrator_settings_save',
+  'orchestrator_prompts_save','orchestrator_ticket_retry','orchestrator_reply',
+].map(name=>({name,description:'fixture only',schema:z.object({}),execute:async()=>({})}))
+
+test('I2 staged Router registers only route/read, forbids bash + hidden tools at call time, and uses read-only preset', async () => {
+  vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY','1')
+  try {
+    const f=fixture({mainTools:fixtureRouterTools})
+    const id='original-master-unmodified'
+    f.makeAgent(id)
+    await f.sessions.ensure(id,f.workspace,'Fixture Router','orchestrator')
+    expect(f.registeredTools.filter(x=>x.id===id).map(x=>x.name)).toEqual(['orchestrator_route','orchestrator_read'])
+    expect(f.toolRestrictions).toEqual([{id,allow:[]}])
+    expect(f.toolGuards).toHaveLength(1)
+    expect(f.toolGuards[0].fn({name:'orchestrator_route'})).toBeUndefined()
+    expect(f.toolGuards[0].fn({name:'orchestrator_read'})).toBeUndefined()
+    for(const name of ['bash','pwsh','skill','job_output','job_list','job_kill','web_fetch',
+      'orchestrator_settings_save','orchestrator_prompts_save','orchestrator_ticket_retry','orchestrator_reply']){
+      expect(f.toolGuards[0].fn({name})).toMatch(/fixture Router allows routing/)
+    }
+    expect(f.toolGuards[0].fn({})).toMatch(/fixture Router allows routing/)
+    expect(f.permissions).toEqual([{id,value:'read-only'}])
+    expect(f.globalDefault).toEqual({provider:'existing-production-default',model:'unchanged'})
+    f.sessions.dispose()
+  }finally{vi.unstubAllEnvs()}
+})
+
+test('I2 staging flag absent preserves production Router tools, shell guard, and danger-full-access preset', async () => {
+  vi.stubEnv('DSH_SUPERAGENT_I2_STAGING_FS_ONLY','false')
+  try{
+    const f=fixture({mainTools:fixtureRouterTools})
+    const id='original-master-unmodified'
+    f.makeAgent(id)
+    await f.sessions.ensure(id,f.workspace,'Fixture Router','orchestrator')
+    expect(f.registeredTools.filter(x=>x.id===id).map(x=>x.name)).toEqual(fixtureRouterTools.map(x=>x.name))
+    expect(f.toolRestrictions[0].allow).toContain('bash')
+    expect(f.toolRestrictions[0].allow).toContain('job_output')
+    expect(f.toolGuards[0].fn({name:'orchestrator_settings_save',arguments:{}})).toBeUndefined()
+    expect(f.toolGuards[0].fn({name:'bash',arguments:{command:'pwd',timeoutMs:30000}})).toBeUndefined()
+    expect(f.permissions).toEqual([{id,value:'danger-full-access'}])
+    f.sessions.dispose()
+  }finally{vi.unstubAllEnvs()}
 })
