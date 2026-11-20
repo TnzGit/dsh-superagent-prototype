@@ -1,5 +1,10 @@
 # Public-repository communication security
 
+## 2026-11-20 operator standing consent — supersedes repeated approvals ONLY within strict scope
+
+The operator expressly said future *reasonable project work* is approved by default; **do not keep asking to authorize routine work**. See `agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md` and machine-readable `STATE.json.operator_standing_authorization`. This covers offline dev/tests and a NEW bounded, isolated, synthetic-copy I2 run after real host-owned policy/OS/tool/approval/budget preflight; it does NOT approve original service changes, real Weixin sends, real registered-project Apply, cloud/credentials, merge/deploy or security weakening. Historic one-shot OL-044/046 remains consumed; never replay the old ID. An approved class of work is **not** an authenticated per-run command: this public repository cannot act as an operator signature. Local execution requires an operator-owned protected dispatcher/allowlist and independent preflight; automation stays PAUSED and no_auto_dispatch true until separately changed/verified. All older blanket per-action consent language below applies to higher-risk actions *outside* the newly scoped standing approval.
+
+
 This GitHub repository is **PUBLIC**. Assume every byte in every file, every commit message, every old Git object and every report can be read, cloned and retained indefinitely, including by external users.
 
 ## Access facts verified on 2026-11-10
