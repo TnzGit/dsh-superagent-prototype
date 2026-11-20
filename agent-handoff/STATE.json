@@ -65,7 +65,8 @@
     "agent-reports/REPORT-ol045-dsh-fs-approval-api-offline.md",
     "agent-handoff/HANDOFF-2026-11-20-OL046-I2-FS-ONLY-SEATBELT-ONE-SHOT.md",
     "agent-handoff/receipts/online/LO-20261120-046-done.md",
-    "agent-reports/REPORT-ol046-i2-seatbelt-native-edit.md"
+    "agent-reports/REPORT-ol046-i2-seatbelt-native-edit.md",
+    "docs/016-i2-worker-scope-preflight-and-ticket-tool-contract.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -151,14 +152,14 @@
     "remote_fix_sha": "1b9fe55ce2e59d8e3a7e6c979101774bb9a72890"
   },
   "remote_followup": {
-    "status": "I2_ROUTER_AND_WORKER_DENY_ONLY_SOURCE_CI_PASS",
-    "source_sha": "f5f3fc025b6af88ae2c6b16ba828747cccbf9e92",
-    "ci_run_id": 44672019486,
-    "ci_run_number": 667,
+    "status": "I2_WORKER_SCOPE_AND_EXACT_OWNED_REPORT_TOOLS_OFFLINE_CI_PASS",
+    "source_sha": "90d32d178fbaefc10cb7f80e260ea67f984ae279",
+    "ci_run_id": 44710359723,
+    "ci_run_number": 697,
     "os_jobs": "3_of_3_success",
     "node_tests_per_os": 255,
-    "focus_tests_per_os": 39,
-    "full_vitest": 1247,
+    "focus_tests_per_os": 43,
+    "full_vitest": 1251,
     "proxy_tests_per_os": 5,
     "operator_macos_provenance_retest": "OL043_LOCAL_PASS_254_OF_254",
     "native_os_real_apply": false,
@@ -170,7 +171,8 @@
     "real_i2_edit": false,
     "next_live_grant": "NOT_GRANTED",
     "operator_macos_fs_only_verification": "SYNTHETIC_SOURCE_ONLY",
-    "operator_macos_router_stage": "NOT_TESTED"
+    "operator_macos_router_stage": "NOT_TESTED",
+    "operator_macos_post_patch_real_I2": "NOT_TESTED"
   },
   "integration_i1c": {
     "status": "REAL_AGENT_DELIVERY_DISPOSABLE_TRANSPORT_PASS_NOT_REAL_SESSION",
@@ -234,19 +236,23 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "REMOTE_OFFLINE_WORKER_SCOPE_AND_REPORT_TOOLS_REMEDIATION_ONLY",
+    "status": "REMOTE_WORKER_SCOPE_OFFLINE_FIX_CI_PASS_AWAIT_NEW_HUMAN_LIVE_CONSENT",
     "task_id": null,
-    "operator_live_authorization": "OL046_CONSUMED",
+    "source_sha": "90d32d178fbaefc10cb7f80e260ea67f984ae279",
+    "source_ci_run_id": 44710359723,
+    "operator_live_authorization": "OL044_OL046_BOTH_CONSUMED",
     "requires_new_private_human_grant": true,
-    "automatic_local_dispatch": false,
     "no_auto_dispatch": true,
+    "automatic_local_dispatch": false,
     "real_weixin": "FORBIDDEN",
     "real_source_apply": "FORBIDDEN",
-    "needed": [
-      "pre_inference_worker_scope_binding_and_attestation",
-      "exact_owned_ticket_report_tool_set_guard",
-      "all_boots_inference_scope_accounting",
-      "outer_canary_read_confidentiality_test"
+    "research_doc": "docs/016-i2-worker-scope-preflight-and-ticket-tool-contract.md",
+    "preflight": [
+      "installed_DSH_scope_before_first_inference",
+      "both_new_Sessions_effective_approval_never",
+      "outer_Seatbelt_sensitive_read_and_write_denials",
+      "all_boots_model_tool_budget",
+      "genuine_native_edit_review_required_unsent_outbox"
     ]
   },
   "integration_i2": {
@@ -295,6 +301,19 @@
     "ol046_multiple_inference_boots": true,
     "ol046_os_canary_read": "ALLOWED",
     "ol046_os_canary_write": "DENIED",
-    "ol046_original_host_summary": "LOCAL_REPORTED_STABLE_EXCEPT_UNRELATED_ONE_SESSION"
+    "ol046_original_host_summary": "LOCAL_REPORTED_STABLE_EXCEPT_UNRELATED_ONE_SESSION",
+    "worker_scope_fix_source_sha": "90d32d178fbaefc10cb7f80e260ea67f984ae279",
+    "worker_scope_fix_ci_run_id": 44710359723,
+    "worker_scope_simulated_tests": "PASS_3_OF_3",
+    "worker_exact_owned_report_tools": [
+      "orchestrator_read",
+      "orchestrator_ack",
+      "orchestrator_thread_unrelated",
+      "orchestrator_thread_follow",
+      "orchestrator_trigger_handback",
+      "orchestrator_report"
+    ],
+    "worker_actual_report_after_patch": "NOT_TESTED",
+    "full_model_edit_review_chain": "NOT_PROVEN"
   }
 }
