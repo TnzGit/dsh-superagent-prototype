@@ -66,7 +66,8 @@
     "agent-handoff/HANDOFF-2026-11-20-OL046-I2-FS-ONLY-SEATBELT-ONE-SHOT.md",
     "agent-handoff/receipts/online/LO-20261120-046-done.md",
     "agent-reports/REPORT-ol046-i2-seatbelt-native-edit.md",
-    "docs/016-i2-worker-scope-preflight-and-ticket-tool-contract.md"
+    "docs/016-i2-worker-scope-preflight-and-ticket-tool-contract.md",
+    "agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -315,5 +316,32 @@
     ],
     "worker_actual_report_after_patch": "NOT_TESTED",
     "full_model_edit_review_chain": "NOT_PROVEN"
+  },
+  "operator_standing_authorization": {
+    "effective_date": "2026-11-20",
+    "intent": "REASONABLE_PROJECT_WORK_DEFAULT_APPROVED_NO_REPEATED_CONFIRMATION",
+    "source": "DIRECT_OPERATOR_CHAT_NOT_PUBLIC_GITHUB_AS_TOKEN",
+    "policy_doc": "agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md",
+    "approved_classes": [
+      "REMOTE_SOURCE_DOC_TEST_CI_DRAFT_PR",
+      "LOCAL_READ_ONLY_AND_OFFLINE_FIXTURES",
+      "NEW_TASK_ISOLATED_DISPOSABLE_SYNTHETIC_I2_WITH_TRUSTED_LOCAL_POLICY_OS_NETWORK_TOOL_APPROVAL_BUDGET_GATES"
+    ],
+    "per_run_chat_consent_required_for_approved_classes": false,
+    "prohibited_without_specific_decision": [
+      "ORIGINAL_3080_3083_8123_OPERATIONS",
+      "REAL_WEIXIN_SEND_OR_PERSONAL_DATA",
+      "REAL_REGISTERED_SOURCE_APPLY",
+      "REAL_PRODUCTION_MERGE_DEPLOY",
+      "SYSTEM_SECURITY_OR_CREDENTIAL_CHANGES",
+      "CLOUD_NETWORK_EXPANSION",
+      "FORCE_PUSH_OR_REPO_PRIVACY_CHANGE"
+    ],
+    "public_github_not_execution_authority": true,
+    "existing_live_one_shots": "OL044_AND_OL046_CONSUMED_NEVER_REUSE",
+    "local_execution_requires_trusted_operator_owned_policy": true,
+    "auto_dispatch": "REMAINS_DISABLED_UNTIL_VERIFIED_LOCALLY",
+    "remote_automation": "REMAINS_OPERATOR_PAUSED",
+    "no_new_OL_task_yet": true
   }
 }
