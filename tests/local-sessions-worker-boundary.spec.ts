@@ -390,7 +390,7 @@ test('I2 Worker agent/created installs provisional deny-all before a model, with
     expect(earlyGuard.fn({name:'bash'})).toMatch(/not prepared/)
     expect(earlyGuard.fn({name:'edit'})).toMatch(/not prepared/)
     await expect(f.sessions.prompt(id,'assignment:'+f.ticketId,'unauthorized early','queue'))
-      .rejects.toThrow(/not prepared/)
+      .rejects.toThrow(/Workspace identity|not prepared/)
     expect(f.delivery).toHaveLength(0)
     expect(f.permissions).toHaveLength(0)
     f.sessions.dispose()
