@@ -114,7 +114,7 @@ Mac Agent ALL_OFFLINE_PASS report `85fbc5c868c3ed23308f15bcf0e5759d58e777ad` rec
 
 The OL-006/007/008/009 local results have been accepted with online LO-006/007/008/009 done receipts. The durable synthetic ledger pin initial acceptance is complete (CI #292; exact code 06de7c16599dc348857a0b0548135e458d5964e5). No real Apply, DSH Prompt or Weixin was authorized.
 
-## Current authorization — LO-046 ACKed BLOCKED, NO ACTIVE LOCAL TASK (2026-11-20)
+## Historical OL-046 closeout (superseded by pending OL-047 standing-scope manual handoff, 2026-11-20)
 
 **Current supersession:** OL-046 is CLOSED as I2_BLOCKED_TOOL_SCOPE after genuine isolated native edit but without review/report, and its live human grant is CONSUMED. Remote Worker tool-scope fix 90d32d17 CI #697 3/3 is source-only; no local task, no auto-dispatch, no real model/8123, Weixin/I3 or original source Apply grant. Old OL-044 and OL-046 consent cannot be replayed. See docs/016-i2-worker-scope-preflight-and-ticket-tool-contract.md. All older active-task descriptions below are HISTORICAL.
 
