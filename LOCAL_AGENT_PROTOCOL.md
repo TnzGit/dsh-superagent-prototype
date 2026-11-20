@@ -106,7 +106,9 @@ Mac Agent ALL_OFFLINE_PASS report `85fbc5c868c3ed23308f15bcf0e5759d58e777ad` rec
 
 The OL-006/007/008/009 local results have been accepted with online LO-006/007/008/009 done receipts. The durable synthetic ledger pin initial acceptance is complete (CI #292; exact code 06de7c16599dc348857a0b0548135e458d5964e5). No real Apply, DSH Prompt or Weixin was authorized.
 
-## Current authorization — OL-045 closed, one NEW conditional manual I2 OL-046 (2026-11-20)
+## Current authorization — LO-046 ACKed BLOCKED, NO ACTIVE LOCAL TASK (2026-11-20)
+
+**Current supersession:** OL-046 is CLOSED as I2_BLOCKED_TOOL_SCOPE after genuine isolated native edit but without review/report, and its live human grant is CONSUMED. Remote Worker tool-scope fix 90d32d17 CI #697 3/3 is source-only; no local task, no auto-dispatch, no real model/8123, Weixin/I3 or original source Apply grant. Old OL-044 and OL-046 consent cannot be replayed. See docs/016-i2-worker-scope-preflight-and-ticket-tool-contract.md. All older active-task descriptions below are HISTORICAL.
 
 **Current supersession:** OL-20261120-045 is ACKed/CLOSED as offline API readiness only; OL-044's one-shot live grant is CONSUMED. The user has granted ONE distinct new, manually forwarded, conditionally executable `OL-20261120-046` in a new OS-Seatbelt confined disposable DSH staging instance using existing local 8123 model ONLY, with full pre-inference OS/child/network + Router/Worker effective tools + both Sessions approval policy NEVER + hard counters. No original 3080/3083/8123 service/config modification, no Weixin or original registered-source Apply. Public GitHub text/CI does NOT trigger it. See `agent-handoff/HANDOFF-2026-11-20-OL046-I2-FS-ONLY-SEATBELT-ONE-SHOT.md`. All old instructions below are historical and cannot widen this scoped one-shot.
 
