@@ -1,5 +1,8 @@
 # Remote ChatGPT ↔ Local Mac Agent: persistent handoff
 
+> **Current new task OL-20261120-047: PENDING trusted MANUAL handoff, not dispatched.** Operator standing safe-project consent applies without reasking; NO original 3080/3083/8123, real Weixin or production Apply. Runbook `agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md`, frozen source `47b104e36f59b6623f139d8927bfa613bbcc777b` CI #737 3/3; full pre-model OS/Worker/approval checks and one inference boot latch required. GitHub is PUBLIC and not a host authorization signature. Automation remains PAUSED / no_auto_dispatch=true. Historical OL-044/046 one-shots consumed, not reused.
+
+
 **Standing operator scope (2026-11-20):** routine project development/offline checks and future fresh OS-isolated synthetic-copy I2 work within strict safety gates are approved by default without repeated ChatGPT requests; see `agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md`. This is NOT public GitHub execution authority. Local auto-dispatch is still disabled, remote scheduler operator-PAUSED, original 3080/3083/8123/Weixin/real Apply protected. OL-044 and OL-046 consumed; no new OL ID here.
 
 

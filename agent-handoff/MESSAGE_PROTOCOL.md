@@ -2,6 +2,9 @@
 
 # Append-only message queue and processed receipts (v1)
 
+> **2026-11-20 newer task supersession:** `OL-20261120-047` is the only ACTIVE LOCAL TASK in the sense of PENDING human manual handoff/trusted owner-owned policy, NOT a process start. Source `47b104e36f59b6623f139d8927bfa613bbcc777b`, runbook `agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md`. Operator's standing consent avoids repetitive chat approval, but public GitHub tasks cannot auto-execute: scheduler still PAUSED, no_auto_dispatch true, no verified trusted local launcher. All gates before model, one inferred boot across entire claim window; no retry. Older "no active local task" notes above and historic paragraphs below are superseded by `STATE.json`.
+
+
 **2026-11-20 standing scope:** Stop requesting a fresh human “同意” for every ordinary, project-reasonable task. The operator's standing intent and high-impact exclusions are recorded in `agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md`. Distinct new synthetic I2 jobs within that scope are not pre-approved to run *merely because a public GitHub message exists*: a separate locally protected dispatcher/allowlist, unique ID, full OS/tool/approval/budget preflight and non-replay receipt are mandatory. The existing remote PAUSE / `no_auto_dispatch=true` remains unchanged. Earlier per-task fresh-consent instructions below still govern non-routine high-impact work or when no trusted local approval-policy execution route exists.
 
 
