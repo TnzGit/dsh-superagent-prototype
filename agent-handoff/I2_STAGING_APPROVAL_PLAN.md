@@ -61,3 +61,8 @@ The operator privately agreed to ONE new isolated DSH Worker and local 8123 mode
 ## 2026-11-20 FINAL supersession — OL-044 consumed, new repair plan
 
 LO-044 was acknowledged online as **I2_PARTIAL_NO_EDIT**, not accepted as a successful I2 Worker edit. The validated outer Seatbelt boundary prevented host writes/egress; inner DSH bash tried to nest Seatbelt and failed with SANDBOX_UNAVAILABLE, then the default headless ask path did not settle and no file edit occurred. This previous proposal and the OL-044 runbook are now historical evidence, NOT instruction or authority to replay. No active local task or live grant exists. Remote research-only remediation and the opt-in deny-only native file-tool profile are specified in `docs/015-i2-seatbelt-headless-remediation.md`; any genuine next model turn requires a new private operator scope. Keep all production services, original source and real Apply unchanged.
+
+
+## 2026-11-20 NEW one-time OL-046 supersession
+
+The historical OL-044 live attempt and grant were consumed and its verdict remains `I2_PARTIAL_NO_EDIT`. OL-045 subsequently confirmed DSH 0.2.2-rc.1 static/API support for `approval:never` and native in-process fs. A **separate fresh one-shot** isolated native-file edit was consented to in the current private ChatGPT conversation and formalized as MANUAL `OL-20261120-046`, with the binding runbook `agent-handoff/HANDOFF-2026-11-20-OL046-I2-FS-ONLY-SEATBELT-ONE-SHOT.md`. This old plan DOES NOT itself grant permission or trigger execution. Direct operator delivery and preflight of outer Seatbelt, both Session tools, effective approval-never and model limits must pass before any live invocation. No automatic OL-047 and no original production source/Weixin/Apply actions.
