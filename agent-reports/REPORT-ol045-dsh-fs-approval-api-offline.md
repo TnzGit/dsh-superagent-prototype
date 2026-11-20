@@ -1,3 +1,5 @@
+> **Public-report privacy correction (2026-11-20, remote online):** This branch copy redacts host-specific identity and file fingerprint fields that were included in an earlier published revision. Aggregate evidence and the original local verdict remain unchanged. Git commits are immutable; previous commit objects may still contain the former fields until the repository owner explicitly manages history and access.
+
 # OL-20261120-045 — Installed DSH native-fs / headless-approval offline compatibility report
 
 Verdict: `ALL_OFFLINE_PASS` — static/API compatibility only; this does NOT attest a real I2 edit success.
@@ -75,17 +77,17 @@ Yes — statically: plugin-level `config.policy: never` in a disposable profile 
 
 ## D. Host zero-drift (read-only before/after)
 
-Private anchors `/Users/m4mini/.dsh-superagent-private/ol045/{baseline_raw.txt,after_raw.txt}` (0600). Identical:
+Private before/after baseline evidence remains in an owner-only local location (mode 0600), **not reproduced here**. Exact host paths, process IDs/start times, database hashes and file-specific metadata have been redacted from this public report; only aggregate comparisons are given:
 
-- Listeners/processes: 3080 pid 1482 (`*:3080`, start Fri Nov 6 13:35:30), 3083 pid 68379 (`127.0.0.1:3083`, Mon Nov 9 18:06:49), 8123 pid 90215 (`127.0.0.1:8123`, Sun Nov 8 10:28:03).
-- Probes: 3080 root 200; 3083 state 200 (x-orchestrator-request header); 8123 `/v1/models` unauth 401.
-- Read-only aggregates: session/list items 885 (both runs); settings/describe writable true / hasDocument true / 28 namespaces; model-default namespaces unchanged (agent-default-model, llm-* rows present in both).
-- 3083 test-home SQLite: sha256 `6db1b2935cc5051938436aed913d6ca1ebb176d7fabfd205832aeae147e4d0db`, mode 0600, size 200704, mtime Nov 9 18:06:47 — byte-identical.
-- Native relay approval: absent in both (relay-OFF). Real Weixin, real registered projects' Apply/Rollback, historical grants untouched; no model inference, no DSH instance start, no tool execution on the original host.
+- Existing 3080/3083/8123 listener/process identities and start times: IDENTICAL before/after; binding classes unchanged.
+- Probe response classes: existing DSH and orchestrator endpoints 200, local model unauthenticated probe 401; all unchanged.
+- Read-only Session/Workspace aggregates and settings namespace count: IDENTICAL before/after; model-default namespace values unchanged.
+- Existing local SQLite identity: byte-identical before/after, including hash/size/mtime; exact fingerprint retained only privately.
+- Native relay approval: absent in both (relay-OFF). Real Weixin, registered projects' Apply/Rollback and historical grants untouched. No inference, DSH instance start or tool execution on original host.
 
 ## E. Cleanup
 
-- Disposable stage worktree `/private/tmp/ol045-*/stage-ol045` (detached at pinned SHA) retained until publication, parent dir holds only this task's scratch files (0600). OL-044 frozen private evidence retained untouched as required.
+- Disposable stage worktree under a new owner-only scratch directory (detached at pinned SHA), retained only until publication; original private evidence from OL-044 remains untouched. Exact local scratch path is withheld.
 - No service/config/port/model-default/SQLite changes made this round; nothing to roll back.
 
 ## F. Residual risks + next-task recommendation
