@@ -7,3 +7,7 @@
 **All past I2 one-shot human consents OL-044 and OL-046 are CONSUMED;** no retry and no OL-047 has been created. The next owner is remote OFFLINE ONLY for source code and regression tests. A future live DSH/8123 model turn, any new sandbox service start, original 3080/3083/8123 change, Weixin/I3, historical Sessions/Workspaces/SQLite, original registered source Apply or cloud requires its own fresh, independently scoped private human authorization. No GitHub state/document or CI can supply consent. PR #1 Draft/unmerged; online scheduler PAUSED_BY_OPERATOR.
 
 Read authoritative `agent-handoff/STATE.json` and online ACK for the evidence and next restrictions.
+
+## Remote-only OFFLINE source update (not a new OL task)
+
+Source `90d32d178fbaefc10cb7f80e260ea67f984ae279`, CI #697 Linux/macOS/build **3/3 SUCCESS**: staged Worker provisional deny-all and early scope, exact six owned ticket report tools; default production unchanged. NO operator-Mac model retest, no OL-047, no new live grant, all previous consents consumed. See `docs/016-i2-worker-scope-preflight-and-ticket-tool-contract.md`. The real OL-046 verdict is STILL I2_BLOCKED_TOOL_SCOPE, and this document remains NO ACTIVE TASK.
