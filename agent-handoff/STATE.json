@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online_with_one_manual_conditional_I2_local_batch",
+  "owner": "remote_online",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -17,19 +17,21 @@
     "vitest_tests": 1208
   },
   "last_accepted_local": {
-    "task_id": "OL-20261120-045",
-    "result_id": "LO-20261120-045",
-    "scope": "OFFLINE_SYNTHETIC_ONLY",
-    "source_code_sha": "5578b19ae1a3326093884dc0324e1ebf1577dfaa",
-    "claim_commit": "84c798fc1c053341305831b23a4197828eb67e00",
-    "report_commit": "ae818ef7cc2a215afa2e7515100e3f6b7bd75e7c",
-    "source_ci_run_id": 44577086561,
-    "report_ci_run_id": 44656018807,
-    "report_ci_status": "SUCCESS_3_OF_3",
-    "online_ack": "agent-handoff/receipts/online/LO-20261120-045-done.md",
-    "verdict": "ALL_OFFLINE_PASS"
+    "task_id": "OL-20261120-046",
+    "result_id": "LO-20261120-046",
+    "scope": "CONDITIONAL_I2_OS_ISOLATED_DISPOSABLE_STAGING_ONE_SHOT",
+    "source_code_sha": "ace9ea426d68675fb78edadb1810919f0c0b3f57",
+    "claim_commit": "a1b418c",
+    "report_commit": "3c95c5cdef9c5d4448a6fe8d509bb8304a197a28",
+    "source_ci_run_id": 44677336789,
+    "report_ci_push_run_id": 44704131543,
+    "report_ci_pr_run_id": 44704140469,
+    "report_ci_status": "SUCCESS_BOTH_3_OF_3",
+    "online_ack": "agent-handoff/receipts/online/LO-20261120-046-done.md",
+    "verdict": "I2_BLOCKED_TOOL_SCOPE",
+    "one_shot_consumed": true
   },
-  "active_local_task": "OL-20261120-046",
+  "active_local_task": null,
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -61,7 +63,9 @@
     "agent-handoff/HANDOFF-2026-11-20-OL045-DSH-FS-APPROVAL-API-OFFLINE.md",
     "agent-handoff/receipts/online/LO-20261120-045-done.md",
     "agent-reports/REPORT-ol045-dsh-fs-approval-api-offline.md",
-    "agent-handoff/HANDOFF-2026-11-20-OL046-I2-FS-ONLY-SEATBELT-ONE-SHOT.md"
+    "agent-handoff/HANDOFF-2026-11-20-OL046-I2-FS-ONLY-SEATBELT-ONE-SHOT.md",
+    "agent-handoff/receipts/online/LO-20261120-046-done.md",
+    "agent-reports/REPORT-ol046-i2-seatbelt-native-edit.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -90,7 +94,7 @@
   },
   "local_batch": {
     "task_id": "OL-20261120-046",
-    "status": "PENDING_MANUAL_HANDOFF",
+    "status": "ACKED_CLOSED_BLOCKED",
     "scope": "CONDITIONAL_ONE_SHOT_OS_ISOLATED_DISPOSABLE_DSH_I2",
     "code_sha": "ace9ea426d68675fb78edadb1810919f0c0b3f57",
     "ci_run_id": 44677336789,
@@ -116,7 +120,10 @@
     "privacy": "PUBLIC_REPORT_REDACT_HOST_PATHS_PIDS_HASHES_AND_CONFIG",
     "handoff": "agent-handoff/HANDOFF-2026-11-20-OL046-I2-FS-ONLY-SEATBELT-ONE-SHOT.md",
     "report_expected": "agent-reports/REPORT-ol046-i2-seatbelt-native-edit.md",
-    "result_expected": "LO-20261120-046"
+    "result_expected": "LO-20261120-046",
+    "online_ack": "agent-handoff/receipts/online/LO-20261120-046-done.md",
+    "report_commit": "3c95c5cdef9c5d4448a6fe8d509bb8304a197a28",
+    "operator_consent_consumed": true
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -227,30 +234,23 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "ONE_MANUAL_I2_ONE_SHOT_AWAIT_OPERATOR_PROMPT_AND_OS_PREFLIGHT",
-    "task_id": "OL-20261120-046",
-    "source_sha": "ace9ea426d68675fb78edadb1810919f0c0b3f57",
-    "source_ci_run_id": 44677336789,
-    "runbook": "agent-handoff/HANDOFF-2026-11-20-OL046-I2-FS-ONLY-SEATBELT-ONE-SHOT.md",
-    "scope": "NEW_SEATBELT_OUTER_SANDBOX_ROUTER_WORKER_NATIVE_EDIT",
-    "operator_live_authorization": "NEW_ONCE_OPERATOR_CONSENT_ONLY_IN_CURRENT_CHAT_MANUAL_FORWARD_REQUIRED",
-    "prior_grant": "OL044_CONSUMED",
+    "status": "REMOTE_OFFLINE_WORKER_SCOPE_AND_REPORT_TOOLS_REMEDIATION_ONLY",
+    "task_id": null,
+    "operator_live_authorization": "OL046_CONSUMED",
+    "requires_new_private_human_grant": true,
     "automatic_local_dispatch": false,
-    "preflight": [
-      "OS_Seatbelt_deny_child_and_network",
-      "model_8123_host_only_route_and_budgets",
-      "Router_read_only_route_read_tools_only",
-      "Worker_native_fs_tools_only",
-      "approval_effective_never_both_new_sessions",
-      "source_fixture_unchanged"
-    ],
-    "original_host_services": "UNCHANGED",
+    "no_auto_dispatch": true,
+    "real_weixin": "FORBIDDEN",
     "real_source_apply": "FORBIDDEN",
-    "native_weixin": "FORBIDDEN",
-    "future_OL047": "NOT_ISSUED_NO_AUTO_DISPATCH"
+    "needed": [
+      "pre_inference_worker_scope_binding_and_attestation",
+      "exact_owned_ticket_report_tool_set_guard",
+      "all_boots_inference_scope_accounting",
+      "outer_canary_read_confidentiality_test"
+    ]
   },
   "integration_i2": {
-    "status": "I2_PARTIAL_NO_EDIT",
+    "status": "I2_BLOCKED_TOOL_SCOPE",
     "one_shot_consumed": true,
     "source_sha": "c0da76b14f4893397428c025670f731e0629555d",
     "report_commit": "f2aca2c0ab6cdccde286ecae9853aaf16418879f",
@@ -267,7 +267,7 @@
     "weixin_send": false,
     "original_source_apply": false,
     "host_drift": "LOCAL_AGENT_REPORTED_ZERO",
-    "next": "REMOTE_OFFLINE_SANDBOX_AND_APPROVAL_DESIGN_ONLY",
+    "next": "REMOTE_OFFLINE_WORKER_PRE_INFERENCE_SCOPE_AND_REPORT_TOOL_FIX_NO_LIVE_GRANT",
     "deny_only_file_tools_source_ci": "PASS_3_OF_3_641",
     "deny_only_file_tools_code_sha": "e458afc2ee6261a1ba3106e2f1de1c4df9c97f86",
     "headless_approval_policy_staging": "DESIGN_NEVER_NOT_HOST_VERIFIED",
@@ -281,6 +281,20 @@
       "orchestrator_read"
     ],
     "router_guard_code_sha": "f5f3fc025b6af88ae2c6b16ba828747cccbf9e92",
-    "router_guard_ci_run_id": 44672019486
+    "router_guard_ci_run_id": 44672019486,
+    "ol046_source_sha": "ace9ea426d68675fb78edadb1810919f0c0b3f57",
+    "ol046_report_commit": "3c95c5cdef9c5d4448a6fe8d509bb8304a197a28",
+    "ol046_actual_native_edit": true,
+    "ol046_copy_changed": true,
+    "ol046_diff_one_line": true,
+    "ol046_review_record": false,
+    "ol046_worker_pre_inference_scope_proof": false,
+    "ol046_orchestrator_tool_guard_denial": true,
+    "ol046_final_boot_model_requests": 2,
+    "ol046_final_boot_tool_actions": 7,
+    "ol046_multiple_inference_boots": true,
+    "ol046_os_canary_read": "ALLOWED",
+    "ol046_os_canary_write": "DENIED",
+    "ol046_original_host_summary": "LOCAL_REPORTED_STABLE_EXCEPT_UNRELATED_ONE_SESSION"
   }
 }
