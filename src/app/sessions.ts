@@ -256,7 +256,7 @@ export class Sessions {
       // An existing Session may already contain a model turn from before
       // this process's control. It cannot be accepted as pre-inference-safe.
       if (result.agent.session.snapshotEvents().some(event =>
-        event.type === 'request/header' || event.type === 'model/request'))
+        event.type === 'request/header' || event.type === 'turn/start'))
         throw new Error('Staged Worker already started inference before scope attestation')
       this.holdStagedWorker(result.agent)
       if (this.bindings.has(result.agent) && !this.stagedBound.has(result.agent))
