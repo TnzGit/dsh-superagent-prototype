@@ -1,5 +1,8 @@
 # LOCAL_AGENT_PROTOCOL — permanent GitHub handoff contract
 
+> **CURRENT 2026-11-21: OL-047 closed as genuine I2 isolated staging PASS, one-shot consumed. OL-20261121-048 is a NEW pending OFFLINE fake-Weixin I3 task**, code SHA `cf68140fdd506b05ca09e40a1b00d8cdea821694`, CI #761/#762 3/3. The operator's standing project scope removes redundant consent questions, but public GitHub does not grant trusted host execution; remote automation PAUSED/no_auto_dispatch true. No real iLink, model inference, original 3080/3083/8123, real Weixin send or Apply under OL-048. Read `LOCAL_AGENT_TASK.md` and `agent-handoff/HANDOFF-2026-11-21-OL048-I3-NATIVE-WEIXIN-FAKE-OFFLINE.md`. Older OL-047 pending paragraphs below are historical.
+
+
 > Current `OL-20261120-047` is **PENDING MANUAL/TRUSTED LOCAL POLICY**, not an automatic execution instruction. Frozen `47b104e36f59b6623f139d8927bfa613bbcc777b` CI #737 3/3. The operator granted standing project-safe consent, so do not ask for fresh consent for isolated fixture I2; nevertheless a public GitHub file/receipt cannot initiate host work. Until a locally verified owner-protected dispatcher exists, direct manual Prompt delivery is necessary to initiate. One shot, one inference-containing boot total, deny sensitive reads/writes and all egress except scoped model, pre-model Router/Worker guard and approval-never attestations, native copy edit+owned report/review, no auto retries. Runbook `agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md`. Historical one-shot grants consumed, original host/Weixin/Apply out of scope.
 
 

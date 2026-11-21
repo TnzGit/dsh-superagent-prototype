@@ -1,5 +1,8 @@
 # RELEASE_BASELINE — frozen research feature candidate (NOT a production release)
 
+**CURRENT 2026-11-21 SUPERSESSION:** OL-047 true disposable synthetic-copy I2 `I2_ISOLATED_STAGING_PASS` independently ACKed after actual model-driven native edit and `orchestrator_report` review plus unsent Outbox; local done `e8e460d12c889d51a8e92edf4ce153be588ba815`, CI #753/#754 both 3/3. I2 PASS does not prove real I3 or Apply. Next source `cf68140fdd506b05ca09e40a1b00d8cdea821694` CI #761/#762 3/3 adds five fake native Weixin poll regressions and architecture test inventory. New OL-048 is pending **OFFLINE only**, not dispatched, no live iLink/8123/model/host operations. Runbook `agent-handoff/HANDOFF-2026-11-21-OL048-I3-NATIVE-WEIXIN-FAKE-OFFLINE.md`. PR #1 DRAFT unmerged, remote scheduler paused. All older task-state sections below are historical.
+
+
 **As reviewed 2026-11-18.** Repo `TnzGit/dsh-superagent-prototype`, feature branch `feat/local-first-wechat-foundation`; no code artifact was deployed by this GitHub review.
 
 ## Immutable anchors

@@ -1,5 +1,8 @@
 # Remote ChatGPT ↔ Local Mac Agent: persistent handoff
 
+> **CURRENT 2026-11-21: OL-047 real disposable I2 PASS accepted and ACKed** at `agent-handoff/receipts/online/LO-20261120-047-done.md`. NEW `OL-20261121-048` is solely a **PENDING OFFLINE fake native Weixin I3 audit**, NOT real Weixin/model/host operation. Pinned source `cf68140fdd506b05ca09e40a1b00d8cdea821694`, CI #761/#762 3/3. Runbook `agent-handoff/HANDOFF-2026-11-21-OL048-I3-NATIVE-WEIXIN-FAKE-OFFLINE.md`. Standing operator consent covers this no-reapproval safe class; public GitHub is NOT an execution token. Auto dispatch remains paused, original 3080/3083/8123, real Weixin send and original project Apply forbidden. **Any OL-047 pending language below is historical.**
+
+
 > **Current new task OL-20261120-047: PENDING trusted MANUAL handoff, not dispatched.** Operator standing safe-project consent applies without reasking; NO original 3080/3083/8123, real Weixin or production Apply. Runbook `agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md`, frozen source `47b104e36f59b6623f139d8927bfa613bbcc777b` CI #737 3/3; full pre-model OS/Worker/approval checks and one inference boot latch required. GitHub is PUBLIC and not a host authorization signature. Automation remains PAUSED / no_auto_dispatch=true. Historical OL-044/046 one-shots consumed, not reused.
 
 

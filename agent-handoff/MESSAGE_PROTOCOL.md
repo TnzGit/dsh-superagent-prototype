@@ -2,6 +2,9 @@
 
 # Append-only message queue and processed receipts (v1)
 
+> **CURRENT 2026-11-21:** Last independently accepted local task `OL-20261120-047` = `I2_ISOLATED_STAGING_PASS`; its isolated one-shot is consumed. Sole pending task `OL-20261121-048` = `OFFLINE_SYNTHETIC_ONLY` fake native Weixin route audit, no real network/model/original DSH. Standing project-safe consent applies, but public GitHub task is NOT authentication; require direct operator-forwarded Prompt or separately verified owner-owned local policy. Remote automation PAUSED/no_auto_dispatch true. Any older top-level reference to pending OL-047 is superseded by authoritative `STATE.json`.
+
+
 > **2026-11-20 newer task supersession:** `OL-20261120-047` is the only ACTIVE LOCAL TASK in the sense of PENDING human manual handoff/trusted owner-owned policy, NOT a process start. Source `47b104e36f59b6623f139d8927bfa613bbcc777b`, runbook `agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md`. Operator's standing consent avoids repetitive chat approval, but public GitHub tasks cannot auto-execute: scheduler still PAUSED, no_auto_dispatch true, no verified trusted local launcher. All gates before model, one inferred boot across entire claim window; no retry. Historical closed-task paragraphs below are superseded by `STATE.json`.
 
 

@@ -1,5 +1,8 @@
 # 016 — Worker pre-inference scope and exact ticket report tools
 
+**CURRENT 2026-11-21 AFTER THIS HISTORICAL REMEDIATION:** OL-047 on pinned `47b104e36f59b6623f139d8927bfa613bbcc777b` genuinely verified pre-inference Worker tool binding + six owned ticket tools and native edit/review/Outbox in disposable Seatbelt. Online accepted `I2_ISOLATED_STAGING_PASS` `agent-handoff/receipts/online/LO-20261120-047-done.md`, local report and CI #753/#754 3/3. OL-047 one-shot consumed; no production/real I3/real Apply. Subsequent `OL-20261121-048` pending OFFLINE fake Weixin source testing only (no model/real Weixin). Older statements below are historical pre-fix findings, not current task status.
+
+
 **2026-11-20 — REMOTE OFFLINE SOURCE ONLY. NO ACTIVE LOCAL TASK OR NEW LIVE GRANT.** OL-046 is CLOSED/ACKed `I2_BLOCKED_TOOL_SCOPE`, not I2 PASS. The human one-shot grant is CONSUMED and cannot be replayed; no OL-047 exists. Evidence: `agent-reports/REPORT-ol046-i2-seatbelt-native-edit.md`, `agent-handoff/receipts/online/LO-20261120-046-done.md`.
 
 ## What OL-046 actually showed

@@ -1,5 +1,8 @@
 # 013 — Integration convergence: Ticket → isolated Worker → preview → review
 
+**CURRENT MILESTONE 2026-11-21:** I2 accepted **only** for genuine model-driven native edit + `orchestrator_report` ready/review + pending UNSENT Outbox in a disposable macOS Seatbelt synthetic COPY; OL-047 [online ACK](https://github.com/TnzGit/dsh-superagent-prototype/blob/feat/local-first-wechat-foundation/agent-handoff/receipts/online/LO-20261120-047-done.md) `I2_ISOLATED_STAGING_PASS`, local report CI #753/#754 3/3. This is NOT real Weixin I3 nor original registered source Apply. Source `cf68140fdd506b05ca09e40a1b00d8cdea821694` CI #761/#762 3/3 adds five offline fake Weixin cursor/peer/relay tests; pending OL-048 only audits I3 simulated readiness with zero external calls. Earlier document history below predates this acceptance.
+
+
 **Status: ARCHITECTURE/ACCEPTANCE PLAN, NOT AN E2E PASS OR HOST ACTION.** Frozen source SHA: `9adced9a40b5ef80c05d2d7916a54add65c6a8f0`; latest current task/owner is always in `agent-handoff/STATE.json`.
 
 ## Product acceptance goal
