@@ -1,14 +1,14 @@
-# WORK_QUEUE — after accepted staged I2 (2026-11-21)
+# WORK_QUEUE — accepted I2; I3 offline synthetic readiness (2026-11-21)
 
-No active local task, remote automation operator-PAUSED, no auto-dispatch; PR #1 Draft/unmerged.
+No auto-dispatch, remote automation PAUSED_BY_OPERATOR; public GitHub not execution authority. PR #1 DRAFT/unmerged.
 
 | Priority | Work | Status |
 | --- | --- | --- |
-| P0 | OL-047 genuine disposable I2 | **CLOSED + ACK `I2_ISOLATED_STAGING_PASS`**: real native edit, owned ack/report ready/review, correlated unsent Outbox, pre-model scopes, one model boot. Local evidence + exact done SHA CI #753/#754 3/3 |
-| P0 | I3 native Weixin route readiness | **NEXT REMOTE OFFLINE ONLY**: mock Weixin-shaped inbound/transport-OFF, project selection, routing Ticket, Worker result, Outbox pending, idempotence and negative security tests. No real inbound/outbound messages or original DSH services |
-| P1 | Real I3 Weixin E2E | NOT AUTHORIZED; separate explicit specific grant when offline gates are complete |
-| P1 | Host model/process or global config changes | NOT AUTHORIZED; read-only baseline permitted |
-| P2 | Real registered-source Apply | NOT AUTHORIZED; ACL/inode/dev/rooted FD/external writer/crash journal missing |
-| P3 | PR #1 | DRAFT unmerged, not deployed |
+| P0 | OL-047 true disposable I2 native edit+review | **CLOSED ACK PASS**; original 3080/3083/8123 untouched per local; one model boot 2 calls/7 tool actions; Outbox never sent |
+| P0 | `OL-20261121-048` | **PENDING MANUAL OFFLINE ONLY**; source `cf68140fdd506b05ca09e40a1b00d8cdea821694` CI #761/#762 3/3, fake Weixin poll 5 negatives, protocol/source/Outbox and simulated vertical full suite; gap matrix; zero real network/model/Weixin/host service calls. Runbook `agent-handoff/HANDOFF-2026-11-21-OL048-I3-NATIVE-WEIXIN-FAKE-OFFLINE.md` |
+| P0 | Remote I3 missing seam tests | After OL-048 report, implement full fake native Source→Engine→Ticket→Worker→review-ready→pending Outbox and replay/malformed/expired-token negative cases if missing |
+| P1 | Genuine native Weixin I3 E2E | NOT AUTHORIZED. Requires separate high-impact decision, no real send from standing I2 class |
+| P2 | Real registered project source Apply | STILL BLOCKED: ACL-aware rooted fd/dev/inode, non-cooperating writers, one-use private capability and crash journal/rollback |
+| P3 | PR #1 | DRAFT unmerged; no deploy |
 
-Standing consent covers ordinary source/CI/offline and new bounded synthetic-copy isolated testing, not external side effects. No automatic next task, no original Weixin send, real Apply or user data handling.
+Do not infer real I3 approval from fake source tests or I2 pass. No OL-049 auto issue.
