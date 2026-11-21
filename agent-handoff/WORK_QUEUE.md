@@ -1,15 +1,14 @@
-# WORK_QUEUE — OL-20261120-047, pending MANUAL host-side preflight (2026-11-20)
+# WORK_QUEUE — after accepted staged I2 (2026-11-21)
 
-Remote automation PAUSED_BY_OPERATOR; no auto dispatch; original host live grant NOT_GRANTED. Standing operator permission covers the class, not a public GitHub execution token. PR #1 Draft unmerged.
+No active local task, remote automation operator-PAUSED, no auto-dispatch; PR #1 Draft/unmerged.
 
 | Priority | Work | Status |
 | --- | --- | --- |
-| P0 | OL-20261120-047 new synthetic-copy I2 | **PENDING DIRECT MANUAL HANDOFF OR VERIFIED OWNER POLICY; NOT RUN**. Source `47b104e36f59b6623f139d8927bfa613bbcc777b`, CI #737 3/3; runbook `agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md`. Strict read+write canaries, pre-model bound Worker/Router, effective approval never, one inference boot + task-wide budget, native edit + report/review + unsent Outbox; no auto retry |
-| P0 | Operator standing scope | ACCEPTED, no repetitive chat consent for safe class; no auto-dispatch until trusted local broker verified |
-| P0 | Remote Worker fix | OFFLINE CI #697 3/3: temporary deny-all from agent-created, native tools bound before async skills/model, exactly six report tools. Installed DSH runtime still unverified after patch |
-| P1 | Historical OL-046 | CLOSED/ACK `I2_BLOCKED_TOOL_SCOPE`, real edit but missing report; its single-use human consent consumed. Never replay |
-| P2 | I3 real Weixin | NOT AUTHORIZED |
-| P3 | Real registered source Apply | BLOCKED OS authority/ACL, inode/dev, external writers, crash journal |
-| P4 | PR #1 | DRAFT, unmerged / undeployed |
+| P0 | OL-047 genuine disposable I2 | **CLOSED + ACK `I2_ISOLATED_STAGING_PASS`**: real native edit, owned ack/report ready/review, correlated unsent Outbox, pre-model scopes, one model boot. Local evidence + exact done SHA CI #753/#754 3/3 |
+| P0 | I3 native Weixin route readiness | **NEXT REMOTE OFFLINE ONLY**: mock Weixin-shaped inbound/transport-OFF, project selection, routing Ticket, Worker result, Outbox pending, idempotence and negative security tests. No real inbound/outbound messages or original DSH services |
+| P1 | Real I3 Weixin E2E | NOT AUTHORIZED; separate explicit specific grant when offline gates are complete |
+| P1 | Host model/process or global config changes | NOT AUTHORIZED; read-only baseline permitted |
+| P2 | Real registered-source Apply | NOT AUTHORIZED; ACL/inode/dev/rooted FD/external writer/crash journal missing |
+| P3 | PR #1 | DRAFT unmerged, not deployed |
 
-A new pending manual task does not prove local service execution. No original 3080/3083/8123 config changes, model restart, cloud, real data or external messages.
+Standing consent covers ordinary source/CI/offline and new bounded synthetic-copy isolated testing, not external side effects. No automatic next task, no original Weixin send, real Apply or user data handling.

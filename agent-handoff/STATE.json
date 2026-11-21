@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-20",
+  "updated_utc": "2026-11-21",
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online_standing_authorization_manual_local_handoff",
+  "owner": "remote_online",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -17,21 +17,25 @@
     "vitest_tests": 1208
   },
   "last_accepted_local": {
-    "task_id": "OL-20261120-046",
-    "result_id": "LO-20261120-046",
+    "task_id": "OL-20261120-047",
+    "result_id": "LO-20261120-047",
     "scope": "CONDITIONAL_I2_OS_ISOLATED_DISPOSABLE_STAGING_ONE_SHOT",
-    "source_code_sha": "ace9ea426d68675fb78edadb1810919f0c0b3f57",
-    "claim_commit": "a1b418c",
-    "report_commit": "3c95c5cdef9c5d4448a6fe8d509bb8304a197a28",
-    "source_ci_run_id": 44677336789,
-    "report_ci_push_run_id": 44704131543,
-    "report_ci_pr_run_id": 44704140469,
+    "source_code_sha": "47b104e36f59b6623f139d8927bfa613bbcc777b",
+    "claim_commit": "6979fc7",
+    "report_commit": "e8e460d12c889d51a8e92edf4ce153be588ba815",
+    "source_ci_run_id": 44724133545,
+    "handoff_ci_run_id": 44730802138,
+    "report_ci_push_run_id": 44815071753,
+    "report_ci_pr_run_id": 44815080594,
     "report_ci_status": "SUCCESS_BOTH_3_OF_3",
-    "online_ack": "agent-handoff/receipts/online/LO-20261120-046-done.md",
-    "verdict": "I2_BLOCKED_TOOL_SCOPE",
-    "one_shot_consumed": true
+    "online_ack": "agent-handoff/receipts/online/LO-20261120-047-done.md",
+    "verdict": "I2_ISOLATED_STAGING_PASS",
+    "one_shot_consumed": true,
+    "supported_scope": "DISPOSABLE_SYNTHETIC_COPY_ONLY",
+    "real_weixin": false,
+    "real_source_apply": false
   },
-  "active_local_task": "OL-20261120-047",
+  "active_local_task": null,
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -69,7 +73,9 @@
     "docs/016-i2-worker-scope-preflight-and-ticket-tool-contract.md",
     "agent-handoff/STANDING_OPERATOR_SCOPE-2026-11-20.md",
     "agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md",
-    "agent-handoff/messages/to-local/2026-11-20-ol047-i2-preinference-native-report.md"
+    "agent-handoff/messages/to-local/2026-11-20-ol047-i2-preinference-native-report.md",
+    "agent-handoff/receipts/online/LO-20261120-047-done.md",
+    "agent-reports/REPORT-ol047-i2-preinference-native-report.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -98,7 +104,7 @@
   },
   "local_batch": {
     "task_id": "OL-20261120-047",
-    "status": "PENDING_MANUAL_HANDOFF_TRUSTED_LOCAL_POLICY",
+    "status": "ACKED_CLOSED_PASS",
     "scope": "CONDITIONAL_ONE_SHOT_OS_ISOLATED_DISPOSABLE_DSH_I2",
     "code_sha": "47b104e36f59b6623f139d8927bfa613bbcc777b",
     "ci_run_id": 44724133545,
@@ -134,7 +140,15 @@
     "handoff": "agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md",
     "local_task_file": "LOCAL_AGENT_TASK.md",
     "result_expected": "LO-20261120-047",
-    "report_expected": "agent-reports/REPORT-ol047-i2-preinference-native-report.md"
+    "report_expected": "agent-reports/REPORT-ol047-i2-preinference-native-report.md",
+    "online_ack": "agent-handoff/receipts/online/LO-20261120-047-done.md",
+    "report_commit": "e8e460d12c889d51a8e92edf4ce153be588ba815",
+    "operator_consent_consumed": true,
+    "model_boots_reported": 1,
+    "model_requests_reported": 2,
+    "tool_actions_reported": 7,
+    "real_review_ready_reported": true,
+    "unsent_outbox_receipts_reported": 2
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -246,32 +260,23 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "PENDING_MANUAL_HANDOFF_STANDING_APPROVED_CLASS_NOT_AUTO_DISPATCH",
-    "task_id": "OL-20261120-047",
+    "status": "I2_ISOLATED_STAGING_ACCEPTED_NEXT_I3_OFFLINE_SYNTHETIC_RESEARCH",
+    "task_id": null,
     "source_sha": "47b104e36f59b6623f139d8927bfa613bbcc777b",
     "source_ci_run_id": 44724133545,
-    "operator_live_authorization": "STANDING_APPROVED_CLASS_REQUIRES_TRUSTED_LOCAL_EXECUTION_POLICY_AND_PREMODEL_GATES",
-    "chat_reapproval_required": false,
-    "requires_trusted_local_policy": true,
-    "verified_local_dispatcher": false,
+    "operator_live_authorization": "NO_ORIGINAL_SERVICE_OR_REAL_WEIXIN_LIVE_GRANT",
+    "standing_scope_offline_dev": true,
     "no_auto_dispatch": true,
     "remote_automation": "PAUSED_BY_OPERATOR",
-    "old_per_run_grants": "OL044_AND_OL046_CONSUMED",
-    "full_runbook": "agent-handoff/HANDOFF-2026-11-20-OL047-TRUSTED-PREINFERENCE-I2-RETEST.md",
-    "preflight": [
-      "unique_manual_operator_handoff_or_trusted_local_policy",
-      "one_model_boot_total_all_boot_request_accounting",
-      "OS_Seatbelt_sensitive_read_AND_write_denials_child_and_egress",
-      "two_new_Sessions_tools_guard_AND_approval_never_before_model",
-      "same_prepared_ticket_worker_reused_for_trigger",
-      "native_edit_plus_orchestrator_report_review_plus_unsent_outbox"
-    ],
+    "original_3080_3083_8123": "NO_ACTION",
+    "weixin_real_send": "FORBIDDEN",
     "real_source_apply": "FORBIDDEN",
-    "real_weixin_send": "FORBIDDEN",
-    "auto_OL048": "FORBIDDEN"
+    "future_scope": "OFFLINE_FAKE_WEIXIN_I3_READINESS_AND_NEGATIVE_TESTS",
+    "requires_new_operator_specific_decision_for_real_weixin": true,
+    "auto_next_task": "FORBIDDEN"
   },
   "integration_i2": {
-    "status": "I2_BLOCKED_TOOL_SCOPE",
+    "status": "I2_ISOLATED_STAGING_PASS",
     "one_shot_consumed": true,
     "source_sha": "c0da76b14f4893397428c025670f731e0629555d",
     "report_commit": "f2aca2c0ab6cdccde286ecae9853aaf16418879f",
@@ -329,7 +334,25 @@
       "orchestrator_report"
     ],
     "worker_actual_report_after_patch": "NOT_TESTED",
-    "full_model_edit_review_chain": "NOT_PROVEN"
+    "full_model_edit_review_chain": "NOT_PROVEN",
+    "ol047_source_sha": "47b104e36f59b6623f139d8927bfa613bbcc777b",
+    "ol047_report_commit": "e8e460d12c889d51a8e92edf4ce153be588ba815",
+    "ol047_online_ack": "agent-handoff/receipts/online/LO-20261120-047-done.md",
+    "ol047_staged_OS_sensitive_read_write_denials": "LOCAL_REPORTED_PASS",
+    "ol047_pre_inference_worker_scope": "LOCAL_REPORTED_PASS",
+    "ol047_model_boots": 1,
+    "ol047_model_requests": 2,
+    "ol047_tool_actions": 7,
+    "ol047_native_edit": true,
+    "ol047_owned_ack": true,
+    "ol047_owned_report_review_ready": true,
+    "ol047_unsent_outbox_receipts": 2,
+    "ol047_original_source_unchanged": true,
+    "ol047_host_drift": "LOCAL_REPORTED_BASELINE_STABLE_EXCEPT_UNRELATED_SESSION_COUNT_DELTA",
+    "staging_i2_accepted": true,
+    "real_weixin_i3_accepted": false,
+    "real_source_apply_authorized": false,
+    "carried_real_apply_gates_open": false
   },
   "operator_standing_authorization": {
     "effective_date": "2026-11-20",
