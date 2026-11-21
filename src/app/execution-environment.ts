@@ -24,10 +24,23 @@ export function declaredVariables(sources: SourceRegistry, settings?: Settings):
     ...sources.declarations().map(({ kind, variables }) => ({ owner: kind, enabled: on.has(kind), variables }))]
 }
 
-export function environmentOf(input: { deployment: Deployment; sources: SourceRegistry; settings: Settings; ticket?: { id: string; name: string; directory: string }; trigger?: Trigger }): Variable[] {
+export function environmentOf(input: { deployment: Deployment; sources: SourceRegistry; settings: Settings; projectIds?: readonly string[]; existingDshProjects?: readonly { id: string; title: string }[]; ticket?: { id: string; name: string; directory: string }; trigger?: Trigger }): Variable[] {
   const { deployment, sources, settings, ticket, trigger } = input
   const executor: Record<string, string> = { DSH_SUPERAGENT_BLOCKED_COMMANDS: settings.executor.blockedCommands.join(' '), ...ticket ? { DSH_SUPERAGENT_DIR: ticket.directory, DSH_SUPERAGENT_NAME: ticket.name, DSH_SUPERAGENT_TICKET: ticket.id } : {} }
   const result: Variable[] = EXECUTOR_VARIABLES.filter(spec => !spec.ticket || ticket).map(spec => ({ key: spec.key, value: executor[spec.key] ?? '', description: spec.description, owner: 'executor' }))
+  if (input.projectIds?.length) result.push({
+    key: 'DSH_SUPERAGENT_LOCAL_PROJECT_IDS', value: input.projectIds.join(' '),
+    description: { zh: '允许使用的本地项目 ID；修改类请求必须在第一行写 /project <项目ID>，不能使用路径',
+      en: 'Registered local project IDs. A change request must start with /project <id> on its first line; never accept a supplied filesystem path.' },
+    owner: 'executor',
+  })
+  if (input.existingDshProjects?.length) result.push({
+    key: 'DSH_SUPERAGENT_EXISTING_DSH_WORKSPACES',
+    value: JSON.stringify(input.existingDshProjects),
+    description: { zh: '本机现有 DSH 3080 Workspace 名称和安全 ID（只读索引，不包含路径/Session 内容）。用户可明确选项目；原实例会话接力尚未授权配置，不得直接修改。',
+      en: 'Read-only existing DSH workspace names and safe aliases; no filesystem paths or session content. Authenticated delegation to the existing DSH host is not yet enabled.' },
+    owner: 'executor',
+  })
   for (const { kind, environment, config } of sources.environments(settings)) {
     const values = environment.values({ deployment, config, ...trigger ? { trigger } : {} })
     for (const spec of environment.variables) result.push({ key: spec.key, value: values[spec.key] ?? '', description: spec.description, owner: kind.kind })

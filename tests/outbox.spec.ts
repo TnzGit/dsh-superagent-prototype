@@ -40,3 +40,48 @@ it('keeps a message for a Source that is not installed waiting, and sends it onc
   await at(5000)
   expect([h.runtime.outbox.status('waiting'), sent.map(message => message.id)]).toEqual(['sent', ['waiting']])
 })
+
+it('C5 relay Weixin reply never retries network send after ambiguous failure', async () => {
+  const sent: string[] = []
+  const kind: SourceKind<Record<string, never>> = {
+    kind: 'weixin', title: { zh: '测试微信', en: 'Test Weixin' },
+    description: { zh: '', en: '' }, health: [], schema: z.object({}).strict(), fields: [],
+    channel: { send: async (_ctx, message) => {
+      sent.push(message.id)
+      throw Error('ambiguous network failure after possible acceptance')
+    }, link: () => ({ url: '', label: { zh: '', en: '' } }) },
+  }
+  h.runtime.sources.register(kind)
+  const id = 'dsh-3080-reply-' + 'a'.repeat(40)
+  h.runtime.outbox.send({ id, kind: 'reply', text: 'test',
+    channel: { source: 'weixin', thread: 'weixin:test', address: { peer: 'test', contextToken: 'test-context' } } })
+  await h.runtime.sendReplies()
+  expect(sent).toEqual([id])
+  expect(h.runtime.outbox.status(id)).toBe('pending')
+  expect(h.runtime.store.receipts.get(id)?.singleSendAttemptAt).toBeTruthy()
+  await at(5000)
+  expect(sent).toEqual([id])
+  h.runtime.outbox.withdraw(id)
+  expect(h.runtime.store.receipts.get(id)?.singleSendAttemptAt).toBeTruthy()
+})
+
+it('ordinary Weixin replies still retry transient failures', async () => {
+  let attempts=0
+  const kind: SourceKind<Record<string, never>> = {
+    kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' },
+    health: [], schema: z.object({}).strict(), fields: [],
+    channel: { send: async () => {
+      attempts++
+      if(attempts===1)throw Error('transient')
+      return 'sent' as const
+    }, link: () => ({ url: '', label: { zh: '', en: '' } }) },
+  }
+  h.runtime.sources.register(kind)
+  h.runtime.outbox.send({ id: 'ordinary-weixin', kind: 'reply', text: 'test',
+    channel: { source: 'weixin', thread: 'weixin:test', address: { peer: 'test' } } })
+  await h.runtime.sendReplies()
+  expect(attempts).toBe(1)
+  await at(5000)
+  expect(attempts).toBe(2)
+  expect(h.runtime.outbox.status('ordinary-weixin')).toBe('sent')
+})

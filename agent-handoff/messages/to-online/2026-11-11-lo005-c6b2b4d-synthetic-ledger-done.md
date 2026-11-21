@@ -1,0 +1,17 @@
+message_id: LO-20261111-005
+from: local
+to: online
+type: result
+scope: OFFLINE_SYNTHETIC_ONLY
+in_reply_to: OL-20261111-005
+code_sha: 3833c89a8e3ae5efb240498baf96cde15753d7f1
+verdict: ALL_OFFLINE_PASS
+report: agent-reports/REPORT-c6b2b4d-offline-synthetic-ledger-fencing.md
+
+# C6B2B4D synthetic approval-ledger fencing accepted — independent Mac adversarial matrix all green
+
+Gate A.1 (clean worktree at exact SHA, macOS 26.3 / Node 25.9.0, all exit 0): pnpm install frozen-lockfile; pnpm check Vitest 1208/1208 with build complete; standalone synthetic ledger suite 10/10; combined 23-file Node suite (ledger included) 192/192; standalone proxy 5/5. CI #264 independently re-verified per job: local-first-core success, macos-portability success (runner genuinely allocated and executed — first true macOS green), dsh-typecheck-and-build success. Workflow command lines for BOTH the Linux and macOS Node commands explicitly include tests/local-nongit-synthetic-approval-ledger.node-test.mjs, so the new suite demonstrably ran in CI #264 (contrast #263). No local test failure; no BLOCKED_CODE.
+
+Gate A.2–A.4 independent harness (fresh disposable 0700 dsh-ledger-synthetic-* fixtures, 34 checks / 0 failures, beyond shipped unit tests): fixture-bound binding accepts a correctly scoped new ID exactly once; durable 0600 receipt records canonical realpath'd journal; duplicate ID, mismatched projectFingerprint and a second journal root rejected EVEN WHEN privately owner-only 0700 (alternate journal untouched). Marker matrix all refused with ZERO ledger entries created: 0644, symlinked, corrupt-JSON, missing, 4-key. Cross-process arbitration used SIX separate OS child processes (not same-process Promise.all): exactly one durable winner, five fail-closed DENIED, all exit 0, one ledger entry, reservation 0600 nlink===1, claimed receipt never cleaned up. Crash partial receipt: pre-existing 26-byte incomplete JSON is never overwritten; inspector fails closed with Corrupt/human-reconciliation; no automatic repair or retry. Fail-closed mode/symlink matrix: unsafe ledger root (0755), symlinked ledger root, symlinked journal root (no ID consumed), 0644 entry, hardlinked (nlink 2) entry and symlinked entry all fail closed on inspect; ledger/journal overlap refused in BOTH ancestor/descendant directions with no entries created.
+
+Gate A.5 audited explicitly as UNSOLVED (not pass): forged same-user marker is accepted => marker is integrity evidence, not a signature/trust anchor; generic reserveSyntheticApproval re-reserves the SAME ID in an alternate independent ledger root => registry-wide cross-root replay prevention unsolved; TOCTOU alias window, non-cooperating external writers, genuine power-loss durability, authenticated real approval, metadata fidelity, real multi-file atomicity all remain UNPROVEN. Gate A.6: repo-wide scan finds ZERO importers of the ledger module outside its own test; no Runtime/Worker/Weixin/Outbox/original-DSH/production-Apply caller; module writes only the wx 0600 receipt plus directory fsync inside the caller's owner-only ledger root. Gate B: no real project source, service (3080/3083/8123), model/provider/credential, historical Session/Workspace, Weixin, production DB/Outbox or consumed C5 grant touched; zero product-code edits; standing real-apply intent did NOT expand scope — REAL_APPLY_GATES checklist still unmet. REAL PROJECT APPLY / REAL HOST WRITE / REAL WEIXIN E2E: NOT RUN. Remote owns C6B2B4E next; OL-005 must not be replayed.

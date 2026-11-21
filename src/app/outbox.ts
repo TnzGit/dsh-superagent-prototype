@@ -45,6 +45,11 @@ export class Outbox implements OutboxPort {
     if (store.receipts.behind(id, FAILURES_BEFORE_ERROR)) throw new Later('An earlier message of this ticket to this conversation waits')
     if (!sources.channelAllowed(receipt.channel)) { store.receipts.settle(receipt, 'channelIgnored'); return }
     // A permanently unreachable target (such as a recalled message or deleted Issue) settles as `channelGone` so its receipt prevents retries.
+    // Only guarded C5 relay replies are at-most-once, including across restarts.
+    // Claim in durable SQLite BEFORE network I/O; a consumed claim prevents resend.
+    if (receipt.kind === 'reply' && receipt.channel.source === 'weixin' &&
+      /^dsh-3080-reply-[a-f0-9]{40}$/.test(id) &&
+      !store.atomic(() => store.receipts.claimOneShotSend(id))) return
     const result = await sources.send(receipt, commands)
     if (result === 'waiting') throw new Later('The Source is not installed')
     store.receipts.settle(receipt, result === 'gone' ? 'channelGone' : 'sent')

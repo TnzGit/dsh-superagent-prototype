@@ -7,7 +7,7 @@ import type { SessionId } from '@deepseek-ai/dsh-session'
 import { dirname } from 'node:path'
 import { z } from 'zod'
 import { key, liveTicket, type Ticket } from '../core/index.ts'
-import { mandateInstructions, ticketOfSession } from '../executor/dsh.ts'
+import { mandateInstructions, ticketOfSession, workerSessionId } from '../executor/dsh.ts'
 import type { HealthEntry } from '../infra/health.ts'
 import { AgentDelivery, messageId } from './delivery.ts'
 import type { Effects } from './effects.ts'
@@ -60,6 +60,30 @@ declare module '@deepseek-ai/cordis' {
  */
 const WORK_TOOLS = ['read', 'write', 'edit', 'read_image', 'glob', 'grep', 'bash', 'pwsh', 'job_output', 'job_list', 'job_kill', 'web_search',
   'web_fetch', 'skill', 'todo_write', 'subagent', 'list_subagent_models', 'send_message', 'list_agents', 'interrupt_agent']
+/**
+ * DENY-ONLY, EXPLICIT OPT-IN fixture-I2 tool profile. It removes shell, jobs,
+ * web, skills and subagent surfaces from registered-project Workers. It does
+ * NOT change the DSH permission preset, override its sandbox backend, grant
+ * file writes, attest external OS confinement, or authorize any model turn.
+ * The one-shot operator + external Seatbelt boundary remain mandatory.
+ */
+const I2_STAGING_FS_ONLY_ENV = 'DSH_SUPERAGENT_I2_STAGING_FS_ONLY'
+const I2_STAGING_FILE_TOOLS = ['read', 'write', 'edit', 'glob', 'grep'] as const
+const I2_STAGING_FILE_SET: ReadonlySet<string> = new Set(I2_STAGING_FILE_TOOLS)
+/** Exact bundle-owned ticket tools. Unlike inherited shell/web tools these are
+ * registered by this application and constrained to the live Ticket. Never
+ * allow arbitrary future tool names under the staged policy. */
+const I2_STAGING_WORKER_OWNED_TOOLS = [
+  'orchestrator_read', 'orchestrator_ack', 'orchestrator_thread_unrelated',
+  'orchestrator_thread_follow', 'orchestrator_trigger_handback', 'orchestrator_report'
+] as const
+const I2_STAGING_WORKER_OWNED_SET: ReadonlySet<string> = new Set(I2_STAGING_WORKER_OWNED_TOOLS)
+const I2_STAGING_WORKER_DENIAL = 'I2 isolated fixture Worker permits native file and exact ticket reporting tools only'
+const I2_STAGING_UNPREPARED = 'I2 isolated fixture Worker is not prepared and Workspace-attested before inference'
+/** The ONLY bundle-local tools a fixture-I2 Router needs. All others, including
+ * settings, retry, reply and prompt writes, are withheld in this profile. */
+const I2_STAGING_ROUTER_TOOL_SET: ReadonlySet<string> = new Set(['orchestrator_route', 'orchestrator_read'])
+const I2_STAGING_ROUTER_DENIAL = 'I2 isolated fixture Router allows routing and read-only ticket context only; shell, jobs, settings and other tools are denied'
 /** What the main Session is told when it would wait: what it waits for comes to it, and a waiting step holds back the next. */
 const NO_WAIT = 'Reports, follow_up notices, new candidates and a background job\'s end with its output arrive by themselves as messages; '
   + 'end the turn instead of waiting for them.'
@@ -94,6 +118,12 @@ export class Sessions {
   private readonly agentDelivery: AgentDelivery
   /** Decorated agents mapped to their registered disposers and skill scope until the agent is disposed or `Sessions.dispose()` runs. */
   private readonly bindings = new Map<Agent, SessionBinding>()
+  /** Early DENY-ALL on newly created staged project Workers, until ensure()
+   * verifies DSH Workspace ownership, registers exact tools and model,
+   * selects the workspace-write preset, and explicitly marks the scope ready. */
+  private readonly stagedPending = new Map<Agent, (() => void)[]>()
+  private readonly stagedBound = new WeakSet<Agent>()
+  private readonly stagedReady = new WeakSet<Agent>()
   private readonly retryHealth = new RetryHealth()
   private readonly ctx: Context
   /** Registers ordered `relay` and `notice` effect handlers that deliver to the main Session. */
@@ -118,7 +148,24 @@ export class Sessions {
       this.retryHealth.observe(agent.id, event)
       this.updateModelHealth()
     })
-    ctx.on('agent/created', async ({ agent }) => { await this.decorate(agent); return undefined })
+    ctx.on('agent/created', async ({ agent }) => {
+      const ticketId = ticketOfSession(agent.id)
+      const ticket = ticketId === undefined ? undefined : this.host.store.tickets.get(ticketId)
+      // A newly created DSH Agent may be emitted BEFORE the workspace account
+      // is attached, and a restored Agent may belong to a different workspace.
+      // Neither may receive Ticket tools/prompts through this event. Only
+      // Sessions.ensure, AFTER the read-only membership attestation, may
+      // decorate a registered-project Worker.
+      if (ticket?.execution?.projectId) {
+        // install a synchronous DENY-ALL even before DSH has attached this
+        // newly created Session to the Workspace. Never expose the full DSH
+        // preset tools while waiting for the verified ensure() path.
+        if (process.env[I2_STAGING_FS_ONLY_ENV] === '1') this.holdStagedWorker(agent)
+        return undefined
+      }
+      await this.decorate(agent)
+      return undefined
+    })
     // Opening a Session in DSH's Web UI before its first turn may select the default preset for it: select ours again. After
     // its first turn DSH refuses any selection, which leaves it as it is.
     ctx.inject(['agentPresets'], child => {
@@ -134,8 +181,63 @@ export class Sessions {
       if (status === 'idle' && !this.host.closing()) { this.retryHealth.clear(agent.id); this.updateModelHealth() }
     })
   }
-  /** Resolves or creates session `id` in workspace `cwd`, initializes its role model, decorates it with prompts/skills/tools, sets `danger-full-access` permissions, and renames it to `title`. */
+  /** Called immediately on staged agent/created and again before any
+   * asynchronous staged ensure() operation. Neither call can grant tools. */
+  private holdStagedWorker(agent: Agent): void {
+    if (this.stagedPending.has(agent) || this.stagedReady.has(agent)) return
+    const disposers = [
+      agent.ctx.tools.restrict({ allow: [] }),
+      agent.ctx.tools.guard(() => I2_STAGING_UNPREPARED)
+    ]
+    this.stagedPending.set(agent, disposers)
+  }
+  private releaseStagedHold(agent: Agent): void {
+    const disposers = this.stagedPending.get(agent)
+    if (!disposers) return
+    this.stagedPending.delete(agent)
+    for (const dispose of [...disposers].reverse()) {
+      try { dispose() } catch (error) { this.ctx.logger.warn('dsh-superagent could not release an I2 staged deny guard: %s', String(error)) }
+    }
+  }
+  /**
+   * A resolved Worker Session may be a RESTORED DSH session with the same id but
+   * a different stored Workspace. Attest its immutable header and the DSH
+   * WorkspaceRegistry's ACCOUNTED membership, never just the requested cwd.
+   *
+   * DSH uses canonical path-string identity, not inode/dev identity. This
+   * check closes accidental cross-workspace Session reattachment; it does NOT
+   * make snapshot paths race-free, isolate noncooperating writers, or authorize
+   * source Apply. The latter still requires a separate native OS helper.
+   */
+  private async assertProjectWorkerWorkspace(sessionId: string, agent: Agent): Promise<void> {
+    const ticketId = ticketOfSession(sessionId)
+    if (ticketId === undefined) return
+    const ticket = this.host.store.tickets.get(ticketId)
+    if (!ticket || !liveTicket(ticket))
+      throw new Error('Worker Session requires an active existing Ticket')
+    if (!ticket.execution?.projectId) return
+    const expected = ticket.execution.directory
+    if (!expected) throw new Error('Worker Session has no isolated snapshot directory')
+    // resolveByPath is read-only and performs the same realpath canon as DSH's
+    // WorkspaceRegistry.create. Do not create/attach a Workspace to repair a
+    // missing Session account or silently move a foreign Session.
+    const workspace = await this.ctx.workspaceRegistry.resolveByPath(expected)
+    if (!workspace || workspace.path !== expected ||
+        agent.id !== sessionId || agent.session.header.cwd !== expected ||
+        !workspace.sessionIds.includes(sessionId as SessionId))
+      throw new Error('Worker Session Workspace identity does not match the Ticket snapshot')
+  }
+  /** Resolves or creates a role-bound Session. Registered project workers may run only for an active Ticket in its selected snapshot. */
   async ensure(id: string, cwd: string, title: string, role: 'orchestrator' | 'worker'): Promise<Agent> {
+    // Fail closed BEFORE creating or resolving an Agent: a name resembling a Worker
+    // must not turn an absent/ended Ticket into a danger-full-access Session.
+    const workerTicketId = role === 'worker' ? ticketOfSession(id) : undefined
+    const workerTicket = workerTicketId ? this.host.store.tickets.get(workerTicketId) : undefined
+    if (role === 'worker' && (!workerTicket || !liveTicket(workerTicket)))
+      throw new Error('Worker Session requires an active existing Ticket')
+    if (role === 'worker' && workerTicket?.execution?.projectId &&
+      (!cwd || cwd !== workerTicket.execution.directory))
+      throw new Error('Worker Session directory does not match its registered project snapshot')
     const ctx = this.ctx
     let result = await ctx.sessionController.resolveAgent(id as SessionId)
     if ('error' in result && result.error.code === 'session/not-found') {
@@ -146,23 +248,60 @@ export class Sessions {
       result = await ctx.sessionController.resolveAgent(id as SessionId)
     }
     if ('error' in result) throw result.error
+    if (role === 'worker') await this.assertProjectWorkerWorkspace(id, result.agent)
+    const stagedWorker = role === 'worker' && !!workerTicket?.execution?.projectId
+      && process.env[I2_STAGING_FS_ONLY_ENV] === '1'
     const settings = this.host.store.settings()
-    await initializeRoleModel(ctx, result.agent, role === 'orchestrator' ? settings.eval.model : settings.executor.model)
-    await this.decorate(result.agent)
-    ctx.permissionPresets.set(result.agent.session, 'danger-full-access')
+    if (stagedWorker) {
+      // An existing Session may already contain a model turn from before
+      // this process's control. It cannot be accepted as pre-inference-safe.
+      if (result.agent.session.snapshotEvents().some(event =>
+        event.type === 'request/header' || event.type === 'turn/start'))
+        throw new Error('Staged Worker already started inference before scope attestation')
+      this.holdStagedWorker(result.agent)
+      if (this.bindings.has(result.agent) && !this.stagedBound.has(result.agent))
+        throw new Error('Staged Worker scope is still being prepared')
+      // Crucial order: install tool restrictions synchronously, and complete
+      // exact owned-tool registration BEFORE role model resolution. The
+      // provisional deny-all remains active until all steps finish.
+      await this.decorate(result.agent)
+      if (!this.stagedBound.has(result.agent)) throw new Error(I2_STAGING_UNPREPARED)
+      await initializeRoleModel(ctx, result.agent, settings.executor.model)
+    } else {
+      await initializeRoleModel(ctx, result.agent, role === 'orchestrator' ? settings.eval.model : settings.executor.model)
+      await this.decorate(result.agent)
+    }
+    // Registered local-project Tickets run only in a disposable snapshot, not with unrestricted host write access.
+    // A fresh isolated I2 Router performs routing only; it must never carry
+    // the normal unrestricted Session permission preset. This cannot elevate
+    // an existing Session's authority and leaves production defaults alone.
+    const stagedRouter = role === 'orchestrator' && process.env[I2_STAGING_FS_ONLY_ENV] === '1'
+    ctx.permissionPresets.set(result.agent.session, stagedRouter ? 'read-only'
+      : workerTicket?.execution?.projectId ? 'workspace-write' : 'danger-full-access')
     await ctx.sessionController.rename({ sessionId: id as SessionId, title })
+    if (stagedWorker) {
+      this.stagedReady.add(result.agent)
+      this.releaseStagedHold(result.agent)
+    }
     return result.agent
   }
   /** Returns whether `sessionId` already holds the message delivered under `requestId`, or `false` if the session does not exist. */
   async holds(sessionId: string, requestId: string): Promise<boolean> {
     const result = await this.ctx.sessionController.resolveAgent(sessionId as SessionId)
-    return !('error' in result) && await this.agentDelivery.holds(result.agent, key(requestId))
+    if ('error' in result) return false
+    await this.assertProjectWorkerWorkspace(sessionId, result.agent)
+    return await this.agentDelivery.holds(result.agent, key(requestId))
   }
   /** Deliver a message once per request id: to the next turn, the current one, or `inject`ed with its label without waking the agent. */
   async prompt(sessionId: string, requestId: string, text: string, mode: 'queue' | 'steer' | { inject: string }, authorize?: () => void,
     accepted?: () => void): Promise<void> {
     const result = await this.ctx.sessionController.resolveAgent(sessionId as SessionId)
     if ('error' in result) throw result.error
+    await this.assertProjectWorkerWorkspace(sessionId, result.agent)
+    const ticketId = ticketOfSession(sessionId)
+    if (process.env[I2_STAGING_FS_ONLY_ENV] === '1' && ticketId
+      && this.host.store.tickets.get(ticketId)?.execution?.projectId && !this.stagedReady.has(result.agent))
+      throw new Error(I2_STAGING_UNPREPARED)
     await this.agentDelivery.send(result.agent, key(requestId), text, mode, this.host.lifetime, authorize, accepted)
   }
   /** The id of the message `prompt` delivers under `requestId`, which DSH's inbox events name it by. */
@@ -237,6 +376,13 @@ export class Sessions {
     if (!master && !ticket) { this.limitSubagent(agent); return }
     const binding: SessionBinding = { disposers: [] }
     this.bindings.set(agent, binding)
+    // Staged project Workers must NEVER wait for the asynchronous skill
+    // injection before their inherited tool allowlist/guard is bound.
+    // This method is invoked by ensure() only AFTER Workspace membership
+    // and immutable Session header cwd were attested.
+    const stagedWorker = !master && !!ticket?.execution?.projectId
+      && process.env[I2_STAGING_FS_ONLY_ENV] === '1'
+    if (stagedWorker) binding.disposers.push(...this.workOnly(agent, ticket!.id))
     this.retryHealth.restore(agent.id, agent.session.snapshotEvents())
     if (agent.status === 'idle') this.retryHealth.clear(agent.id)
     this.updateModelHealth()
@@ -258,13 +404,32 @@ export class Sessions {
     // Bail out if the agent was disposed while awaiting the skill scope.
     if (this.bindings.get(agent) !== binding) return
     const register = this.registerTool(agent, binding)
-    for (const tool of host.tools(agent, ticket)) register(tool.name, tool.description, tool.schema, tool.execute)
+    // The I2 flag is explicit, fixture-only and deny-only; never silently
+    // mount original master maintenance/settings/retry/reply surfaces in
+    // the isolated model-driven Router. Normal production registration is
+    // byte-for-byte equivalent when the flag is absent.
+    const stagedRouter = master && process.env[I2_STAGING_FS_ONLY_ENV] === '1'
+    for (const tool of host.tools(agent, ticket)) {
+      if (stagedRouter && !I2_STAGING_ROUTER_TOOL_SET.has(tool.name)) continue
+      // No future bundle tool is silently added to the staging Worker.
+      if (stagedWorker && !I2_STAGING_WORKER_OWNED_SET.has(tool.name)) continue
+      register(tool.name, tool.description, tool.schema, tool.execute)
+    }
+    if (stagedWorker) this.stagedBound.add(agent)
     if (master) {
-      binding.disposers.push(agent.ctx.tools.restrict({ allow: ['skill', 'bash', 'read', 'read_image', 'job_output', 'job_list', 'job_kill'] }),
-        agent.ctx.tools.guard(execution => noWait(execution, () => this.routed(agent))))
+      const inheritAllow = stagedRouter ? [] : ['skill', 'bash', 'read', 'read_image', 'job_output', 'job_list', 'job_kill']
+      binding.disposers.push(agent.ctx.tools.restrict({ allow: inheritAllow }),
+        agent.ctx.tools.guard(execution => {
+          // A stale/hidden direct call must not enter DSH's nested Seatbelt
+          // bash runner or an approval escalation even when tool discovery
+          // was previously cached. Only the two owned routing tools remain.
+          if (stagedRouter)
+            return I2_STAGING_ROUTER_TOOL_SET.has(execution?.name ?? '') ? undefined : I2_STAGING_ROUTER_DENIAL
+          return noWait(execution, () => this.routed(agent))
+        }))
     } else {
       // An Executor Session keeps the profile's work tools it has, which DSH requires to be known; its own tools are not masked.
-      binding.disposers.push(...this.workOnly(agent, ticket!.id))
+      if (!stagedWorker) binding.disposers.push(...this.workOnly(agent, ticket!.id))
     }
   }
   /**
@@ -289,10 +454,44 @@ export class Sessions {
   private workOnly(agent: Agent, ticketId: string): (() => void)[] {
     const store = this.host.store
     const parent = scopeParentOf(agent)
-    const allow = WORK_TOOLS.filter(name => agent.ctx.tools.get(name, parent))
-    return [agent.ctx.tools.restrict({ allow }), agent.ctx.tools.guard(() => {
+    const registeredProject = store.tickets.get(ticketId)?.execution?.projectId !== undefined
+    const stagedFileToolsOnly = registeredProject && process.env[I2_STAGING_FS_ONLY_ENV] === '1'
+    // Selecting an I2 fixture profile can ONLY REMOVE tools. The normal
+    // runtime and legacy non-project workers keep their exact former set.
+    const names = stagedFileToolsOnly ? I2_STAGING_FILE_TOOLS : WORK_TOOLS
+    const allow = names.filter(name => agent.ctx.tools.get(name, parent))
+    return [agent.ctx.tools.restrict({ allow }), agent.ctx.tools.guard(execution => {
+      // A denied shell MUST NOT reach DSH's nested Seatbelt runner or its
+      // danger-full-access approval path, even if tool listing is stale.
+      if (stagedFileToolsOnly) {
+        // Bundle-owned reporting tools are NOT inherited DSH tools; they are
+        // permitted only for the exact root Worker with a valid live Ticket
+        // and Workspace. A subagent never receives these owned names.
+        const name = execution?.name ?? ''
+        const owned = agent.id === workerSessionId(ticketId) && I2_STAGING_WORKER_OWNED_SET.has(name)
+        if (!I2_STAGING_FILE_SET.has(name) && !owned) return I2_STAGING_WORKER_DENIAL
+        if (!this.stagedReady.has(agent)) return I2_STAGING_UNPREPARED
+      }
       const current = store.tickets.get(ticketId)
-      return !current || !liveTicket(current) ? 'Ticket ended; new work needs a new authorized ticket' : undefined
+      if (!current || !liveTicket(current)) return 'Ticket ended; new work needs a new authorized ticket'
+      if (current.execution?.projectId) {
+        const expected = current.execution.directory
+        if (!expected || agent.session.header.cwd !== expected)
+          return 'Worker Session no longer has the Ticket snapshot directory'
+        // The DSH WorkspaceRegistry list is a synchronous cached, filtered
+        // projection. Check it at tool-use time as well as at ensure/prompt;
+        // a deleted or reassigned Workspace must not keep old worker tools.
+        // Subagents inherit the worker's directory but need not themselves be
+        // accounted in the parent's Workspace sessionIds list.
+        if (agent.id === workerSessionId(ticketId)) {
+          try {
+            const owner = this.ctx.workspaceRegistry.list().find(workspace =>
+              workspace.path === expected && workspace.sessionIds.includes(agent.id as SessionId))
+            if (!owner) return 'Worker Session lost its registered Workspace ownership'
+          } catch { return 'Worker Session Workspace ownership cannot be verified' }
+        }
+      }
+      return undefined
     })]
   }
   /**
@@ -340,13 +539,18 @@ export class Sessions {
   /** Releases registrations for `agent` in reverse order (LIFO); disposing its skill scope releases its skills as well. */
   private release(agent: Agent): void {
     const binding = this.bindings.get(agent)
-    if (!binding) return
+    this.stagedReady.delete(agent)
+    this.stagedBound.delete(agent)
+    if (!binding) { this.releaseStagedHold(agent); return }
     this.bindings.delete(agent)
     binding.skills?.dispose()
     for (const dispose of binding.disposers.splice(0).reverse()) {
       try { dispose() } catch (error) { this.ctx.logger.warn('dsh-superagent could not release what it registered for a Session: %s', String(error)) }
     }
+    this.releaseStagedHold(agent)
   }
   /** Releases prompt sections, skills, and tools registered by `Sessions` across all decorated agents. */
-  dispose(): void { for (const agent of [...this.bindings.keys()]) this.release(agent) }
+  dispose(): void {
+    for (const agent of [...new Set([...this.bindings.keys(), ...this.stagedPending.keys()])]) this.release(agent)
+  }
 }
