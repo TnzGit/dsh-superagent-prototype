@@ -1,6 +1,7 @@
 /** I3 PREP ONLY: real Source polling code with fake HTTP/credentials/Engine,
  * NO actual Weixin, network, DSH session, model, original source or Apply. */
 import { afterEach, expect, test, vi } from 'vitest'
+import { createHash } from 'node:crypto'
 import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -52,7 +53,13 @@ function fakeLoop(messages: unknown[], opts: {
       { status: 200, headers: { 'content-type': 'application/json' } })
   }))
   const controller = new AbortController()
-  const records = new Map<string, unknown>([[KV.weixin.nativeCursor, 'cursor-before-page']])
+  // Simulate an existing already-paired account: a new account correctly
+  // resets its cursor before polling, but these tests exercise cursor commit.
+  const accountHash = createHash('sha256').update('THIS_IS_SYNTHETIC_NOT_REAL_CREDENTIALS').digest('hex')
+  const records = new Map<string, unknown>([
+    [KV.weixin.nativeAccount, accountHash],
+    [KV.weixin.nativeCursor, 'cursor-before-page']
+  ])
   const received: unknown[] = [], routed: unknown[] = [], health: string[] = []
   const ctx = {
     ready: Promise.resolve(),
