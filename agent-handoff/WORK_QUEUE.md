@@ -1,14 +1,15 @@
-# WORK_QUEUE — accepted I2; I3 offline synthetic readiness (2026-11-21)
+# WORK_QUEUE — I3 OFFLINE gaps after LO-048 ACK (2026-11-24)
 
-No auto-dispatch, remote automation PAUSED_BY_OPERATOR; public GitHub not execution authority. PR #1 DRAFT/unmerged.
+Remote automation PAUSED_BY_OPERATOR and no_auto_dispatch true; no active local task, PR #1 Draft/unmerged.
 
-| Priority | Work | Status |
+| Priority | Work | State |
 | --- | --- | --- |
-| P0 | OL-047 true disposable I2 native edit+review | **CLOSED ACK PASS**; original 3080/3083/8123 untouched per local; one model boot 2 calls/7 tool actions; Outbox never sent |
-| P0 | `OL-20261121-048` | **PENDING MANUAL OFFLINE ONLY**; source `cf68140fdd506b05ca09e40a1b00d8cdea821694` CI #761/#762 3/3, fake Weixin poll 5 negatives, protocol/source/Outbox and simulated vertical full suite; gap matrix; zero real network/model/Weixin/host service calls. Runbook `agent-handoff/HANDOFF-2026-11-21-OL048-I3-NATIVE-WEIXIN-FAKE-OFFLINE.md` |
-| P0 | Remote I3 missing seam tests | After OL-048 report, implement full fake native Source→Engine→Ticket→Worker→review-ready→pending Outbox and replay/malformed/expired-token negative cases if missing |
-| P1 | Genuine native Weixin I3 E2E | NOT AUTHORIZED. Requires separate high-impact decision, no real send from standing I2 class |
-| P2 | Real registered project source Apply | STILL BLOCKED: ACL-aware rooted fd/dev/inode, non-cooperating writers, one-use private capability and crash journal/rollback |
-| P3 | PR #1 | DRAFT unmerged; no deploy |
+| P0 | I2 disposable DSH native edit + review | **ACKed PASS OL-047**, limited to isolated synthetic COPY, not production |
+| P0 | OL-048 offline fake Weixin | **ACKed ALL_OFFLINE_PASS**; full 1256 Vitest / 255 Node, CI #772/#773 3/3. NO real I3 |
+| P0 | Unified I3 fake vertical | **REMOTE OFFLINE NEXT:** genuine pollNativeWeixin fake fetch → actual Engine intake/Decision/Ticket + synthetic Worker report-ready → pending unsent Core Outbox |
+| P0 | Poll negative tests | **REMOTE OFFLINE NEXT:** HTTP 401/429/503/-14 retry schedules, token account rotation, mid-page abort uncommitted cursor |
+| P1 | Real I3 Weixin | NOT AUTHORIZED; no QR/credentials/real sending |
+| P2 | Original registered source Apply | GATED: ACL/fd-root/dev/inode/writer lock/one-use consent/crash journal |
+| P3 | PR #1 | DRAFT unmerged / undeployed |
 
-Do not infer real I3 approval from fake source tests or I2 pass. No OL-049 auto issue.
+No OL-049 auto issue. Public GitHub cannot by itself trigger Mac host operations; safe offline source/test maintenance requires no repeat approval.

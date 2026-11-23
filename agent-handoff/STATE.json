@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-21",
+  "updated_utc": "2026-11-24",
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "remote_online_standing_scope_offline_task_pending_manual",
+  "owner": "remote_online",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -17,25 +17,22 @@
     "vitest_tests": 1208
   },
   "last_accepted_local": {
-    "task_id": "OL-20261120-047",
-    "result_id": "LO-20261120-047",
-    "scope": "CONDITIONAL_I2_OS_ISOLATED_DISPOSABLE_STAGING_ONE_SHOT",
-    "source_code_sha": "47b104e36f59b6623f139d8927bfa613bbcc777b",
-    "claim_commit": "6979fc7",
-    "report_commit": "e8e460d12c889d51a8e92edf4ce153be588ba815",
-    "source_ci_run_id": 44724133545,
-    "handoff_ci_run_id": 44730802138,
-    "report_ci_push_run_id": 44815071753,
-    "report_ci_pr_run_id": 44815080594,
+    "task_id": "OL-20261121-048",
+    "result_id": "LO-20261121-048",
+    "scope": "OFFLINE_SYNTHETIC_ONLY",
+    "source_code_sha": "cf68140fdd506b05ca09e40a1b00d8cdea821694",
+    "claim_commit": "fb0813fad1fb44c3ed9228044880a17cdb62f0fe",
+    "report_commit": "7ceff721b70dc681465894ba05ae0b2f7b831bdd",
+    "source_ci_push_run_id": 44868301561,
+    "source_ci_pr_run_id": 44868305638,
+    "report_ci_push_run_id": 44877270864,
+    "report_ci_pr_run_id": 44877274039,
     "report_ci_status": "SUCCESS_BOTH_3_OF_3",
-    "online_ack": "agent-handoff/receipts/online/LO-20261120-047-done.md",
-    "verdict": "I2_ISOLATED_STAGING_PASS",
-    "one_shot_consumed": true,
-    "supported_scope": "DISPOSABLE_SYNTHETIC_COPY_ONLY",
-    "real_weixin": false,
-    "real_source_apply": false
+    "online_ack": "agent-handoff/receipts/online/LO-20261121-048-done.md",
+    "verdict": "ALL_OFFLINE_PASS",
+    "real_weixin_i3_accepted": false
   },
-  "active_local_task": "OL-20261121-048",
+  "active_local_task": null,
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -78,7 +75,9 @@
     "agent-reports/REPORT-ol047-i2-preinference-native-report.md",
     "agent-handoff/HANDOFF-2026-11-21-OL048-I3-NATIVE-WEIXIN-FAKE-OFFLINE.md",
     "agent-handoff/messages/to-local/2026-11-21-ol048-i3-weixin-fake-offline.md",
-    "tests/weixin-native-poll-offline.spec.ts"
+    "tests/weixin-native-poll-offline.spec.ts",
+    "agent-handoff/receipts/online/LO-20261121-048-done.md",
+    "agent-reports/REPORT-ol048-i3-weixin-fake-offline.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -107,7 +106,7 @@
   },
   "local_batch": {
     "task_id": "OL-20261121-048",
-    "status": "PENDING_MANUAL_OFFLINE_HANDOFF",
+    "status": "ACKED_CLOSED_OFFLINE_PASS",
     "scope": "OFFLINE_SYNTHETIC_ONLY",
     "code_sha": "cf68140fdd506b05ca09e40a1b00d8cdea821694",
     "ci_run_id": 44868301561,
@@ -128,7 +127,10 @@
     "report_only_ff": true,
     "report_expected": "agent-reports/REPORT-ol048-i3-weixin-fake-offline.md",
     "result_expected": "LO-20261121-048",
-    "handoff": "agent-handoff/HANDOFF-2026-11-21-OL048-I3-NATIVE-WEIXIN-FAKE-OFFLINE.md"
+    "handoff": "agent-handoff/HANDOFF-2026-11-21-OL048-I3-NATIVE-WEIXIN-FAKE-OFFLINE.md",
+    "report_commit": "7ceff721b70dc681465894ba05ae0b2f7b831bdd",
+    "online_ack": "agent-handoff/receipts/online/LO-20261121-048-done.md",
+    "offline_only": true
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -240,33 +242,23 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "I3_OFFLINE_NATIVE_WEIXIN_FAKE_READINESS_PENDING_TRUSTED_MANUAL_HANDOFF",
-    "task_id": "OL-20261121-048",
+    "status": "REMOTE_I3_OFFLINE_TEST_GAPS_NOT_LIVE_I3",
+    "task_id": null,
     "source_sha": "cf68140fdd506b05ca09e40a1b00d8cdea821694",
-    "source_ci_run_id": 44868301561,
-    "source_pr_ci_run_id": 44868305638,
-    "operator_live_authorization": "NOT_GRANTED_NO_REAL_WEIXIN",
     "standing_project_safe_offline_scope": true,
-    "manual_operator_handoff_or_verified_local_broker": true,
-    "requires_repeated_chat_consent": false,
-    "no_auto_dispatch": true,
+    "chat_reapproval_required": false,
     "remote_automation": "PAUSED_BY_OPERATOR",
-    "preflight": [
-      "source_exact_green_CI",
-      "fake_HTTP_only_no_real_fetch",
-      "no_model_no_original_DSH_no_weixin_send",
-      "single_claim"
+    "no_auto_dispatch": true,
+    "proposed_remote_offline_work": [
+      "unified_native_weixin_fake_poll_engine_ticket_worker_pending_outbox",
+      "non2xx_backoff_fakeclock_tests",
+      "account_token_rotation_cursor_test",
+      "abort_midpage_no_cursor_commit_test"
     ],
-    "test_targets": [
-      "tests/weixin-native-poll-offline.spec.ts",
-      "tests/weixin-native.spec.ts",
-      "tests/outbox.spec.ts",
-      "tests/local-vertical-real-sessions.spec.ts",
-      "tests/local-weixin-native.node-test.mjs"
-    ],
+    "local_host_task": "NONE",
     "real_weixin": "FORBIDDEN",
     "real_source_apply": "FORBIDDEN",
-    "next_auto_task": "FORBIDDEN"
+    "original_services": "NO_ACTION"
   },
   "integration_i2": {
     "status": "I2_ISOLATED_STAGING_PASS",
@@ -374,5 +366,26 @@
     "remote_automation": "REMAINS_OPERATOR_PAUSED",
     "no_new_OL_task_yet": false,
     "current_offline_task": "OL-20261121-048"
+  },
+  "integration_i3": {
+    "status": "NATIVE_WEIXIN_OFFLINE_FAKE_PATH_VERIFIED_REAL_I3_NOT_ACCEPTED",
+    "latest_task": "OL-20261121-048",
+    "source_sha": "cf68140fdd506b05ca09e40a1b00d8cdea821694",
+    "report_commit": "7ceff721b70dc681465894ba05ae0b2f7b831bdd",
+    "online_ack": "agent-handoff/receipts/online/LO-20261121-048-done.md",
+    "native_fake_poll_cases": 5,
+    "full_vitest": 1256,
+    "node_tests": 255,
+    "proxy_tests": 5,
+    "focus_tests": 43,
+    "pending_gaps": [
+      "unified_fake_native_weixin_to_engine_worker_review_pending_outbox",
+      "http_401_429_503_and_minus14_backoff",
+      "account_rotation_cursor_reset",
+      "abort_mid_page"
+    ],
+    "next": "REMOTE_OWNED_OFFLINE_TEST_IMPROVEMENTS",
+    "real_weixin_sent": false,
+    "real_weixin_i3_accepted": false
   }
 }
