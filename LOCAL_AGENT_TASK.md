@@ -1,9 +1,14 @@
-# LOCAL_AGENT_TASK — NO ACTIVE TASK after LO-048 ACK (2026-11-24)
+# LOCAL_AGENT_TASK — OL-20261124-049, unified I3 fake vertical OFFLINE verification
 
-**NO ACTIVE TASK. NO AUTO-DISPATCH. NO LIVE I3/WEIXIN/8123/ORIGINAL SERVICE/REAL APPLY GRANT.**
+**PENDING TRUSTED DIRECT MANUAL HANDOFF OR VERIFIED OPERATOR-OWNED BROKER; NOT EXECUTED. NO AUTO-DISPATCH.**
 
-The online owner has independently ACKed `OL-20261121-048` with truthful verdict **`ALL_OFFLINE_PASS`** for **`OFFLINE_SYNTHETIC_ONLY`**. See `agent-handoff/receipts/online/LO-20261121-048-done.md`, the sanitized report `agent-reports/REPORT-ol048-i3-weixin-fake-offline.md` at done SHA `7ceff721b70dc681465894ba05ae0b2f7b831bdd`, CI #772 and #773 each 3/3 SUCCESS. The result includes five fake-iLink polling negatives and local full Vitest 1256/1256 and node 255/255, with no actual network/model/Weixin. This is **NOT I3 acceptance**.
+The operator's standing reasonable-project consent already covers this safe OFFLINE synthetic test; no repeated request for consent is needed. Public GitHub is NOT local-host execution authority; remote automation PAUSED_BY_OPERATOR and `no_auto_dispatch=true`. Original 3080/3083/8123 services, real Weixin send/inbound, QR/credentials, original Sessions/SQLite, cloud and real registered source Apply forbidden.
 
-The earlier OL-047 genuine disposable synthetic-copy **I2_ISOLATED_STAGING_PASS** remains accepted; it does not authorize real Weixin I3 or registered-source Apply. Existing 3080/3083/8123, original Sessions/Workspace/SQLite, provider/config, real Weixin send and production operation remain out of scope.
+- Task: `OL-20261124-049`, expected `LO-20261124-049`, scope `OFFLINE_SYNTHETIC_ONLY`.
+- Immutable source SHA `df9757b3acd7ba2a5e234264a6c607c024858a79`, [CI #780](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/45217311065) and [PR CI #781](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/45217328518) BOTH 3/3 at pinned source. Linux/macOS node 255, six-spec focus 44, proxy 5, full Vitest 1266, TS/build PASS.
+- Binding runbook: `agent-handoff/HANDOFF-2026-11-24-OL049-I3-UNIFIED-FAKE-VERTICAL-OFFLINE.md`.
+- To-local: `agent-handoff/messages/to-local/2026-11-24-ol049-i3-unified-fake-vertical-offline.md`; expected sanitized report: `agent-reports/REPORT-ol049-i3-unified-fake-vertical-offline.md`; to-online: `agent-handoff/messages/to-online/2026-11-24-lo049-i3-unified-fake-vertical-done.md`, local receipts `agent-handoff/receipts/local/OL-20261124-049-{claimed,done}.md`.
 
-The operator's standing permission allows ordinary remote source/CI/offline work without re-asking; next is remote-owned offline I3 test-gap repair. No new OL-049 issued, public GitHub messages are not permission tokens, and remote scheduler is PAUSED_BY_OPERATOR / `no_auto_dispatch=true`. Draft PR #1 remains unmerged.
+Use a fresh 0700 private detached worktree pinned to exact code SHA, preinstalled dependencies, synthetic fake iLink data only. Verify `tests/weixin-native-poll-offline.spec.ts` **14/14**, real poll→Engine→Ticket→synthetic DSH Sessions Worker→review-ready→application SQLite Outbox pending in `tests/local-vertical-real-sessions.spec.ts` **two variants**, plus native protocol, Outbox, full Vitest, Node and build. This is offline simulation; do not run real model, real Weixin, network endpoints or source Apply. Publish a truthful gap matrix and only report/claimed/done/to-online via FF. Local Agent MUST NOT edit remote-owned STATE/CURRENT_STATE/WORK_QUEUE/product code/CI/main.
+
+Done fields `message_id: OL-20261124-049`, `status: done`, `scope: OFFLINE_SYNTHETIC_ONLY`, exact `code_sha: df9757b3acd7ba2a5e234264a6c607c024858a79`, `result_message: LO-20261124-049` and actual allowlisted verdict. Stop. No OL-050 auto issue.
