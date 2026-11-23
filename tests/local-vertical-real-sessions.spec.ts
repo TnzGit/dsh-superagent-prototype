@@ -21,8 +21,16 @@ import { Sessions } from '../src/app/sessions.ts'
 import { LocalProjectRegistry } from '../src/local-first/project-registry.ts'
 import { previewNonGitProjectChanges } from '../src/local-first/project-workspaces.ts'
 import { SettingsSchema } from '../src/policy.ts'
+import { pollNativeWeixin, nativeWeixinKind } from '../src/sources/weixin-native.ts'
+import { messageToTrigger } from '../src/local-first/weixin-native-protocol.ts'
+import { KV } from '../src/kv.ts'
+import { Store } from '../src/app/store.ts'
+import { Outbox } from '../src/app/outbox.ts'
 
-test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery→preview→Outbox with no source writes', async () => {
+test.each([
+  { name: 'I1E synthetic chat Engine→Ticket→Worker→preview→Outbox no source write', native: false },
+  { name: 'I3 offline real native Weixin poll→Engine→Ticket→Worker→ready→durable pending Outbox', native: true }
+])('$name', async ({native}) => {
   const parent = realpathSync(mkdtempSync(join(tmpdir(), 'dsh-i1e-vertical-')))
   const stateDir = join(parent,'state'), projectHome=join(parent,'registered'), source=join(projectHome,'fixture')
   mkdirSync(stateDir,{recursive:true,mode:0o700})
@@ -116,20 +124,76 @@ test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery
   }
   const executor=new DshExecutor(host)
   const candidates=[]
-  const outboxPort={send:msg=>{if(!outbox.some(x=>x.id===msg.id))outbox.push(msg)},
-    status:id=>outbox.some(x=>x.id===id)?'pending':undefined,withdraw:()=>{}}
+  // Actual application Outbox persists receipts in disposable SQLite, but the
+  // Source is uninstalled: delivery is NEVER initiated on a real transport.
+  const receiptStore = new Store(join(stateDir,'offline-outbox.sqlite'))
+  const realOutbox = new Outbox({
+    store: {atomic:fn=>receiptStore.atomic(fn), receipts:receiptStore.receipts},
+    effects:effectPort,
+    sources: {
+      instance:()=>undefined,
+      channelAllowed:()=>false,
+      send:async()=>{throw Error('I3 OFFLINE: real message delivery forbidden')}
+    },
+    commands:{} as never, paused:()=>false
+  })
+  const outboxPort={
+    send:msg=>{if(!outbox.some(x=>x.id===msg.id))outbox.push(msg);realOutbox.send(msg)},
+    status:id=>realOutbox.status(id),withdraw:id=>realOutbox.withdraw(id)
+  }
   const policy={version:'fixture-v1',paused:false,evalTimeoutMs:60000,
     gate:()=>({admissible:true,strength:'explicit',basis:{via:'fixture'}}),
     revalidate:()=>true,admitsInferred:()=>false}
   engine=new Engine({repo,policy:()=>policy,scope:{scope:()=>({listened:true,observed:false})},
     assessor:{request:x=>candidates.push(x),release:()=>{}},executor,outbox:outboxPort,
     prepareTicket:(ticket,outcome)=>executor.prepare(ticket,outcome),now:()=>now})
-  const trigger={id:'fixture-msg',source:'chat',
+  const input={
+    message_id:'fixture-msg',from_user_id:'synthetic-peer',message_type:1,message_state:2,
+    create_time_ms:Date.parse(now),context_token:'ONLY_SYNTHETIC_CONTEXT',
+    item_list:[{type:1,text_item:{text:'/project fixture\nEdit isolated copy only'}}]
+  }
+  const trigger=native ? messageToTrigger(input)! : {
+    id:'fixture-msg',source:'chat',
     threads:[{source:'chat',id:'fixture-thread'}],actor:{source:'chat',id:'human-fixture'},
     human:true,addressed:'direct',at:now,text:'/project fixture\nEdit isolated copy only',
     channel:{source:'chat',thread:'fixture-thread',address:{peer:'offline-only'}},meta:{}}
   try{
-    engine.receive(trigger)
+    if(native){
+      const credentialsFile=join(parent,'SYNTHETIC-NOT-REAL-credentials.json')
+      writeFileSync(credentialsFile, JSON.stringify({
+        token:'this-is-a-fake-only-bot-token-not-usable',
+        baseUrl:'https://ilinkai.weixin.qq.com'
+      }), {mode:0o600})
+      vi.stubEnv('DSH_WEIXIN_NATIVE_CREDENTIALS_FILE',credentialsFile)
+      const stopped=new AbortController(), sourceState=new Map()
+      let fetchCalls=0, deliveredToEngine=0
+      vi.stubGlobal('fetch',vi.fn(async(url,init)=>{
+        expect(String(url)).toBe('https://ilinkai.weixin.qq.com/ilink/bot/getupdates')
+        expect(init.method).toBe('POST')
+        expect(JSON.parse(init.body).get_updates_buf).toBe('')
+        fetchCalls++
+        return new Response(JSON.stringify({
+          ret:0,errcode:0,msgs:[input],get_updates_buf:'synthetic-next-cursor',
+          longpolling_timeout_ms:1000
+        }),{status:200,headers:{'content-type':'application/json'}})
+      }))
+      const sourceCtx={
+        ready:Promise.resolve(),configured:()=>true,
+        config:()=>nativeWeixinKind.schema.parse({allowedPeers:[{id:'synthetic-peer'}]}),
+        state:{
+          get:key=>sourceState.get(key),
+          set:(key,value)=>{if(value===undefined)sourceState.delete(key);else sourceState.set(key,value)}
+        },
+        receive:received=>{deliveredToEngine++;return engine.receive(received)},
+        threads:{describe:()=>{}},
+        report:(_source,health)=>{if(health.state==='ready'||health.state==='error')stopped.abort()}
+      }
+      await pollNativeWeixin(sourceCtx,stopped.signal)
+      expect(fetchCalls).toBe(1)
+      expect(deliveredToEngine).toBe(1)
+      expect(sourceState.get(KV.weixin.nativeCursor)).toBe('synthetic-next-cursor')
+      expect(repo.triggers.get(trigger.id)?.channel.source).toBe('weixin')
+    }else engine.receive(trigger)
     engine.evaluateDue()
     const candidate=candidates.at(-1)
     expect(candidate).toBeDefined()
@@ -142,6 +206,9 @@ test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery
     expect(outbox.filter(x=>x.kind==='acknowledgement')).toHaveLength(1)
     while(queue.length){
       const item=queue.shift()
+      // Durable Outbox receipts remain pending while the channel Source is
+      // OFF; never dispatch reply effects in a fake-I3 test.
+      if(item.name==='reply')continue
       await effects.get(item.name)(item.payload)
     }
     const sessionId=workerSessionId(ticket.id)
@@ -181,6 +248,18 @@ test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery
     expect(replay.id).toBe(first.id)
     expect(replay.reused).toBe(true)
     expect(outbox.filter(x=>x.kind==='reply')).toHaveLength(1)
+    expect(realOutbox.status(first.id)).toBe('pending')
+    expect(realOutbox.status(outbox.find(x=>x.kind==='acknowledgement').id)).toBe('pending')
+    expect(outbox.filter(x=>x.kind==='reply')[0].channel.source).toBe(native?'weixin':'chat')
+    if(native){
+      expect(outbox.filter(x=>x.kind==='reply')[0].channel.address).toMatchObject({
+        peer:'synthetic-peer',contextToken:'ONLY_SYNTHETIC_CONTEXT'
+      })
+      // Actually invoke the real Outbox's delivery effect while Source is
+      // uninstalled: it must defer, not attempt native Weixin send.
+      await expect(effects.get('reply')({},first.id)).rejects.toThrow(/Source is off or not installed/)
+      expect(realOutbox.status(first.id)).toBe('pending')
+    }
     expect(readFileSync(join(source,'before.txt'),'utf8')).toBe('ORIGINAL\n')
     expect(readFileSync(join(source,'to-delete.txt'),'utf8')).toBe('DELETE ONLY IN COPY\n')
     expect(readFileSync(join(source,'.env'),'utf8')).toBe('FIXTURE SECRET EXCLUDED\n')
@@ -188,8 +267,11 @@ test('I1E actual Engine→Ticket→DshExecutor→Sessions.ensure→AgentDelivery
     expect(flushes).toBeGreaterThanOrEqual(2)
     expect(guards).toHaveLength(1)
   }finally{
+    vi.unstubAllEnvs()
+    vi.unstubAllGlobals()
     executor.dispose()
     sessions.dispose()
+    receiptStore.close()
     rmSync(parent,{recursive:true,force:true})
   }
 })
