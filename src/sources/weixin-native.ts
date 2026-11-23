@@ -133,10 +133,17 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
         // Only a strictly approved, already-persisted one-shot relay bypasses
         // the default Engine. Never execute the same Trigger twice.
         const handled=route?await route(trigger):false
+        // A route/receive may have awaited an abort. Never continue to Engine
+        // ingestion or commit a whole-page cursor after shutdown intervenes.
+        if(signal.aborted)return
         if(!handled)await ctx.receive(trigger)
+        if(signal.aborted)return
         for(const ref of trigger.threads)ctx.threads.describe(threadKey(ref),
           {facts:{conversation:{value:{zh:'微信私聊',en:'Weixin direct'}}}})
       }
+      // Also cover a signal that aborted after the final input: otherwise a
+      // partially acknowledged page could be skipped on restart.
+      if(signal.aborted)return
       if(page.cursor!==ctx.state.get(KV.weixin.nativeCursor))ctx.state.set(KV.weixin.nativeCursor,page.cursor)
       timeoutMs=page.waitMs;failures=0
       ctx.report(WEIXIN_SOURCE,{state:'ready',detail:'Weixin iLink long poll connected',at:new Date().toISOString()})
