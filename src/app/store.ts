@@ -280,6 +280,38 @@ export class Store implements Repositories {
       }
       return { total, reasons }
     },
+    /**
+     * Read-only operator reconciliation ledger of pending native Weixin review holds, oldest first, capped by `limit`.
+     * Projects only sanitized audit fields (receipt ID, message kind, ticket, durable claim flag with its time, review time,
+     * whitelisted reason code); never payload text, peer IDs, context tokens, credentials or provider error strings.
+     * This view is strictly read-only: no mutation, resend, claim reset or terminal marking is wired here —
+     * live reconciliation remains GATED (docs/018 runbook), and the installed runtime exposes no mutating reconcile route.
+     */
+    reviewLedger: (limit = 50): { id: string; kind: Receipt['kind']; ticketId?: string; claimed: boolean; claimedAt?: string; reviewAt: string; reason: WeixinReviewReason }[] =>
+      this.values<Receipt>(`SELECT value FROM outbox WHERE json_extract(value, '$.channel.source')='weixin'
+        AND json_extract(value, '$.status')='pending' AND json_extract(value, '$.review.reason') IS NOT NULL
+        ORDER BY rowid LIMIT ?`, limit).map(receipt => ({
+          id: receipt.id, kind: receipt.kind, ...(receipt.ticketId ? { ticketId: receipt.ticketId } : {}),
+          claimed: receipt.singleSendAttemptAt !== undefined,
+          ...(receipt.singleSendAttemptAt !== undefined ? { claimedAt: receipt.singleSendAttemptAt } : {}),
+          reviewAt: receipt.review!.at, reason: safeWeixinReviewReason(receipt.review!.reason),
+        })),
+    /**
+     * Test-only dry-run projection of ONE manual terminal marking of a review hold: reports what a resolve WOULD write
+     * (with its audit fields) without touching SQLite, sending anything, or resetting the durable claim.
+     * It is never wired to the installed runtime's routes (the management API exposes only the read-only `reviewSummary`);
+     * real live reconciliation against a genuine peer with server-side idempotency remains GATED (docs/018 runbook).
+     */
+    reviewResolveDryRun: (id: string, outcome: 'sent' | DropReason = 'sent'): { found: boolean; id?: string; status?: ReplyStatus;
+      wouldSettle?: { status: 'sent' | DropReason; at: string };
+      audit?: { reason: WeixinReviewReason; claimed: boolean; claimedAt?: string; reviewAt: string } } => {
+      const receipt = this.receipts.get(id)
+      if (!receipt || receipt.channel.source !== 'weixin' || receipt.status !== 'pending' || !receipt.review) return { found: false }
+      return { found: true, id, status: receipt.status,
+        wouldSettle: { status: outcome, at: new Date().toISOString() },
+        audit: { reason: safeWeixinReviewReason(receipt.review.reason), claimed: receipt.singleSendAttemptAt !== undefined,
+          ...(receipt.singleSendAttemptAt === undefined ? {} : { claimedAt: receipt.singleSendAttemptAt }), reviewAt: receipt.review.at } }
+    },
     /** Pending message receipts, oldest first. */
     waiting: (): Receipt[] => this.values("SELECT value FROM outbox WHERE value ->> '$.status' = 'pending' ORDER BY rowid"),
     /** True if an earlier message for the same ticket and conversation is still pending with fewer than `failures` consecutive failed `reply` effect attempts. */

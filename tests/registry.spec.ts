@@ -186,3 +186,56 @@ describe('Source registry', () => {
     expect(run.mock.calls[0]![1]).toEqual(expect.arrayContaining(['+messages-reply', '--message-id', 'om_dm']))
   })
 })
+
+  it('a disabled Weixin instance denies every channel, scope and send path without touching its adapter', async () => {
+    let sends = 0
+    const sources = new SourceRegistry(() => SettingsSchema.parse({
+      sources: { weixin: { enabled: false, config: { allowedPeers: [{ id: 'synthetic' }] } } } }))
+    sources.register({
+      kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' },
+      health: [], schema: z.object({ allowedPeers: z.array(z.object({ id: z.string() }).strict()).default([]) }).strict(), fields: [],
+      channel: { allowed: (address, config) => config.allowedPeers.some(row => row.id === address.peer),
+        send: async () => { sends++; return 'sent' as const }, link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+    const outbound: OutboundMessage = { id: 'synthetic-disabled', kind: 'reply', text: 'test',
+      channel: { source: 'weixin', thread: 'weixin:synthetic', address: { peer: 'synthetic' } } }
+    expect(sources.channelAllowed(outbound.channel)).toBe(false)
+    expect(sources.scope({ source: 'weixin', meta: {} })).toEqual({ listened: false, reason: 'source_disabled' })
+    expect(await sources.send(outbound, {} as Commands)).toBe('gone')
+    expect(sends).toBe(0)
+  })
+
+  it('a stored instance whose configuration fails validation is treated as disabled, denying sends and scopes', async () => {
+    let sends = 0
+    const sources = new SourceRegistry(() => SettingsSchema.parse({
+      sources: { weixin: { enabled: true, config: { allowedPeers: 'not-rows' } } } }))
+    sources.register({
+      kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' },
+      health: [], schema: z.object({ allowedPeers: z.array(z.object({ id: z.string() }).strict()).default([]) }).strict(), fields: [],
+      channel: { allowed: (address, config) => config.allowedPeers.some(row => row.id === address.peer),
+        send: async () => { sends++; return 'sent' as const }, link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+    expect(sources.instance('weixin')?.enabled).toBe(false)
+    const outbound: OutboundMessage = { id: 'synthetic-invalid-config', kind: 'reply', text: 'test',
+      channel: { source: 'weixin', thread: 'weixin:synthetic', address: { peer: 'synthetic' } } }
+    expect(sources.channelAllowed(outbound.channel)).toBe(false)
+    expect(await sources.send(outbound, {} as Commands)).toBe('gone')
+    expect(sends).toBe(0)
+    // An address on the restored allowlist may still send once the stored configuration is valid again.
+    expect(await sources.send({ ...outbound, channel: { ...outbound.channel, address: { peer: 'other' } } }, {} as Commands)).toBe('gone')
+    expect(sends).toBe(0)
+  })
+
+  it('prepareSend reports a review before any claim without consulting enablement, so Outbox can hold the receipt durably', async () => {
+    let sends = 0
+    const sources = new SourceRegistry(() => SettingsSchema.parse({ sources: { weixin: { enabled: true, config: {} } } }))
+    sources.register({
+      kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' },
+      health: [], schema: z.object({}).strict(), fields: [],
+      channel: { preflight: () => ({ status: 'review', reason: 'context_missing' }),
+        send: async () => { sends++; return 'sent' as const }, link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+    const outbound: OutboundMessage = { id: 'synthetic-preflight', kind: 'reply', text: 'test',
+      channel: { source: 'weixin', thread: 'weixin:synthetic', address: { peer: 'synthetic' } } }
+    expect(await sources.prepareSend(outbound)).toEqual({ status: 'review', reason: 'context_missing' })
+    expect(sends).toBe(0)
+    // An uninstalled kind waits (no review, no claim, no network) instead of pretending readiness.
+    expect(await sources.prepareSend({ ...outbound, channel: { ...outbound.channel, source: 'retired' } })).toEqual({ status: 'waiting' })
+  })

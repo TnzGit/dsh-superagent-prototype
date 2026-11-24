@@ -9,6 +9,7 @@ import { Store } from '../src/app/store.ts'
 import { messageToTrigger, clientMessageId, WEIXIN_REPLY_MAX_AGE_MS } from '../src/local-first/weixin-native-protocol.ts'
 import { nativeWeixinKind, readNativeCredentials } from '../src/sources/weixin-native.ts'
 import { startRuntime, type Host } from './fixtures/host.ts'
+import { deferred, track, waitUntil } from './fixtures/async.ts'
 
 let h:Host
 let file:string
@@ -185,4 +186,130 @@ it('native channel send cannot bypass account guard even if called directly',asy
   writeCred(TOKEN_B)
   await expect(nativeWeixinKind.channel!.send({commands:null as never},old)).rejects.toThrow('safety gate')
   expect(replies).toHaveLength(0)
+})
+
+it('the same native message ID queued twice issues exactly one HTTP send with the first payload kept',async()=>{
+  const original=trigger()
+  const outbound=message('installed-native-dup', 'reply', original.channel!)
+  h.runtime.outbox.send(outbound)
+  h.runtime.outbox.send({...outbound,text:'second-injection-must-not-replace'})
+  await h.runtime.sendReplies()
+  // Idempotency-key collision: the durable receipt and the client_id both keep the original queue only.
+  expect(replies).toHaveLength(1)
+  expect(h.runtime.store.receipts.get(outbound.id)).toMatchObject({status:'sent',text:'synthetic reply'})
+  const body=replies[0]!.body.msg as Record<string,unknown>
+  expect(body.client_id).toBe(clientMessageId(outbound.id))
+  const item=(body.item_list as Record<string,unknown>[])[0]!.text_item as Record<string,unknown>
+  expect(item.text).toBe('synthetic reply') // the first payload travels to the adapter, not a later injection
+  h.runtime.outbox.send({...outbound,text:'third'})
+  await at(5000)
+  expect(replies).toHaveLength(1)
+})
+
+it('a response delivered after a withdraw attempt during flight settles sent once and the ID stays idempotent',async()=>{
+  const outbound=message('late-delivered-native','acknowledgement',trigger().channel!)
+  const gate=deferred<void>()
+  vi.mocked(globalThis.fetch).mockImplementationOnce(async(input:unknown,init:RequestInit={})=>{
+    if(String(input)!=='https://ilinkai.weixin.qq.com/ilink/bot/sendmessage')
+      throw Error('OFFLINE EGRESS TRIPWIRE: '+String(input))
+    replies.push({url:String(input),auth:String((init.headers as Record<string,string>)?.Authorization),
+      body:JSON.parse(String(init.body)) as Record<string,unknown>})
+    await gate.promise // the response arrives long after the queue step began
+    return new Response(JSON.stringify({ret:0,errcode:0}),{status:200,
+      headers:{'content-type':'application/json'}})
+  })
+  h.runtime.outbox.send(outbound)
+  const inFlight=track(h.runtime.sendReplies())
+  await waitUntil(()=>replies.length===1)
+  // Withdraw cannot remove an already-claimed native receipt (deny unsafe cancellation).
+  h.runtime.outbox.withdraw(outbound.id)
+  expect(h.runtime.store.receipts.get(outbound.id)?.status).toBe('pending')
+  expect(h.runtime.store.receipts.get(outbound.id)?.singleSendAttemptAt).toBeTruthy()
+  gate.resolve()
+  await inFlight.promise
+  expect(h.runtime.outbox.status(outbound.id)).toBe('sent')
+  expect(replies).toHaveLength(1)
+  const audit=new Store(join(h.directory,'orchestrator.sqlite'))
+  try{expect(audit.receipts.get(outbound.id)).toMatchObject({status:'sent',text:'synthetic reply'})
+    expect(audit.receipts.claimOneShotSend(outbound.id)).toBe(false)}
+  finally{audit.close()}
+  h.runtime.outbox.send(outbound)
+  await at(5000)
+  expect(replies).toHaveLength(1) // no second egress for a settled ID
+})
+
+it('a duplicate receipt re-queued over the same disposable SQLite after a crash is held for review with zero egress',async()=>{
+  // OL-052 restart model: a fresh Store handle over the same disposable SQLite is the replayed state of a crashed process.
+  // The simulated crash happens AFTER the durable one-shot claim and BEFORE the HTTP request; the effect row survives.
+  // Real live resolution stays GATED: only human reconciliation against a genuine peer with server-side idempotency may settle it.
+  const channel=trigger().channel!
+  const id='restart-reclaimed-native'
+  h.runtime.outbox.send({id,kind:'acknowledgement',text:'synthetic reply',channel})
+  expect(h.runtime.store.receipts.claimOneShotSend(id)).toBe(true)
+  const reopened=new Store(join(h.directory,'orchestrator.sqlite'))
+  try{
+    expect(reopened.receipts.get(id)).toMatchObject({status:'pending'})
+    expect(reopened.receipts.get(id)?.singleSendAttemptAt).toBeTruthy()
+    // Duplicate queue (same ID) over the replayed store cannot re-open a claim: INSERT OR IGNORE keeps the original row and payload.
+    expect(reopened.receipts.add({id,kind:'reply',text:'duplicate-injection',channel})).toBe(false)
+    expect(reopened.receipts.get(id)?.text).toBe('synthetic reply')
+    expect(reopened.receipts.claimOneShotSend(id)).toBe(false)
+    expect(reopened.receipts.reviewSummary()).toEqual({total:0,reasons:{}})
+  } finally{reopened.close()}
+  // The running process's next pump holds the claimed row for manual review and never replays it.
+  await h.runtime.sendReplies()
+  expect(replies).toHaveLength(0)
+  const row=h.runtime.store.receipts.get(id)!
+  expect(row.status).toBe('pending')
+  expect(row.review?.reason).toBe('ambiguous_send')
+  expect(row.singleSendAttemptAt).toBeTruthy()
+  h.runtime.outbox.send({id,kind:'reply',text:'late-duplicate',channel})
+  await at(10_000)
+  expect(replies).toHaveLength(0)
+  expect(h.runtime.store.receipts.get(id)?.text).toBe('synthetic reply')
+})
+
+it('peer revocation and source disable deny delivery fail-closed without claim or egress',async()=>{
+  const outbound=message('peer-revoked-native','notice',trigger().channel!)
+  h.runtime.outbox.send(outbound)
+  const settings=h.runtime.store.settings()
+  h.runtime.store.saveSettings({...settings,sources:{...settings.sources,
+    weixin:{enabled:true,config:{allowedPeers:[]}}}})
+  await h.runtime.sendReplies()
+  expect(replies).toHaveLength(0)
+  expect(h.runtime.store.receipts.get(outbound.id)).toMatchObject({
+    status:'dropped',dropped:{reason:'channelIgnored'}
+  })
+  expect(h.runtime.store.receipts.get(outbound.id)?.singleSendAttemptAt).toBeUndefined()
+  // Source disabled mid-queue: the receipt waits with no claim and no egress, and sends after re-enable.
+  const waiting=message('source-disabled-native','reply',trigger().channel!)
+  h.runtime.outbox.send(waiting)
+  const off=h.runtime.store.settings()
+  h.runtime.store.saveSettings({...off,sources:{...off.sources,weixin:{enabled:false,config:{allowedPeers:[{id:'approved-peer'}]}}}})
+  await h.runtime.sendReplies()
+  expect(replies).toHaveLength(0)
+  expect(h.runtime.store.receipts.get(waiting.id)?.status).toBe('pending')
+  expect(h.runtime.store.receipts.get(waiting.id)?.singleSendAttemptAt).toBeUndefined()
+  const on=h.runtime.store.settings()
+  h.runtime.store.saveSettings({...on,sources:{...on.sources,weixin:{enabled:true,config:{allowedPeers:[{id:'approved-peer'}]}}}})
+  await at(5000)
+  expect(replies).toHaveLength(1)
+  expect(h.runtime.outbox.status(waiting.id)).toBe('sent')
+})
+
+it('a reviewed native acknowledgement holds a later same-ticket reply behind it with zero egress',async()=>{
+  const channel=trigger().channel!
+  const ack=message('reviewed-native-ack','acknowledgement',channel)
+  h.runtime.outbox.send({...ack,ticketId:'synthetic-ticket'})
+  h.runtime.outbox.send({id:'later-native-reply',kind:'reply',text:'later',channel,ticketId:'synthetic-ticket'})
+  // Rotate A->B before pumping: the acknowledgement is held (account_mismatch) and the reply waits behind it.
+  writeCred(TOKEN_B)
+  await h.runtime.sendReplies()
+  expect(replies).toHaveLength(0)
+  expect(h.runtime.store.receipts.get(ack.id)?.review?.reason).toBe('account_mismatch')
+  expect(h.runtime.store.receipts.get('later-native-reply')?.status).toBe('pending')
+  expect(h.runtime.store.receipts.get('later-native-reply')?.singleSendAttemptAt).toBeUndefined()
+  await at(30_000)
+  expect(replies).toHaveLength(0)
+  expect(h.runtime.outbox.status('later-native-reply')).toBe('pending')
 })
