@@ -1,3 +1,5 @@
+> **CURRENT update 2026-11-24:** The table below is the original *pre-fix finding*, NOT the current code state. Remote source/tests/workflow pin `d6c51629855caf4b2737049cf4592cc12b912765` resolved synthetic R1/R2/R3 and bounded R4/R5, CI #821/#822 both 3/3, with 1284 full Linux Vitest and 83 focus tests on EACH OS. See `docs/018-i3-native-weixin-outbox-review-runbook.md` (unlinked text to preserve numbered-document ordering). `OL-20261124-050` is pending operator-initiated OFFLINE Mac independent retest; this public doc does not authorize execution. R6 genuine iLink/host, real sender/peer consent, server idempotency, original Apply and manual reconciliation action remain gated.
+
 # 017 — Native Weixin I3 pre-live fault gates (source review, not live authorization)
 
 **Date:** 2026-11-24. **Scope:** remote-only source/security review and synthetic testing; **NO real iLink/QR/credentials/peer send/8123/3080/3083/registered-source Apply**. No new local task. PR #1 DRAFT, remote automation PAUSED, `no_auto_dispatch=true`.
