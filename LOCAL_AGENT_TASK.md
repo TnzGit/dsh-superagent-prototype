@@ -1,4 +1,4 @@
-# LOCAL_AGENT_TASK — NO ACTIVE LOCAL TASK (2026-11-24)
+# LOCAL_AGENT_TASK — NO ACTIVE TASK (2026-11-24)
 
 OL-20261124-049 is **CLOSED** after remote ACK `ALL_OFFLINE_PASS` **for OFFLINE_SYNTHETIC_ONLY only**. Pinned source `df9757b3acd7ba2a5e234264a6c607c024858a79`, local done `4c805b9518d2025644c708cf7816653cbce39ccf`, source CI #780/#781 and done CI #791/#792 all 3/3 at exact SHAs. Read `agent-handoff/receipts/online/LO-20261124-049-done.md` and `agent-reports/REPORT-ol049-i3-unified-fake-vertical-offline.md`.
 
