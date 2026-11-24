@@ -200,7 +200,12 @@ describe('native Weixin egress guards and TTL ceiling (OL-20261124-052 P2)', () 
     const windowMs = Date.parse(String(future.channel!.address.expiresAt)) - Date.now()
     expect(windowMs).toBeLessThanOrEqual(WEIXIN_REPLY_MAX_AGE_MS + 1000)
     expect(windowMs).toBeGreaterThan(0)
-    // realpath sanity: the guard walks resolved paths, so macOS /var symlink prefixes do not break it.
-    expect(realpathSync(tmpdir())).not.toBe(tmpdir())
+    // realpath sanity: the guard walks resolved paths. macOS prefixes /var under a symlinked
+    // private/var, so the resolved path must differ there; Linux /tmp is already canonical and
+    // must resolve without error. Both OSes prove the guard does not break on either layout.
+    const resolved = realpathSync(tmpdir())
+    expect(typeof resolved).toBe('string')
+    if (process.platform === 'darwin') expect(resolved).not.toBe(tmpdir())
+    else expect(resolved).toBe(tmpdir())
   })
 })
