@@ -58,3 +58,93 @@ test('native Weixin Trigger preserves incoming curly quote bytes for strict gran
   assert.equal(result?.text,text)
   assert.notEqual(result?.text,'/project dsh-testalias\n请仅回复"OK"')
 })
+import { WEIXIN_MAX_RESPONSE_BYTES } from '../src/local-first/weixin-native-protocol.ts'
+
+// OL-20261124-052 P2: fake-transport page fault shapes at the protocol adapter level.
+// Every fetch below is a fake (in-memory Response); the egress tripwire inside
+// `fake`/`fakeStream` forbids any real network, and these tests never reach it.
+const abortFake=()=>async(url,init)=>{
+  if(init?.signal?.aborted)throw init.signal.reason
+  return new Promise((_resolve,reject)=>{
+    init.signal.addEventListener('abort',()=>reject(init.signal.reason))
+  })
+}
+test('poll timeout mid-response returns an empty page and keeps the opaque cursor',async()=>{
+  // Fake clock: the application long-poll deadline is already expired while the request is still pending;
+  // the caller signal is untouched. Same stub technique as the vitest poll spec.
+  const original=AbortSignal.timeout
+  AbortSignal.timeout=()=>AbortSignal.abort()
+  try {
+    const page=await receivePage(creds,'old-cursor',new AbortController().signal,abortFake(),1000)
+    assert.equal(page.cursor,'old-cursor')
+    assert.deepEqual(page.messages,[])
+    assert.equal(page.waitMs,1000)
+  } finally { AbortSignal.timeout=original }
+})
+const rawFake=(body,requests=[])=>async(url,init)=>{
+  requests.push({url,init})
+  return new Response(body,{status:200,headers:{'content-type':'application/json'}})
+}
+test('poll malformed JSON fails the page and never invents a cursor',async()=>{
+  const requests=[]
+  await assert.rejects(receivePage(creds,'old-cursor',new AbortController().signal,rawFake('not json {{{',requests)),
+    error=>error instanceof SyntaxError)
+  assert.equal(requests.length,1)
+})
+test('poll oversized declared content-length is refused before reading the body',async()=>{
+  const over=async()=>new Response('{"ret":0}',{status:200,
+    headers:{'content-length':String(WEIXIN_MAX_RESPONSE_BYTES+1)}})
+  await assert.rejects(receivePage(creds,'old-cursor',new AbortController().signal,over),
+    error=>/application cap/.test(error.message))
+})
+test('poll oversized streamed body is refused at the application cap',async()=>{
+  const over=async()=>new Response('x'.repeat(WEIXIN_MAX_RESPONSE_BYTES+16))
+  await assert.rejects(receivePage(creds,'old-cursor',new AbortController().signal,over),
+    error=>/application cap/.test(error.message))
+})
+test('poll non-Unicode response bytes fail with a fatal UTF-8 decode (no silent replacement)',async()=>{
+  const bytes=async()=>new Response(new Uint8Array([0xff,0xfe,0x22,0x7b,0x7d]))
+  await assert.rejects(receivePage(creds,'old-cursor',new AbortController().signal,bytes),
+    error=>error instanceof TypeError&&/not valid for encoding/.test(error.message))
+})
+test('poll Unicode payload survives byte-for-byte into the Trigger',async()=>{
+  const unicode='请仅回复“OK” 🚀 café ✓'
+  const page=await receivePage(creds,'',new AbortController().signal,
+    fake({ret:0,errcode:0,msgs:[{...received,item_list:[{type:1,text_item:{text:unicode}}]}]}))
+  assert.equal(messageToTrigger(page.messages[0])?.text,unicode)
+})
+test('poll transport cut mid-body rejects instead of hanging the page',async()=>{
+  const cut=async()=>new Response(new ReadableStream({start(c){
+    c.enqueue(new TextEncoder().encode('{"ret":0,"errcode":0,"msgs":['))
+    setTimeout(()=>c.error(new Error('synthetic transport cut')),5)
+  }}))
+  await assert.rejects(receivePage(creds,'old-cursor',new AbortController().signal,cut),
+    error=>/transport cut/.test(error.message))
+})
+test('incomplete items, bot echo and group updates are dropped at the protocol boundary',()=>{
+  assert.equal(messageToTrigger({from_user_id:'peer-alice',message_state:2,message_type:1,item_list:[null,{type:1,text_item:{text:'x'}}]}),undefined)
+  // An empty item list still carries a stable message ID: it becomes the unsupported placeholder, never a crash.
+  assert.equal(messageToTrigger({...received,item_list:[]})?.text,'[未支持的微信消息]')
+  assert.equal(messageToTrigger({...received,message_id:''}),undefined)
+  // A non-string context_token is dropped from the address; the Trigger still mints so the
+  // send-side preflight can hold the reply for review instead of the poll loop dropping it.
+  const noCtx=messageToTrigger({...received,context_token:12345})
+  assert.ok(noCtx)
+  assert.equal(noCtx.channel.address.contextToken,undefined)
+})
+test('absent or invalid native timestamp never mints an unbounded reply window',()=>{
+  const bare=messageToTrigger({...received,create_time_ms:undefined})
+  assert.ok(bare)
+  assert.equal(bare.channel.address.expiresAt,undefined)
+  assert.equal(bare.meta.expiresAt,undefined)
+  // A future timestamp is clamped to now+cap; it must never exceed the conservative 60-minute ceiling.
+  const future=messageToTrigger({...received,create_time_ms:Date.now()+24*3600_000})
+  assert.ok(future?.channel.address.expiresAt)
+  assert.ok(Date.parse(future.channel.address.expiresAt)-Date.now()<=(60*60*1000)+1000)
+})
+test('send refuses a malformed or oversized response body without trusting content-length',async()=>{
+  await assert.rejects(sendText(creds,'outbox-9','peer-alice','reply-token','OK',async()=>new Response('nope{{{')),
+    error=>error instanceof SyntaxError)
+  await assert.rejects(sendText(creds,'outbox-9','peer-alice','reply-token','OK',async()=>new Response('{"ret":0}',{
+    headers:{'content-length':String(WEIXIN_MAX_RESPONSE_BYTES+1)}})),error=>/application cap/.test(error.message))
+})
