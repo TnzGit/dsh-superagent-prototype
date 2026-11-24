@@ -1,16 +1,16 @@
-# WORK_QUEUE — OL-050 ACKed offline; safe online review resumes
+# WORK_QUEUE — OL-051 offline local verification after remote hardening
 
-Remote automation `PAUSED_BY_OPERATOR`, `no_auto_dispatch=true`, no active local task, no OL-051, PR #1 Draft/unmerged.
+Remote automation `PAUSED_BY_OPERATOR`, `no_auto_dispatch=true`, exactly one pending task `OL-20261124-051` requiring trusted direct operator Prompt, PR #1 Draft/unmerged.
 
 | Priority | Work | Status |
 | --- | --- | --- |
-| P0 | OL-047 isolated I2 synthetic COPY | Accepted `I2_ISOLATED_STAGING_PASS`, not production Apply |
-| P0 | OL-048/049 fake native Weixin/vertical | Accepted `ALL_OFFLINE_PASS` for exact older source, no real iLink |
-| P0 | OL-050 installed native Source and disposable SQLite Outbox | **CLOSED and online ACKed `ALL_OFFLINE_PASS` for OFFLINE_SYNTHETIC_ONLY**. Source `d6c51629855caf4b2737049cf4592cc12b912765`, source CI #821/#822 3/3, local done `0de496099135080c0e4f763c6aee80317b7fcf2f`, done CI #827/#828 3/3, online ACK `agent-handoff/receipts/online/LO-20261124-050-done.md`; real I3 still gated |
-| P1 | Online-only durable review hold, withdraw, pending/ordering and double-send source audit | **NEXT remotely owned safe offline code/test work**; CI required; no local task during online work |
-| P1 | Manual reconciliation policy | No automated resend/clear; read-only redacted summary exists; real operator resolution requires separately reviewed transaction design |
-| P1 | Real native I3 E2E | **GATED** specific operator account+peer/consent/host permission, real provider semantics |
-| P2 | Production registered-source Apply | **GATED** ACL/fd/dev/inode/external writers/capability/journal/recovery |
-| P3 | PR #1 | Draft/unmerged; no deploy |
+| P0 | OL-047 isolated I2, OL-048/049 fake native inbound/vertical | Previously ACKed only for their precise synthetic scopes |
+| P0 | OL-050 installed native Weixin Outbox Mac | CLOSED online ACK `ALL_OFFLINE_PASS`, done `0de496099135080c0e4f763c6aee80317b7fcf2f`, done CI #827/#828 each 3/3; NOT real I3 |
+| P0 | Online ledger review retention + safe reasons + latest-peer-send guard | **REMOTE SOURCE CODE & CROSS-OS CI COMPLETE**, PIN `f0179c7dee7f57ea098ae223dabfa87d0dca2e5c`, CI #835/#836 each 3/3, Vitest **1288**, focus **97 each OS**, Node **255 each OS**; no real I3 |
+| P0 | `OL-20261124-051` operator Mac independent synthetic acceptance | **PENDING DIRECT TRUSTED OPERATOR HANDOFF**, `OFFLINE_SYNTHETIC_ONLY`; `agent-handoff/HANDOFF-2026-11-24-OL051-I3-REVIEW-LEDGER-RETENTION-OFFLINE.md`; no auto dispatch, no real network/model/host |
+| P1 | Live manual reconciliation of reviewed Outbox | Read-only safe counts exist; **no authorized mutating resolution** and no automatic resend |
+| P1 | Genuine native I3 | **GATED** separate operator-approved account+peer+real Tencent+host/model scope |
+| P2 | Registered project production Apply | **GATED** ACL/fd/dev/inode/external writers/capability/journal/recovery |
+| P3 | PR #1 | Draft/unmerged, no deploy |
 
-No GitHub file, ACK or CI creates host-execution authority. If future bounded offline Mac task is warranted, issue one new distinct task only after safe remote work and source CI, with trusted operator-owned initiation; never auto-dispatch.
+Local Agent must not claim/dispatch from PUBLIC GitHub alone. After LO-051, remote independently checks report/receipt and CI, ACKs and resumes its safe remote work. Do not create OL-052 automatically.

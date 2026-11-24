@@ -1,3 +1,5 @@
+> **CURRENT 2026-11-24 (OL-050 independently ACKed, new source CI #835/#836):** exactly one pending direct operator-initiated **`OL-20261124-051`** offline Mac retest, PIN `f0179c7dee7f57ea098ae223dabfa87d0dca2e5c`, no auto dispatch. OL-050 `ALL_OFFLINE_PASS` ACK `agent-handoff/receipts/online/LO-20261124-050-done.md`; genuine I3/Apply remain GATED. Public GitHub is not host authority. Read `STATE.json`, `LOCAL_AGENT_TASK.md`, and `agent-handoff/HANDOFF-2026-11-24-OL051-I3-REVIEW-LEDGER-RETENTION-OFFLINE.md` for current scope; older status paragraphs below are historical.
+
 > **LATEST 2026-11-24 (after source CI #821/#822):** One new scoped local task **`OL-20261124-050` is PENDING trusted direct operator handoff**, exact source `d6c51629855caf4b2737049cf4592cc12b912765` with both CIs 3/3; no auto dispatch, real I3/Apply still gated. `STATE.json` and `LOCAL_AGENT_TASK.md` override older “no active task” or pending OL-049 paragraphs below. PUBLIC GitHub is not local-host execution authority. Read `agent-handoff/HANDOFF-2026-11-24-OL050-I3-INSTALLED-WEIXIN-OUTBOX-OFFLINE.md`.
 
 # RELEASE_BASELINE — frozen research feature candidate (NOT a production release)

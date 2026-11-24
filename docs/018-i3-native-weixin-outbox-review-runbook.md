@@ -1,3 +1,5 @@
+> **Post-OL050 update 2026-11-24:** The newer remote-only review-retention/allowed-reasons/registry authorization source `f0179c7dee7f57ea098ae223dabfa87d0dca2e5c` passed source CI #835/#836 each 3/3 (Vitest Linux 1288, focus Linux/macOS 97). OL-050 is independently ACKed on its older pinned source. **OL-051** is pending operator-initiated independent OFFLINE Mac verification of new source, NOT a real I3 or live reconciliation authorization. `LOCAL_AGENT_TASK.md` and `STATE.json` are authoritative.
+
 # 018 — Installed native Weixin Outbox: fail-closed receipts and manual review (OFFLINE)
 
 **2026-11-24, source pin `d6c51629855caf4b2737049cf4592cc12b912765`.** Supersedes the pre-fix risk state in [017 pre-live fault gates](017-i3-native-weixin-prelive-fault-gates.md); does **not** enable any real Weixin, operator account, sending, original host work or production Apply. All evidence is fake HTTP, fake credential, fresh SQLite and Linux/macOS CI.
