@@ -103,7 +103,7 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
   route?:(trigger:Trigger)=>boolean|Promise<boolean>):Promise<void> {
   await ctx.ready
   let timeoutMs=35000,failures=0,accountHash=''
-  while(!signal.aborted) {
+  pollLoop: while(!signal.aborted) {
     const config=ctx.config<Config>(WEIXIN_SOURCE)
     if(!config || !ctx.configured()){
       ctx.report(WEIXIN_SOURCE,{state:'paused',detail:!config?'Source disabled':'Waiting for DSH setup'})
@@ -129,13 +129,22 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
       for(const input of page.messages){
         if(signal.aborted)return
         const trigger=messageToTrigger(input)
-        if(!trigger || !canReceive(config,String(trigger.meta.peer??'')))continue
+        // The operator may revoke a peer while the long poll is in flight.
+        // Never route or receive using the allowlist captured before await receivePage.
+        const liveConfig=ctx.config<Config>(WEIXIN_SOURCE)
+        if(!liveConfig || !ctx.configured())continue pollLoop
+        if(!trigger || !canReceive(liveConfig,String(trigger.meta.peer??'')))continue
         // Only a strictly approved, already-persisted one-shot relay bypasses
         // the default Engine. Never execute the same Trigger twice.
         const handled=route?await route(trigger):false
         // A route/receive may have awaited an abort. Never continue to Engine
         // ingestion or commit a whole-page cursor after shutdown intervenes.
         if(signal.aborted)return
+        // route() can await; a revoke/disable during that await must not leak
+        // a now-unapproved Trigger into ordinary Engine ingestion.
+        const beforeReceive=ctx.config<Config>(WEIXIN_SOURCE)
+        if(!beforeReceive || !ctx.configured() ||
+          !canReceive(beforeReceive,String(trigger.meta.peer??'')))continue pollLoop
         if(!handled)await ctx.receive(trigger)
         if(signal.aborted)return
         for(const ref of trigger.threads)ctx.threads.describe(threadKey(ref),
@@ -144,6 +153,8 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
       // Also cover a signal that aborted after the final input: otherwise a
       // partially acknowledged page could be skipped on restart.
       if(signal.aborted)return
+      // A Source disabled mid-page must not commit a cursor for work it skipped.
+      if(!ctx.config<Config>(WEIXIN_SOURCE) || !ctx.configured())continue pollLoop
       if(page.cursor!==ctx.state.get(KV.weixin.nativeCursor))ctx.state.set(KV.weixin.nativeCursor,page.cursor)
       timeoutMs=page.waitMs;failures=0
       ctx.report(WEIXIN_SOURCE,{state:'ready',detail:'Weixin iLink long poll connected',at:new Date().toISOString()})

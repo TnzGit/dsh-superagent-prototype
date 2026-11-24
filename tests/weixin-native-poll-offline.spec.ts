@@ -30,7 +30,10 @@ function incoming(peer: string, messageId = 'offline-message-1') {
 }
 
 function fakeLoop(messages: unknown[], opts: {
-  allowedPeers?: string[]
+  allowedPeers?: string[] | (() => string[])
+  sourceEnabled?: () => boolean
+  onPage?: () => void
+  stopOnPause?: boolean
   receive?: (trigger: unknown, abort: () => void) => Promise<unknown>
   route?: (trigger: unknown, abort: () => void) => Promise<boolean>
   httpStatus?: number
@@ -52,6 +55,7 @@ function fakeLoop(messages: unknown[], opts: {
     if (url !== 'https://ilinkai.weixin.qq.com/ilink/bot/getupdates' || init.method !== 'POST')
       throw Error('I3 OFFLINE TEST FORBIDS OUTBOUND: ' + url)
     requests.push({ url, method: init.method, body: String(init.body) })
+    opts.onPage?.()
     return new Response(JSON.stringify({
       ret: opts.responseCode ?? 0, errcode: opts.responseCode ?? 0,
       msgs: messages, get_updates_buf: 'cursor-after-page', longpolling_timeout_ms: 1000
@@ -69,8 +73,9 @@ function fakeLoop(messages: unknown[], opts: {
   const ctx = {
     ready: Promise.resolve(),
     configured: () => true,
-    config: () => nativeWeixinKind.schema.parse({
-      allowedPeers: (opts.allowedPeers ?? ['peer-allowed']).map(id => ({ id }))
+    config: () => opts.sourceEnabled?.() === false ? undefined : nativeWeixinKind.schema.parse({
+      allowedPeers: (typeof opts.allowedPeers === 'function'
+        ? opts.allowedPeers() : opts.allowedPeers ?? ['peer-allowed']).map(id => ({ id }))
     }),
     state: {
       get: (key: string) => records.get(key),
@@ -85,6 +90,7 @@ function fakeLoop(messages: unknown[], opts: {
     report: (_: string, item: { state: string }) => {
       health.push(item.state)
       if (item.state === 'ready' && !controller.signal.aborted) controller.abort()
+      if (item.state === 'paused' && opts.stopOnPause) controller.abort()
       if (item.state === 'error' && opts.stopOnError !== false) controller.abort()
     }
   } as unknown as SourceContext
@@ -104,6 +110,47 @@ test('I3 offline: unauthorized peer cannot route or enter Engine and cursor adva
   expect(f.received).toHaveLength(0)
   expect(f.records.get(KV.weixin.nativeCursor)).toBe('cursor-after-page')
   expect(f.requests).toHaveLength(1)
+})
+
+test('I3 offline: peer revoked while getupdates was awaited never reaches route or Engine', async () => {
+  let peers=['peer-allowed']
+  const f=fakeLoop([incoming('peer-allowed')], {
+    allowedPeers:()=>peers,
+    onPage:()=>{peers=[]},
+    route:async()=>{throw Error('revoked peer must not route')},
+  })
+  await pollNativeWeixin(f.ctx,f.controller.signal,f.route)
+  expect(f.routed).toHaveLength(0)
+  expect(f.received).toHaveLength(0)
+  expect(f.records.get(KV.weixin.nativeCursor)).toBe('cursor-after-page')
+  expect(f.requests).toHaveLength(1)
+})
+
+test('I3 offline: Source disabled during long poll cannot ingest or advance cursor', async () => {
+  let enabled=true
+  const f=fakeLoop([incoming('peer-allowed')], {
+    sourceEnabled:()=>enabled,
+    onPage:()=>{enabled=false},
+    stopOnPause:true,
+  })
+  await pollNativeWeixin(f.ctx,f.controller.signal)
+  expect(f.received).toHaveLength(0)
+  expect(f.records.get(KV.weixin.nativeCursor)).toBe('cursor-before-page')
+  expect(f.health).toContain('paused')
+  expect(f.requests).toHaveLength(1)
+})
+
+test('I3 offline: revocation during async route blocks later ordinary Engine receive', async () => {
+  let peers=['peer-allowed']
+  const f=fakeLoop([incoming('peer-allowed')], {
+    allowedPeers:()=>peers,
+    route:async()=>{peers=[];return false},
+  })
+  await pollNativeWeixin(f.ctx,f.controller.signal,f.route)
+  expect(f.routed).toHaveLength(1)
+  expect(f.received).toHaveLength(0)
+  expect(f.requests).toHaveLength(2)
+  expect(f.records.get(KV.weixin.nativeCursor)).toBe('cursor-after-page')
 })
 
 test('I3 offline: allowed inbound commits cursor only AFTER durable Engine receive settles', async () => {
