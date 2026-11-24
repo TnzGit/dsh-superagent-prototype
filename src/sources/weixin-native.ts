@@ -58,6 +58,13 @@ function nativeSendReadiness(message:OutboundMessage):{decision:SourceSendPrefli
   if(accountHash!==current)return {decision:{status:'review',reason:'account_mismatch'}}
   return {decision:{status:'ready'},creds}
 }
+/** Long-poll results may arrive after a synthetic or real credential rotation. */
+function nativeAccountCurrent(expected:string):boolean {
+  try {
+    const creds=readNativeCredentials()
+    return !!creds && createHash('sha256').update(creds.token).digest('hex')===expected
+  } catch {return false}
+}
 /** The operator has to configure source-level and DSH policy allowlists independently. */
 export const nativeWeixinKind: SourceKind<Config>={
   kind:WEIXIN_SOURCE,
@@ -143,6 +150,8 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
     }
     try{
       const page=await receivePage(creds,ctx.state.get(KV.weixin.nativeCursor)??'',signal,fetch,timeoutMs)
+      // Never ingest an old account's in-flight page after the credential file rotated.
+      if (!nativeAccountCurrent(hash)) continue pollLoop
       for(const input of page.messages){
         if(signal.aborted)return
         const trigger=messageToTrigger(input,hash)
@@ -157,6 +166,7 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
         // A route/receive may have awaited an abort. Never continue to Engine
         // ingestion or commit a whole-page cursor after shutdown intervenes.
         if(signal.aborted)return
+        if(!nativeAccountCurrent(hash))continue pollLoop
         // route() can await; a revoke/disable during that await must not leak
         // a now-unapproved Trigger into ordinary Engine ingestion.
         const beforeReceive=ctx.config<Config>(WEIXIN_SOURCE)
@@ -170,6 +180,7 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
       // Also cover a signal that aborted after the final input: otherwise a
       // partially acknowledged page could be skipped on restart.
       if(signal.aborted)return
+      if(!nativeAccountCurrent(hash))continue pollLoop
       // A Source disabled mid-page must not commit a cursor for work it skipped.
       if(!ctx.config<Config>(WEIXIN_SOURCE) || !ctx.configured())continue pollLoop
       if(page.cursor!==ctx.state.get(KV.weixin.nativeCursor))ctx.state.set(KV.weixin.nativeCursor,page.cursor)
