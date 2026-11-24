@@ -1,11 +1,16 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { receivePage, messageToTrigger, sendText, secureBase, clientMessageId } from '../src/local-first/weixin-native-protocol.ts'
+import { receivePage, messageToTrigger, sendText, secureBase, clientMessageId, WEIXIN_MAX_RESPONSE_BYTES } from '../src/local-first/weixin-native-protocol.ts'
 const creds={token:'test-local-only-token-123456789',baseUrl:'https://ilinkai.weixin.qq.com',botId:'bot-test'}
 const received={message_id:'m-1',from_user_id:'peer-alice',message_type:1,message_state:2,
   create_time_ms:1783488000000,context_token:'opaque-reply-token',
   item_list:[{type:1,text_item:{text:'hello'}}]}
+// Abort-on-egress tripwire: any URL outside the approved Tencent HTTPS iLink hosts fails the test.
+const tripwire=(url)=>{
+  if(!String(url).startsWith('https://ilinkai.weixin.qq.com/'))throw Error('EGRESS TRIPWIRE: '+url)
+}
 const fake=(response,requests=[])=>async(url,init)=>{
+  tripwire(url)
   requests.push({url,init})
   return new Response(JSON.stringify(response),{status:200,headers:{'content-type':'application/json'}})
 }
@@ -58,12 +63,12 @@ test('native Weixin Trigger preserves incoming curly quote bytes for strict gran
   assert.equal(result?.text,text)
   assert.notEqual(result?.text,'/project dsh-testalias\n请仅回复"OK"')
 })
-import { WEIXIN_MAX_RESPONSE_BYTES } from '../src/local-first/weixin-native-protocol.ts'
 
 // OL-20261124-052 P2: fake-transport page fault shapes at the protocol adapter level.
-// Every fetch below is a fake (in-memory Response); the egress tripwire inside
-// `fake`/`fakeStream` forbids any real network, and these tests never reach it.
+// Every fetch below is a fake (in-memory Response) behind the abort-on-egress tripwire
+// defined above; NO real network is touched by any test in this file.
 const abortFake=()=>async(url,init)=>{
+  tripwire(url)
   if(init?.signal?.aborted)throw init.signal.reason
   return new Promise((_resolve,reject)=>{
     init.signal.addEventListener('abort',()=>reject(init.signal.reason))
@@ -82,6 +87,7 @@ test('poll timeout mid-response returns an empty page and keeps the opaque curso
   } finally { AbortSignal.timeout=original }
 })
 const rawFake=(body,requests=[])=>async(url,init)=>{
+  tripwire(url)
   requests.push({url,init})
   return new Response(body,{status:200,headers:{'content-type':'application/json'}})
 }

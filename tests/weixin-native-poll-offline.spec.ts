@@ -80,7 +80,7 @@ function fakeLoop(messages: unknown[], opts: {
     if (opts.fetchThrows) throw opts.fetchThrows(init)
     if (opts.response) return opts.response(init)
     if (opts.body !== undefined)
-      return new Response(opts.body, { status: opts.httpStatus ?? 200, headers: { 'content-type': 'application/json' } })
+      return new Response(opts.body as BodyInit, { status: opts.httpStatus ?? 200, headers: { 'content-type': 'application/json' } })
     return new Response(JSON.stringify({
       ret: opts.responseCode ?? 0, errcode: opts.responseCode ?? 0,
       msgs: messages, get_updates_buf: 'cursor-after-page', longpolling_timeout_ms: 1000
@@ -511,8 +511,9 @@ test('I3 offline: unbound accountHash and unparseable expiry are refused by pref
   const f = fakeLoop([incoming('peer-allowed', 'unbound')])
   await pollNativeWeixin(f.ctx, f.controller.signal)
   const channel = (f.received[0] as unknown as Trigger).channel!
+  const { accountHash: _dropped, ...unboundAddress } = channel.address
   expect(nativeWeixinKind.channel!.preflight!({
-    id: 'x', text: 't', kind: 'reply', channel: { ...channel, address: { ...channel.address, accountHash: undefined } },
+    id: 'x', text: 't', kind: 'reply', channel: { ...channel, address: unboundAddress },
   })).toMatchObject({ status: 'review', reason: 'account_unbound' })
   expect(nativeWeixinKind.channel!.preflight!({
     id: 'x', text: 't', kind: 'reply', channel: { ...channel, address: { ...channel.address, expiresAt: 'not-a-date' } },
