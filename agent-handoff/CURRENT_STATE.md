@@ -1,19 +1,18 @@
-# CURRENT_STATE — OL-051 independent Mac review-ledger OFFLINE pending (2026-11-24)
+# CURRENT_STATE — OL-051 independently ACKed; OL-052 multi-phase offline handover (2026-11-24)
 
-**Authoritative:** `agent-handoff/STATE.json`. `OL-20261124-051` is the **one** pending local `OFFLINE_SYNTHETIC_ONLY` verification. A PUBLIC GitHub task is NOT trusted host execution; require direct operator-forwarded Prompt or independently verified owner-owned local dispatcher. `no_auto_dispatch=true`, remote automation `PAUSED_BY_OPERATOR`; PR #1 Draft/unmerged.
+**Authoritative:** `agent-handoff/STATE.json`; primary plan: root **`HANDOVER.md`**. PR #1 Draft/unmerged. Remote scheduler `PAUSED_BY_OPERATOR`, `no_auto_dispatch=true`. Exactly one pending operator-direct **`OL-20261124-052`** (not auto-running), covering the *whole* next offline source/test/CI batch with ≤3 concurrent subagents and one final report. Public GitHub is not operator host authority.
 
-## Last independently accepted local task: OL-050
+## Completed
 
-- Offline native Source + actual application SQLite Outbox with synthetic HTTP, source PIN `d6c51629855caf4b2737049cf4592cc12b912765`, source CI #821/#822 both 3/3.
-- Local claim `38f011b2d96004bdcbf7236550b48cf8e97761c0` → report `7ab63f33b8cb9e6e5e6cdbf5261e25cd2efb045d` → done `0de496099135080c0e4f763c6aee80317b7fcf2f`, done CI #827/#828 each 3/3. Online ACK `agent-handoff/receipts/online/LO-20261124-050-done.md`, `ALL_OFFLINE_PASS` **strictly synthetic**, no real I3. Local report: 1284 full Vitest, 255 Node, 83 focus, 5 proxy, TS/build/check PASS. Host isolation claims are local attestation, not independent GitHub proof.
-- Historical OL-047 I2 disposable synthetic-copy acceptance and OL-048/049 fake-native stages remain scoped; no historic one-shot grants can be reused.
+- OL-051 independently accepted `ALL_OFFLINE_PASS` **only for OFFLINE_SYNTHETIC_ONLY**. Source SHA `f0179c7dee7f57ea098ae223dabfa87d0dca2e5c` and source CI #835/#836 each 3/3; local claimed `d6500149325b73da1741cd14b36fea8455735b8a`, report `134e6146309c920ad24d64386b97c44032c66924`, done `781b27df169f3a05bd4c3bb82ac62dfbd327ab7d`; done push CI #841 / PR #842 each 3/3 exact done SHA. Online ACK `agent-handoff/receipts/online/LO-20261124-051-done.md`.
+- Mac offline local measured 70-file Vitest **1288/1288**, Node **255/255**, focus **97/97**, proxy **5/5**, typecheck/build/check green; installed fake native Source/Outbox, durable review retention, reason redaction, same-ticket hold, registry late peer revoke. Fake transport and mocked agent ≠ real Weixin/LLM/host.
+- Earlier OL-047–050 accepted only in their bounded prior scopes; no historic one-shot capability reused.
 
-## New post-ACK remote code hardening, independently green CI
+## Newly authorized single batch
 
-- **Pin `f0179c7dee7f57ea098ae223dabfa87d0dca2e5c`.** [Source push CI #835](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/45395374431) and [source PR CI #836](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/45395389128) EACH 3/3 `completed/success` at the exact pin; Linux full Vitest **70 files 1288/1288**, Linux and macOS 11-spec focus **97/97** EACH, Node **255/255**, proxy **5/5**, TS/build PASS. Both macOS workflows executed `tests/outbox.spec.ts` **14** and `tests/registry.spec.ts` **11** explicitly.
-- Fixes: an unclaimed Weixin `pending+review` record survives `withdraw` (no accidental delete or ID reuse), review reason codes are allowlisted on persistence and public-safe aggregate projection (unknown/legacy strings map to `unclassified_hold`), a reviewed prior acknowledgment holds later same Ticket/thread messages (no out-of-order send), and `SourceRegistry.send` rechecks live Weixin peer allowlist even for callers bypassing Outbox. No real network/production action.
-- `OL-20261124-051` independently verifies these exact code/test changes on the operator Mac via detached disposable checkout, synthetic credentials/fetch, fresh SQLite, actual Source + application Outbox and 11-spec workflow focus. Runbook `agent-handoff/HANDOFF-2026-11-24-OL051-I3-REVIEW-LEDGER-RETENTION-OFFLINE.md` and `LOCAL_AGENT_TASK.md` are the only fresh task specification; source pin remains immutable even if docs/handoff HEAD advances.
+- `OL-20261124-052`, `OFFLINE_SYNTHETIC_ONLY`, initial immutable SHA `781b27df169f3a05bd4c3bb82ac62dfbd327ab7d` (baseline code same as `f0179c7dee7f57ea098ae223dabfa87d0dca2e5c`), done CI #841/#842 exact 3/3. **ONE direct operator Prompt initiates**; local lead may modify in-scope feature branch source/tests/docs/CI, run fake tests and cross-OS CI, spawn up to 3 concurrent synthetic-only subagents, implement all P0–P5 phases, commit normal FF and return one final result. No new online dispatch/ACK between phases.
+- See `HANDOVER.md` for P0 baseline; P1 durable Outbox/review; P2 native transport/credentials; P3 full installed fake vertical; P4 synthetic-copy Apply/faults; P5 readiness/CI/release docs. Local owns its report/receipts/results, plus scoped product changes **only for this task**. Remote-owned `STATE.json` remains untouched by local until online ACK.
 
-## Remaining gates
+## Still GATED
 
-Real Weixin QR/account/consented peer/send, true Tencent idempotency/expiry/401/429/-14, an actual model turn in native full vertical, original 3080/3083/8123/Sessions/SQLite, live `pending+review` reconciliation transactions, registered project Apply and OS ACL/fd/capability/journal, and production merge/deploy remain **GATED**. No OL-052 auto issue.
+Real Weixin QR, account, user peer, Tencent iLink accept/send, original 3080/3083/8123, real model turn, original SQLite/Sessions/Workspace, live reconciliation, real registered project Apply, OS grants, deployment/merge/main, cloud/network expansion. No OL-053 auto-dispatch or activation of remote automation.

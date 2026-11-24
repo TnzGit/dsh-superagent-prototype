@@ -1,3 +1,5 @@
+> **OPERATOR DIRECTED BATCH 2026-11-24 (latest):** OL-051 is independently ACKed `ALL_OFFLINE_PASS` OFFLINE, ACK `agent-handoff/receipts/online/LO-20261124-051-done.md`. The sole pending task is **OL-20261124-052**, root **`HANDOVER.md`**, one operator-direct multi-phase P0–P5 local batch with **≤3 simultaneous subagents**. It **explicitly permits local source/tests/docs/CI edits and normal FF commits for this task only**; the old OL-051 report-only rule is historical. No online ACK required between phases; one final LO-052. Real Weixin, original host and production Apply remain GATED; public GitHub is not host authorization; `no_auto_dispatch=true`, remote scheduler PAUSED. `STATE.json` and root `HANDOVER.md` outrank historical status banners below.
+
 # Public-repository communication security
 
 ## 2026-11-20 operator standing consent — supersedes repeated approvals ONLY within strict scope
