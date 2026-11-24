@@ -120,7 +120,7 @@ it('account A pending receipt is held for review after A-to-B rotation, never se
   expect(row.review?.reason).toBe('account_mismatch')
   expect(row.singleSendAttemptAt).toBeUndefined()
   const reread=new Store(join(h.directory,'orchestrator.sqlite'))
-  try{expect(reread.receipts.get(old.id)?.review?.reason).toBe('account_mismatch'}
+  try{expect(reread.receipts.get(old.id)?.review?.reason).toBe('account_mismatch')}
   finally{reread.close()}
   writeCred(TOKEN_A)
   h.runtime.outbox.send(old)
