@@ -212,6 +212,28 @@ test.each([401, 429, 503])('I3 offline: poll HTTP %i reports failure and does no
   expect(f.requests).toHaveLength(1)
 })
 
+test('I3 offline: old account in-flight poll page cannot enter Engine after A-to-B credentials rotation', async () => {
+  let pages=0
+  const f=fakeLoop([incoming('peer-allowed')], {
+    allowedPeers:()=>pages===2?[]:['peer-allowed'],
+    onPage:()=>{
+      if(++pages===1){
+        // Rotation happens after the HTTP long-poll request but BEFORE its page is parsed.
+        writeFileSync(process.env.DSH_WEIXIN_NATIVE_CREDENTIALS_FILE!,JSON.stringify({
+          token:'SYNTHETIC_NEW_ACCOUNT_B_DIFFERENT_TOKEN',
+          baseUrl:'https://ilinkai.weixin.qq.com'
+        }),{mode:0o600})
+      }
+    },
+    route:async()=>{throw Error('old-account page must never reach route')},
+  })
+  await pollNativeWeixin(f.ctx,f.controller.signal,f.route)
+  expect(f.requests).toHaveLength(2)
+  expect(f.received).toHaveLength(0)
+  expect(f.routed).toHaveLength(0)
+  expect(JSON.parse(f.requests[1]!.body!).get_updates_buf).toBe('')
+})
+
 test('I3 offline: account token rotation resets opaque cursor before the next request', async () => {
   const f = fakeLoop([incoming('intruder')])
   f.records.set(KV.weixin.nativeAccount, 'previous-synthetic-account-hash')
