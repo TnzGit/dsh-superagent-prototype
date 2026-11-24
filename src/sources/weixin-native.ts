@@ -81,6 +81,14 @@ export const nativeWeixinKind: SourceKind<Config>={
     allowed:(address,config)=>typeof address.peer==='string' && canReceive(config,address.peer),
     preflight:(message:OutboundMessage)=>nativeSendReadiness(message).decision,
     send:async(_ctx,message:OutboundMessage)=>{
+      // Preserve the direct channel contract: an explicitly expired/invalid
+      // legacy relay address is permanently gone, with no credential read or I/O.
+      // The Outbox preflight instead keeps a manual-review receipt.
+      const expiresAt=message.channel.address.expiresAt
+      if(expiresAt!==undefined){
+        const cut=Date.parse(expiresAt)
+        if(!Number.isFinite(cut)||Date.now()>=cut)return 'gone'
+      }
       // Revalidate on the actual send path even if a caller bypasses Outbox's preflight.
       const {decision,creds}=nativeSendReadiness(message)
       if(decision.status!=='ready' || !creds)throw Error('Native Weixin send safety gate refused')

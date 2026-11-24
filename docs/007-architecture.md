@@ -442,6 +442,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/local-ticket-worker-session.spec.ts` | I1B disposable fake-host Engine receive/decide → real Executor launch/prepareDirectory → fake Session transport, Git/non-Git snapshots, replay/cancel/deny and result Outbox; no live model/Weixin/Apply |
 | `tests/weixin-native.spec.ts` | DSH-native iLink Source peer allowlist and owner-only credentials, tested with Vitest (no real QR) |
 | `tests/weixin-native-poll-offline.spec.ts` | I3 offline native-Weixin poll with synthetic page/credentials and blocked egress: peer allowlist, cursor-after-receive, failed-ingest cursor retention, relay consumed before Engine, and invalid/bot updates; no real network/Weixin/send |
+| `tests/weixin-native-outbox-offline.spec.ts` | Installed native Weixin adapter and actual durable SQLite Outbox with fake iLink HTTP: success, one-shot ambiguous EOF, A→B rotation hold, stale context, missing credentials, fd-only file guards; no external traffic |
 | `tests/registry.spec.ts` | `SourceRegistry`: instances, validation, Policy parts, Channels and Thread context |
 | `tests/sources.spec.ts` | The Feishu and GitHub Sources on a `SourceContext`: translation, polls and read positions, the pull request rules, health |
 | `tests/commands.spec.ts` | CLI calls as the deployment's accounts, the Channels' answers, and repository-scoped GitHub calls |
