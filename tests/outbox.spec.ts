@@ -199,3 +199,64 @@ it('non-Weixin Sources retain their transient-failure retry contract', async () 
   expect(attempts).toBe(2)
   expect(h.runtime.outbox.status('retry-probe-message')).toBe('sent')
 })
+
+it('an unclaimed Weixin manual-review hold survives withdraw, duplicate ID and later restored authorization', async () => {
+  let ready=false, sends=0
+  const kind: SourceKind<Record<string, never>>={
+    kind:'weixin',title:{zh:'',en:''},description:{zh:'',en:''},
+    health:[],schema:z.object({}).strict(),fields:[],
+    channel:{
+      preflight:()=>ready?{status:'ready'}:{status:'review',reason:'account_mismatch'},
+      send:async()=>{sends++;return 'sent'},
+      link:()=>({url:'',label:{zh:'',en:''}})
+    }
+  }
+  h.runtime.sources.register(kind)
+  const original: OutboundMessage={id:'persistent-review-across-withdraw',kind:'reply',text:'first',
+    channel:{source:'weixin',thread:'weixin:synthetic',address:{peer:'synthetic'}}}
+  h.runtime.outbox.send(original)
+  await h.runtime.sendReplies()
+  expect(h.runtime.store.receipts.get(original.id)).toMatchObject({
+    status:'pending',review:{reason:'account_mismatch'}
+  })
+  expect(h.runtime.store.receipts.get(original.id)?.singleSendAttemptAt).toBeUndefined()
+  h.runtime.outbox.withdraw(original.id)
+  expect(h.runtime.store.receipts.get(original.id)?.review?.reason).toBe('account_mismatch')
+  ready=true
+  h.runtime.outbox.send({...original,text:'second-injection-must-not-replace'})
+  await at(5000)
+  expect(sends).toBe(0)
+  expect(h.runtime.store.receipts.get(original.id)?.text).toBe('first')
+  expect(h.runtime.store.receipts.reviewSummary()).toEqual({
+    total:1,reasons:{account_mismatch:1}
+  })
+})
+
+it('review hold and state summary whitelist reason codes, including legacy stored unknown reason', async () => {
+  const canary='PRIVATE_TOKEN_SHOULD_NOT_APPEAR_IN_PUBLIC_REVIEW_XXXX'
+  const kind: SourceKind<Record<string, never>>={
+    kind:'weixin',title:{zh:'',en:''},description:{zh:'',en:''},
+    health:[],schema:z.object({}).strict(),fields:[],
+    channel:{
+      preflight:()=>({status:'review',reason:canary}),
+      send:async()=>{throw Error('review must not invoke the network')},
+      link:()=>({url:'',label:{zh:'',en:''}})
+    }
+  }
+  h.runtime.sources.register(kind)
+  const id='review-safe-code-only'
+  h.runtime.outbox.send({id,kind:'notice',text:'test',
+    channel:{source:'weixin',thread:'weixin:synthetic',address:{peer:'synthetic'}}})
+  await h.runtime.sendReplies()
+  expect(h.runtime.store.receipts.get(id)?.review?.reason).toBe('unclassified_hold')
+  // Even a legacy SQLite receipt with untrusted persisted metadata cannot leak via GET state.
+  h.runtime.store.db.prepare("UPDATE outbox SET value=json_set(value, '$.review.reason', ?) WHERE id=?")
+    .run(canary,id)
+  expect(h.runtime.store.receipts.reviewSummary()).toEqual({
+    total:1,reasons:{unclassified_hold:1}
+  })
+  const view=await h.api('GET','state')
+  expect(view.status).toBe(200)
+  expect(view.body.weixinOutboxReview).toEqual({total:1,reasons:{unclassified_hold:1}})
+  expect(JSON.stringify(view.body.weixinOutboxReview)).not.toContain(canary)
+})

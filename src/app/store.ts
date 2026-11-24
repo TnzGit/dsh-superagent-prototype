@@ -16,7 +16,15 @@ export interface TimelinePlace { at: string; id: string }
 export type DropReason = 'channelGone' | 'channelIgnored'
 /** Outbound message receipt tracked in the outbox from the moment it is queued (`pending`, `sent`, or `dropped`); delivery attempt counts live on its `reply` effect. */
 /** Durable fail-closed review: pending is intentional and has no automatic retry effect. */
-export interface OutboxReview { at: string; reason: string }
+/** Stable review codes for public-safe summaries: plugin/provider error strings are never exposed. */
+export const WEIXIN_REVIEW_REASONS = [
+  'ambiguous_send', 'account_mismatch', 'account_unbound',
+  'context_expired_or_unbounded', 'context_missing', 'unclassified_hold',
+] as const
+export type WeixinReviewReason = typeof WEIXIN_REVIEW_REASONS[number]
+const safeWeixinReviewReason = (reason: string): WeixinReviewReason =>
+  (WEIXIN_REVIEW_REASONS as readonly string[]).includes(reason) ? reason as WeixinReviewReason : 'unclassified_hold'
+export interface OutboxReview { at: string; reason: WeixinReviewReason }
 export interface Receipt extends OutboundMessage { status: ReplyStatus; dropped?: { at: string; reason: DropReason }; singleSendAttemptAt?: string; review?: OutboxReview }
 /** A dropped outbound message receipt, with the timestamp and reason it was dropped. */
 export type Dropped = Receipt & { dropped: { at: string; reason: DropReason } }
@@ -267,7 +275,8 @@ export class Store implements Repositories {
       for (const row of rows) {
         const n = Number(row.count)
         total += n
-        reasons[String(row.reason)] = n
+        const code = safeWeixinReviewReason(String(row.reason))
+        reasons[code] = (reasons[code] ?? 0) + n
       }
       return { total, reasons }
     },
@@ -305,7 +314,7 @@ export class Store implements Repositories {
         WHERE id=? AND json_extract(value, '$.status')='pending'
           AND json_extract(value, '$.channel.source')='weixin'
           AND json_extract(value, '$.review') IS NULL`)
-        .run(JSON.stringify({ at: new Date().toISOString(), reason }), id)
+        .run(JSON.stringify({ at: new Date().toISOString(), reason: safeWeixinReviewReason(reason) }), id)
     },
     /**
      * Marks a pending receipt as sent or dropped (with drop reason and timestamp), recreating the receipt if the message
@@ -320,11 +329,12 @@ export class Store implements Repositories {
         .run(id, JSON.stringify({ id, channel, text, kind, ...ticketId ? { ticketId } : {}, ...settled }))
     },
     /**
-     * Withdraws a pending message that has not yet been sent.
-     * @returns Whether a pending message with `id` was waiting and removed.
+     * Withdraws only a genuinely unclaimed, unreviewed pending message.
+     * A Weixin manual-review hold survives withdraw/duplicate queue to prevent later id reuse.
+     * @returns Whether a safely withdrawable pending message was removed.
      */
     withdraw: (id: string): boolean =>
-      Number(this.db.prepare("DELETE FROM outbox WHERE id = ? AND value ->> '$.status' = 'pending' AND json_extract(value, '$.singleSendAttemptAt') IS NULL").run(id).changes) > 0,
+      Number(this.db.prepare("DELETE FROM outbox WHERE id = ? AND value ->> '$.status' = 'pending' AND json_extract(value, '$.singleSendAttemptAt') IS NULL AND json_extract(value, '$.review') IS NULL").run(id).changes) > 0,
   }
 }
 export { key, threadKey }
