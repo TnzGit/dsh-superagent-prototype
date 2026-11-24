@@ -260,3 +260,28 @@ it('review hold and state summary whitelist reason codes, including legacy store
   expect(view.body.weixinOutboxReview).toEqual({total:1,reasons:{unclassified_hold:1}})
   expect(JSON.stringify(view.body.weixinOutboxReview)).not.toContain(canary)
 })
+
+it('a reviewed Weixin acknowledgement holds later same-ticket outbound work behind it', async () => {
+  let sends=0
+  const kind:SourceKind<Record<string,never>>={
+    kind:'weixin',title:{zh:'',en:''},description:{zh:'',en:''},
+    health:[],schema:z.object({}).strict(),fields:[],
+    channel:{
+      preflight:message=>message.id==='reviewed-ack'?{status:'review',reason:'account_mismatch'}:{status:'ready'},
+      send:async()=>{sends++;return 'sent'},
+      link:()=>({url:'',label:{zh:'',en:''}})
+    }
+  }
+  h.runtime.sources.register(kind)
+  const channel={source:'weixin',thread:'weixin:synthetic',address:{peer:'synthetic'}}
+  h.runtime.outbox.send({id:'reviewed-ack',kind:'acknowledgement',text:'ack',ticketId:'synthetic-ticket',channel})
+  h.runtime.outbox.send({id:'later-reply',kind:'reply',text:'reply',ticketId:'synthetic-ticket',channel})
+  await h.runtime.sendReplies()
+  expect(h.runtime.store.receipts.get('reviewed-ack')?.review?.reason).toBe('account_mismatch')
+  expect(h.runtime.outbox.status('later-reply')).toBe('pending')
+  expect(h.runtime.store.receipts.get('later-reply')?.singleSendAttemptAt).toBeUndefined()
+  expect(sends).toBe(0)
+  await at(5000)
+  expect(sends).toBe(0)
+  expect(h.runtime.outbox.status('later-reply')).toBe('pending')
+})

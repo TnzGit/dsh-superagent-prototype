@@ -101,6 +101,9 @@ export class SourceRegistry implements SourceScope {
   async send(message: OutboundMessage, commands: Commands): Promise<'sent' | 'gone' | 'waiting'> {
     const kind = this.kinds.get(message.channel.source)
     if (!kind) return 'waiting'
+    // Enforce the live Weixin allowlist even for future callers bypassing Outbox:
+    // never forward a revoked/disabled peer to a channel adapter.
+    if (message.channel.source === 'weixin' && !this.channelAllowed(message.channel)) return 'gone'
     return kind.channel ? kind.channel.send({ commands }, message) : 'gone'
   }
   link(channel: ChannelRef, links: ChannelLinks): ChannelLink {

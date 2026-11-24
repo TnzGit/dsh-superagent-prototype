@@ -145,6 +145,32 @@ describe('Source registry', () => {
     expect(sources.channelAllowed(feishuChannel('oc_dm', 'om_1', true))).toBe(false)
     expect(sources.channelAllowed({ source: 'github', address: { number: '7' } })).toBe(true)
   })
+
+  it('rechecks current Weixin peer authorization on every registry send, not only in the Outbox caller', async () => {
+    let allowed=true, sends=0
+    const sources=new SourceRegistry(()=>SettingsSchema.parse({
+      sources:{weixin:{enabled:true,config:{}}}
+    }))
+    sources.register({
+      kind:'weixin',title:{zh:'',en:''},description:{zh:'',en:''},
+      health:[],schema:z.object({}).strict(),fields:[],
+      channel:{
+        allowed:()=>allowed,
+        send:async()=>{sends++;return 'sent' as const},
+        link:()=>({url:'',label:{zh:'',en:''}})
+      }
+    })
+    const outbound:OutboundMessage={
+      id:'synthetic-auth-gate',kind:'reply',text:'test',
+      channel:{source:'weixin',thread:'weixin:synthetic',address:{peer:'synthetic'}}
+    }
+    const commands={} as Commands
+    expect(await sources.send(outbound,commands)).toBe('sent')
+    allowed=false
+    expect(await sources.send(outbound,commands)).toBe('gone')
+    expect(sends).toBe(1)
+  })
+
   it('delivers a reply to a direct message under the default settings', async () => {
     const sources = new SourceRegistry(() => SettingsSchema.parse({}))
     sources.register(feishuKind)
