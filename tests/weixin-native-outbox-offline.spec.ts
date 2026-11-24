@@ -119,6 +119,14 @@ it('account A pending receipt is held for review after A-to-B rotation, never se
   expect(row.status).toBe('pending')
   expect(row.review?.reason).toBe('account_mismatch')
   expect(row.singleSendAttemptAt).toBeUndefined()
+  const view=await h.api('GET','state')
+  expect(view.status).toBe(200)
+  expect(view.body.weixinOutboxReview).toEqual({
+    total:1,reasons:{account_mismatch:1}
+  })
+  // The public API must expose only counts/reason codes, never receipt payload or peer.
+  expect(JSON.stringify(view.body.weixinOutboxReview)).not.toContain('approved-peer')
+  expect(JSON.stringify(view.body.weixinOutboxReview)).not.toContain('SYNTHETIC_CONTEXT')
   const reread=new Store(join(h.directory,'orchestrator.sqlite'))
   try{expect(reread.receipts.get(old.id)?.review?.reason).toBe('account_mismatch')}
   finally{reread.close()}

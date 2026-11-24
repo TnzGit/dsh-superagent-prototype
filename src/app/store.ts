@@ -255,6 +255,22 @@ export class Store implements Repositories {
   /** Outbox message receipts for channel delivery; only `Outbox` writes to `receipts`. */
   readonly receipts = {
     get: (id: string): Receipt | undefined => this.values<Receipt>('SELECT value FROM outbox WHERE id = ?', id)[0],
+    /** Redacted review queue summary; never projects peer IDs, tokens, payloads or private receipt IDs. */
+    reviewSummary: (): { total: number; reasons: Record<string, number> } => {
+      const rows = this.db.prepare(`SELECT json_extract(value, '$.review.reason') AS reason, COUNT(*) AS count
+        FROM outbox WHERE json_extract(value, '$.channel.source')='weixin'
+          AND json_extract(value, '$.status')='pending'
+          AND json_extract(value, '$.review.reason') IS NOT NULL
+        GROUP BY json_extract(value, '$.review.reason')`).all()
+      const reasons: Record<string, number> = Object.create(null)
+      let total = 0
+      for (const row of rows) {
+        const n = Number(row.count)
+        total += n
+        reasons[String(row.reason)] = n
+      }
+      return { total, reasons }
+    },
     /** Pending message receipts, oldest first. */
     waiting: (): Receipt[] => this.values("SELECT value FROM outbox WHERE value ->> '$.status' = 'pending' ORDER BY rowid"),
     /** True if an earlier message for the same ticket and conversation is still pending with fewer than `failures` consecutive failed `reply` effect attempts. */
