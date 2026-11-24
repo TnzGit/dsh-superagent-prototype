@@ -1,16 +1,16 @@
-# WORK_QUEUE — OL-050 independent native Weixin Outbox OFFLINE Mac verification
+# WORK_QUEUE — OL-050 ACKed offline; safe online review resumes
 
-`no_auto_dispatch=true`; remote automation `PAUSED_BY_OPERATOR`; PR #1 Draft/unmerged; public GitHub cannot start local host work. **Exactly one active local task: OL-20261124-050 — PENDING direct trusted operator Prompt; no auto execution.**
+Remote automation `PAUSED_BY_OPERATOR`, `no_auto_dispatch=true`, no active local task, no OL-051, PR #1 Draft/unmerged.
 
 | Priority | Work | Status |
 | --- | --- | --- |
-| P0 | OL-047 I2 disposable Mac Worker | ACKed `I2_ISOLATED_STAGING_PASS` only for synthetic COPY, not real Apply |
-| P0 | OL-048 fake native Weixin; OL-049 unified fake vertical | Both CLOSED and remote ACKed `ALL_OFFLINE_PASS`; source pin `df9757...` remains historical |
-| P0 | Remote installed Source Outbox fail-closed R1/R2/R3/R4/R5 | **CODE + CROSS-OS CI PASS** source `d6c51629855caf4b2737049cf4592cc12b912765`; #821/#822 each 3/3, Vitest 1284, focused 83 EACH OS; real I3 still gated |
-| P0 | OL-20261124-050 independent operator Mac | **PENDING trusted DIRECT prompt**, `OFFLINE_SYNTHETIC_ONLY`; source pin `d6c51629855caf4b2737049cf4592cc12b912765`, task runbook `agent-handoff/HANDOFF-2026-11-24-OL050-I3-INSTALLED-WEIXIN-OUTBOX-OFFLINE.md`, no real network/model/host and no auto dispatch |
-| P1 | Manually reconcile blocked/ambiguous Weixin receipts | Read-only redacted count/reason implemented; **no authorized replay/write/clear UI**; design in `docs/018-i3-native-weixin-outbox-review-runbook.md` |
-| P1 | Real native I3 E2E | **GATED** separate specific operator-owned account+peer+send/host authorization, real iLink and model turn |
+| P0 | OL-047 isolated I2 synthetic COPY | Accepted `I2_ISOLATED_STAGING_PASS`, not production Apply |
+| P0 | OL-048/049 fake native Weixin/vertical | Accepted `ALL_OFFLINE_PASS` for exact older source, no real iLink |
+| P0 | OL-050 installed native Source and disposable SQLite Outbox | **CLOSED and online ACKed `ALL_OFFLINE_PASS` for OFFLINE_SYNTHETIC_ONLY**. Source `d6c51629855caf4b2737049cf4592cc12b912765`, source CI #821/#822 3/3, local done `0de496099135080c0e4f763c6aee80317b7fcf2f`, done CI #827/#828 3/3, online ACK `agent-handoff/receipts/online/LO-20261124-050-done.md`; real I3 still gated |
+| P1 | Online-only durable review hold, withdraw, pending/ordering and double-send source audit | **NEXT remotely owned safe offline code/test work**; CI required; no local task during online work |
+| P1 | Manual reconciliation policy | No automated resend/clear; read-only redacted summary exists; real operator resolution requires separately reviewed transaction design |
+| P1 | Real native I3 E2E | **GATED** specific operator account+peer/consent/host permission, real provider semantics |
 | P2 | Production registered-source Apply | **GATED** ACL/fd/dev/inode/external writers/capability/journal/recovery |
-| P3 | PR #1 | Draft/unmerged; no deployment |
+| P3 | PR #1 | Draft/unmerged; no deploy |
 
-After local completion, the **online side** verifies sanitized report/receipt and CI, writes a single ACK and resumes safe remote work. Never infer real-I3 acceptance or issue OL-051 automatically.
+No GitHub file, ACK or CI creates host-execution authority. If future bounded offline Mac task is warranted, issue one new distinct task only after safe remote work and source CI, with trusted operator-owned initiation; never auto-dispatch.
