@@ -1,16 +1,16 @@
 /** Native Weixin Source: iLink polling and replies, directly inside DSH. Never loads OpenClaw. */
 import { createHash } from 'node:crypto'
-import { readFileSync, lstatSync } from 'node:fs'
+import { closeSync, constants as fsConstants, fstatSync, openSync, readFileSync } from 'node:fs'
 import { isAbsolute } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { z } from 'zod'
 import type { OutboundMessage, Trigger } from '../core/index.ts'
 import { threadKey } from '../core/index.ts'
 import { KV } from '../kv.ts'
-import type { SourceKind } from './kind.ts'
+import type { SourceKind, SourceSendPreflight } from './kind.ts'
 import { sourceContext, type SourceContext } from './host.ts'
 import { pause } from './poll.ts'
-import { messageToTrigger, receivePage, sendText, WEIXIN_SOURCE, secureBase, type WeixinCredentials } from '../local-first/weixin-native-protocol.ts'
+import { messageToTrigger, receivePage, sendText, WEIXIN_SOURCE, WEIXIN_REPLY_MAX_AGE_MS, secureBase, type WeixinCredentials } from '../local-first/weixin-native-protocol.ts'
 
 const ConfigSchema=z.object({
   allowedPeers:z.array(z.object({id:z.string().trim().min(1).max(256)}).strict()).default([])
@@ -24,16 +24,39 @@ const PolicySchema=z.object({allowed:z.array(IDENTITY).default([])}).strict()
 export function readNativeCredentials(file=process.env.DSH_WEIXIN_NATIVE_CREDENTIALS_FILE): WeixinCredentials|undefined {
   if(!file)return undefined
   if(!isAbsolute(file)) throw Error('Weixin credentials path must be absolute')
-  const stat=lstatSync(file)
-  if(!stat.isFile() || stat.isSymbolicLink() || (stat.mode & 0o077)!==0)
-    throw Error('Weixin credentials must be an owner-only regular file, not a symlink')
-  const data=z.object({token:z.string().min(16),baseUrl:z.string(),botId:z.string().optional()}).strict()
-    .parse(JSON.parse(readFileSync(file,'utf8')))
-  return {...data,baseUrl:secureBase(data.baseUrl)}
+  // One open file descriptor, O_NOFOLLOW on the final component, and fstat BEFORE read.
+  // Do not lstat(path) and later reopen(path): that permits a replacement race.
+  const fd=openSync(file,fsConstants.O_RDONLY|fsConstants.O_NOFOLLOW)
+  try {
+    const stat=fstatSync(fd)
+    if(!stat.isFile() || (stat.mode & 0o077)!==0 ||
+      (typeof process.getuid==='function' && stat.uid!==process.getuid()) ||
+      stat.size>64*1024)
+      throw Error('Weixin credentials must be an owner-owned, owner-only regular file (max 64 KiB)')
+    const data=z.object({token:z.string().min(16),baseUrl:z.string(),botId:z.string().optional()}).strict()
+      .parse(JSON.parse(readFileSync(fd,'utf8')))
+    return {...data,baseUrl:secureBase(data.baseUrl)}
+  } finally {closeSync(fd)}
 }
 /** Strict source allowlist is enforced before a Trigger can enter DSH evaluation. */
 export function canReceive(config:Config, peer:string): boolean {
   return config.allowedPeers.some(row=>row.id===peer)
+}
+/** Fail-closed account/context check before a durable Outbox claim; no HTTP and no secrets in audit. */
+function nativeSendReadiness(message:OutboundMessage):{decision:SourceSendPreflight;creds?:WeixinCredentials} {
+  const {peer,contextToken,accountHash,expiresAt}=message.channel.address
+  if(!peer || !contextToken)return {decision:{status:'review',reason:'context_missing'}}
+  if(!accountHash || !/^[a-f0-9]{64}$/.test(accountHash))
+    return {decision:{status:'review',reason:'account_unbound'}}
+  const expiry=expiresAt?Date.parse(expiresAt):NaN
+  if(!Number.isFinite(expiry) || expiry<=Date.now() || expiry>Date.now()+WEIXIN_REPLY_MAX_AGE_MS)
+    return {decision:{status:'review',reason:'context_expired_or_unbounded'}}
+  let creds:WeixinCredentials|undefined
+  try {creds=readNativeCredentials()} catch {return {decision:{status:'waiting'}}}
+  if(!creds)return {decision:{status:'waiting'}}
+  const current=createHash('sha256').update(creds.token).digest('hex')
+  if(accountHash!==current)return {decision:{status:'review',reason:'account_mismatch'}}
+  return {decision:{status:'ready'},creds}
 }
 /** The operator has to configure source-level and DSH policy allowlists independently. */
 export const nativeWeixinKind: SourceKind<Config>={
@@ -49,19 +72,13 @@ export const nativeWeixinKind: SourceKind<Config>={
     ?{listened:true,observed:false,row:'direct'}:{listened:false,reason:'weixin_peer_not_allowed'},
   channel:{
     allowed:(address,config)=>typeof address.peer==='string' && canReceive(config,address.peer),
+    preflight:(message:OutboundMessage)=>nativeSendReadiness(message).decision,
     send:async(_ctx,message:OutboundMessage)=>{
-      // Only Stage C3 relay replies carry expiresAt. Never use a later unrelated
-      // Weixin Trigger's token after expiry; mark the old Outbox receipt gone.
-      const expiresAt=message.channel.address.expiresAt
-      if(expiresAt!==undefined){
-        const cut=Date.parse(expiresAt)
-        if(!Number.isFinite(cut)||Date.now()>=cut)return 'gone'
-      }
-      const creds=readNativeCredentials()
-      if(!creds)throw Error('Weixin credentials are not configured')
+      // Revalidate on the actual send path even if a caller bypasses Outbox's preflight.
+      const {decision,creds}=nativeSendReadiness(message)
+      if(decision.status!=='ready' || !creds)throw Error('Native Weixin send safety gate refused')
       const {peer,contextToken}=message.channel.address
-      if(!peer || !contextToken)throw Error('Cannot reply without the original Weixin context token')
-      await sendText(creds,message.id,peer,contextToken,message.text)
+      await sendText(creds,message.id,peer!,contextToken!,message.text)
       return 'sent'
     },
     link:()=>({url:'',label:{zh:'微信私聊',en:'Weixin direct message'}}),
@@ -128,7 +145,7 @@ export async function pollNativeWeixin(ctx:SourceContext, signal:AbortSignal,
       const page=await receivePage(creds,ctx.state.get(KV.weixin.nativeCursor)??'',signal,fetch,timeoutMs)
       for(const input of page.messages){
         if(signal.aborted)return
-        const trigger=messageToTrigger(input)
+        const trigger=messageToTrigger(input,hash)
         // The operator may revoke a peer while the long poll is in flight.
         // Never route or receive using the allowlist captured before await receivePage.
         const liveConfig=ctx.config<Config>(WEIXIN_SOURCE)

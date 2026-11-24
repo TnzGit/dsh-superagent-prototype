@@ -6,6 +6,8 @@ import { key } from '../core/ids.ts'
 export const WEIXIN_SOURCE = 'weixin'
 export const DEFAULT_BASE = 'https://ilinkai.weixin.qq.com'
 export const WEIXIN_CLIENT_VERSION = '2.4.10'
+/** Conservative application-side freshness ceiling; not a guarantee of Tencent token validity. */
+export const WEIXIN_REPLY_MAX_AGE_MS = 60 * 60 * 1000
 export interface WeixinCredentials { token: string; baseUrl: string; botId?: string }
 export interface UpdatePage { msgs?: unknown[]; get_updates_buf?: string; longpolling_timeout_ms?: number; ret?: number; errcode?: number; errmsg?: string }
 /** Error code from an iLink response; plain field works with Node's TypeScript strip-only loader. */
@@ -61,7 +63,7 @@ export async function receivePage(creds: WeixinCredentials, cursor: string, sign
 }
 const stringOf=(x:unknown): string | undefined => typeof x==='string'||typeof x==='number'?String(x):undefined
 /** Discard bot echoes and partial updates, keep stable IDs and original context token for safe reply. */
-export function messageToTrigger(input:unknown): Trigger | undefined {
+export function messageToTrigger(input:unknown, accountHash?:string): Trigger | undefined {
   if(!input||typeof input!=='object'||Array.isArray(input))return
   const m=input as Record<string,unknown>
   const peer=typeof m.from_user_id==='string'?m.from_user_id:''
@@ -80,11 +82,17 @@ export function messageToTrigger(input:unknown): Trigger | undefined {
   const at=Number(m.create_time_ms)
   const iso=Number.isFinite(at)&&at>0&&at<=8.64e15?new Date(at).toISOString():new Date().toISOString()
   const thread=WEIXIN_SOURCE+':'+peer
+  // Never mint an effectively infinite reply window from a missing/invalid native timestamp.
+  const expiresAt=Number.isFinite(at)&&at>0&&at<=8.64e15
+    ? new Date(Math.min(at+WEIXIN_REPLY_MAX_AGE_MS,Date.now()+WEIXIN_REPLY_MAX_AGE_MS)).toISOString()
+    : undefined
   return {id:key(WEIXIN_SOURCE,id),source:WEIXIN_SOURCE,
     threads:[{source:WEIXIN_SOURCE,id:thread}],actor:{source:WEIXIN_SOURCE,id:peer},
     human:true,addressed:'direct',at:iso,text,
-    channel:{source:WEIXIN_SOURCE,thread,address:{peer,messageId:id,...contextToken?{contextToken}:{}}},
-    meta:{peer,messageId:id,direct:true,...contextToken?{contextToken}:{}}}
+    channel:{source:WEIXIN_SOURCE,thread,address:{peer,messageId:id,...contextToken?{contextToken}:{},
+      ...accountHash?{accountHash}:{},...expiresAt?{expiresAt}:{}}},
+    meta:{peer,messageId:id,direct:true,...contextToken?{contextToken}:{},
+      ...accountHash?{accountHash}:{},...expiresAt?{expiresAt}:{}}}
 }
 /** Stable ID for the Outbox message: a retry reuses it instead of generating a fresh client_id. */
 export function clientMessageId(outboxId:string):string {

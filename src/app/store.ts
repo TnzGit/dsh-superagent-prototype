@@ -15,7 +15,9 @@ export interface TimelinePlace { at: string; id: string }
 /** Why a message was dropped: its conversation can never receive it (`channelGone`), or its Source no longer listens to it (`channelIgnored`). */
 export type DropReason = 'channelGone' | 'channelIgnored'
 /** Outbound message receipt tracked in the outbox from the moment it is queued (`pending`, `sent`, or `dropped`); delivery attempt counts live on its `reply` effect. */
-export interface Receipt extends OutboundMessage { status: ReplyStatus; dropped?: { at: string; reason: DropReason }; singleSendAttemptAt?: string }
+/** Durable fail-closed review: pending is intentional and has no automatic retry effect. */
+export interface OutboxReview { at: string; reason: string }
+export interface Receipt extends OutboundMessage { status: ReplyStatus; dropped?: { at: string; reason: DropReason }; singleSendAttemptAt?: string; review?: OutboxReview }
 /** A dropped outbound message receipt, with the timestamp and reason it was dropped. */
 export type Dropped = Receipt & { dropped: { at: string; reason: DropReason } }
 /** Saved settings snapshot with the policy version and ticket notifications it produced (`internal` saves have no origin). */
@@ -267,19 +269,27 @@ export class Store implements Repositories {
       const receipt: Receipt = { ...message, status: 'pending' }
       return Number(this.db.prepare('INSERT OR IGNORE INTO outbox (id, value) VALUES (?, ?)').run(message.id, JSON.stringify(receipt)).changes) > 0
     },
-    /** Claim a unique external attempt BEFORE the first C5 relay Weixin HTTP send.
-     * This persists across crashes and retries; an ambiguous send remains pending
-     * for manual review, not a second external delivery.
+    /** Durable one-shot claim for ALL native Weixin outbound kinds, before any external request.
+     * In particular ordinary replies and acknowledgements MUST NOT retry an ambiguous acceptance.
      */
     claimOneShotSend: (id: string): boolean => {
-      if (!/^dsh-3080-reply-[a-f0-9]{40}$/.test(id)) return false
       const changed = this.db.prepare(`UPDATE outbox SET value=json_set(value, '$.singleSendAttemptAt', ?)
         WHERE id=? AND json_extract(value, '$.status')='pending'
-          AND json_extract(value, '$.kind')='reply'
           AND json_extract(value, '$.channel.source')='weixin'
-          AND json_extract(value, '$.singleSendAttemptAt') IS NULL`)
+          AND json_extract(value, '$.singleSendAttemptAt') IS NULL
+          AND json_extract(value, '$.review') IS NULL`)
         .run(new Date().toISOString(), id)
       return Number(changed.changes)===1
+    },
+    /** Hold a receipt for an operator's manual reconciliation, never for automatic resend.
+     * Reasons are fixed local codes: never persist provider errors, credentials or context tokens here.
+     */
+    holdForReview: (id: string, reason: string): void => {
+      this.db.prepare(`UPDATE outbox SET value=json_set(value, '$.review', json(?))
+        WHERE id=? AND json_extract(value, '$.status')='pending'
+          AND json_extract(value, '$.channel.source')='weixin'
+          AND json_extract(value, '$.review') IS NULL`)
+        .run(JSON.stringify({ at: new Date().toISOString(), reason }), id)
     },
     /**
      * Marks a pending receipt as sent or dropped (with drop reason and timestamp), recreating the receipt if the message

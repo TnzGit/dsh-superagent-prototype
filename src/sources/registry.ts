@@ -3,7 +3,7 @@ import type { ChannelRef, OutboundMessage, ScopeResult, SourceScope, Trigger } f
 import type { Commands } from '../infra/commands.ts'
 import { HealthBoard, type HealthEntry } from '../infra/health.ts'
 import { AdmissionTableSchema, type Settings } from '../policy.ts'
-import type { ChannelLink, ChannelLinks, SourceInstance, SourceKind, TriggerContext, VariableSpec } from './kind.ts'
+import type { ChannelLink, ChannelLinks, SourceInstance, SourceKind, SourceSendPreflight, TriggerContext, VariableSpec } from './kind.ts'
 
 
 /**
@@ -87,6 +87,12 @@ export class SourceRegistry implements SourceScope {
       const instance = this.resolve(kind, settings.sources[kind.kind])
       return kind.environment && instance.enabled ? [{ kind, environment: kind.environment, config: instance.config }] : []
     })
+  }
+  /** Resolve a Source's safe pre-network delivery gate; absent plugins wait without consuming an attempt. */
+  async prepareSend(message: OutboundMessage): Promise<SourceSendPreflight> {
+    const kind = this.kinds.get(message.channel.source)
+    if (!kind) return { status: 'waiting' }
+    return await kind.channel?.preflight?.(message) ?? { status: 'ready' }
   }
   /**
    * Sends a message idempotently through its Channel's kind; returns `'waiting'` while the kind is not installed, or
