@@ -80,7 +80,9 @@
     "agent-handoff/receipts/online/LO-20261121-048-done.md",
     "agent-reports/REPORT-ol048-i3-weixin-fake-offline.md",
     "agent-handoff/HANDOFF-2026-11-24-OL049-I3-UNIFIED-FAKE-VERTICAL-OFFLINE.md",
-    "agent-handoff/messages/to-local/2026-11-24-ol049-i3-unified-fake-vertical-offline.md"
+    "agent-handoff/messages/to-local/2026-11-24-ol049-i3-unified-fake-vertical-offline.md",
+    "agent-handoff/receipts/online/LO-20261124-049-done.md",
+    "docs/017-i3-native-weixin-prelive-fault-gates.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -232,7 +234,7 @@
   "next_stage": {
     "status": "REAL_I3_GATED_REMOTE_OFFLINE_REVIEW_ONLY",
     "last_task": "OL-20261124-049",
-    "remote_work": "OFFLINE_NATIVE_OUTBOX_DELIVERY_AND_CONSENT_FAILURE_REVIEW",
+    "remote_work": "OFFLINE_INSTALLED_SOURCE_OUTBOX_AT_MOST_ONCE_AND_ACCOUNT_BINDING_PRELIVE_DESIGN_TESTS",
     "real_weixin": "FORBIDDEN_WITHOUT_SEPARATE_OPERATOR_DECISION",
     "real_source_apply": "FORBIDDEN_WITHOUT_SEPARATE_GATES_AND_AUTHORIZATION",
     "auto_next_task": "FORBIDDEN",
@@ -343,8 +345,8 @@
     "local_execution_requires_trusted_operator_owned_policy": true,
     "auto_dispatch": "REMAINS_DISABLED_UNTIL_VERIFIED_LOCALLY",
     "remote_automation": "REMAINS_OPERATOR_PAUSED",
-    "no_new_OL_task_yet": false,
-    "current_offline_task": "OL-20261121-048"
+    "no_new_OL_task_yet": true,
+    "current_offline_task": null
   },
   "integration_i3": {
     "status": "UNIFIED_FAKE_VERTICAL_LOCAL_OFFLINE_ACCEPTED_REAL_I3_NOT_ACCEPTED",
@@ -374,6 +376,20 @@
     "unified_native_weixin_vertical_variants": 2,
     "integrated_fake_durable_outbox": true,
     "http_backoff_rotation_abort_tests": true,
-    "local_mac_ol049": "ALL_OFFLINE_PASS"
+    "local_mac_ol049": "ALL_OFFLINE_PASS",
+    "latest_remote_hardening": {
+      "source_fix_commit": "6d69a794d08a742a39e62a5c6d3bef508fc3f9c9",
+      "verified_head_sha": "676bc321ae33bc691b64d17f90a9789f5683a2b3",
+      "ci_push_run_id": 45321974373,
+      "ci_pr_run_id": 45321979189,
+      "ci_status": "SUCCESS_BOTH_3_OF_3",
+      "fake_poll_cases": 17,
+      "full_vitest": 1269,
+      "node_tests": 255,
+      "focus_tests": 44,
+      "proxy_tests": 5,
+      "scope": "REMOTE_OFFLINE_ONLY",
+      "real_i3_accepted": false
+    }
   }
 }
