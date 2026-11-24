@@ -1,7 +1,7 @@
 /** Native Weixin Source: iLink polling and replies, directly inside DSH. Never loads OpenClaw. */
 import { createHash } from 'node:crypto'
-import { closeSync, constants as fsConstants, fstatSync, openSync, readFileSync } from 'node:fs'
-import { isAbsolute } from 'node:path'
+import { closeSync, constants as fsConstants, fstatSync, openSync, readFileSync, realpathSync } from 'node:fs'
+import { dirname, isAbsolute } from 'node:path'
 import type { Context } from '@deepseek-ai/cordis'
 import { z } from 'zod'
 import type { OutboundMessage, Trigger } from '../core/index.ts'
@@ -21,9 +21,42 @@ const IDENTITY=z.object({id:z.string().trim().min(1).max(256),name:z.string().tr
 const PolicySchema=z.object({allowed:z.array(IDENTITY).default([])}).strict()
 
 /** Credentials must live in an operator-controlled file outside this repository and existing OpenClaw profiles. */
+/**
+ * Portable no-follow walk over every ancestor directory of the credentials file.
+ * The path prefix is resolved once with realpath first: macOS ships symlinked system prefixes (for example
+ * /var -> /private/var) that POSIX open() resolves regardless, so a literal no-follow walk of the raw path
+ * is not portable. After resolution each REAL ancestor is opened with O_NOFOLLOW|O_DIRECTORY and checked on
+ * the SAME descriptor via fstat: a real directory, writable only by its owner (group/world write bits clear,
+ * or the POSIX sticky bit 0o1000 set so non-owners cannot rename entries they do not own — the portable shape
+ * of /tmp on both Linux and macOS), and owned by the current uid or root (root is the trusted system owner).
+ * Known residual limitation (TOCTOU): between closing an ancestor fd and opening the final file, an attacker
+ * who owns that ancestor (or root) can still swap the directory; Node exposes no openat() to pin the whole
+ * chain. Tests record this as an unsolved, bounded threat.
+ */
+function assertCredentialAncestors(file: string): void {
+  let dir: string
+  try { dir = realpathSync(dirname(file)) }
+  catch { throw Error('Weixin credentials ancestor directory cannot be resolved: '+dirname(file)) }
+  for (;;) {
+    let fd: number
+    try { fd = openSync(dir,fsConstants.O_RDONLY|fsConstants.O_NOFOLLOW|(fsConstants.O_DIRECTORY ?? 0)) }
+    catch { throw Error('Weixin credentials ancestor directory cannot be opened without following symlinks: '+dir) }
+    try {
+      const stat=fstatSync(fd)
+      const sticky=stat.mode&0o1000
+      if(!stat.isDirectory() || (typeof process.getuid==='function' && stat.uid!==process.getuid() && stat.uid!==0) ||
+        ((stat.mode&(fsConstants.S_IWGRP|fsConstants.S_IWOTH))!==0 && !sticky))
+        throw Error('Weixin credentials ancestors must be operator/root-owned directories, not group or world writable unless sticky')
+    } finally { closeSync(fd) }
+    const parent=dirname(dir)
+    if(parent===dir)break
+    dir=parent
+  }
+}
 export function readNativeCredentials(file=process.env.DSH_WEIXIN_NATIVE_CREDENTIALS_FILE): WeixinCredentials|undefined {
   if(!file)return undefined
   if(!isAbsolute(file)) throw Error('Weixin credentials path must be absolute')
+  assertCredentialAncestors(file)
   // One open file descriptor, O_NOFOLLOW on the final component, and fstat BEFORE read.
   // Do not lstat(path) and later reopen(path): that permits a replacement race.
   const fd=openSync(file,fsConstants.O_RDONLY|fsConstants.O_NOFOLLOW)
