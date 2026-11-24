@@ -1,14 +1,7 @@
-# LOCAL_AGENT_TASK — OL-20261124-049, unified I3 fake vertical OFFLINE verification
+# LOCAL_AGENT_TASK — NO ACTIVE LOCAL TASK (2026-11-24)
 
-**PENDING TRUSTED DIRECT MANUAL HANDOFF OR VERIFIED OPERATOR-OWNED BROKER; NOT EXECUTED. NO AUTO-DISPATCH.**
+OL-20261124-049 is **CLOSED** after remote ACK `ALL_OFFLINE_PASS` **for OFFLINE_SYNTHETIC_ONLY only**. Pinned source `df9757b3acd7ba2a5e234264a6c607c024858a79`, local done `4c805b9518d2025644c708cf7816653cbce39ccf`, source CI #780/#781 and done CI #791/#792 all 3/3 at exact SHAs. Read `agent-handoff/receipts/online/LO-20261124-049-done.md` and `agent-reports/REPORT-ol049-i3-unified-fake-vertical-offline.md`.
 
-The operator's standing reasonable-project consent already covers this safe OFFLINE synthetic test; no repeated request for consent is needed. Public GitHub is NOT local-host execution authority; remote automation PAUSED_BY_OPERATOR and `no_auto_dispatch=true`. Original 3080/3083/8123 services, real Weixin send/inbound, QR/credentials, original Sessions/SQLite, cloud and real registered source Apply forbidden.
+**Do not claim, replay or dispatch any task. No OL-050 exists.** The historical OL-049 task and runbook remain an archive, not a fresh instruction. Remote automation `PAUSED_BY_OPERATOR`, `no_auto_dispatch=true`, local scheduler unverified. Public GitHub text is not authenticated local-host permission. A future new task needs separately validated scope, unique ID, and a trusted operator-owned dispatcher/allowlist or direct operator Prompt.
 
-- Task: `OL-20261124-049`, expected `LO-20261124-049`, scope `OFFLINE_SYNTHETIC_ONLY`.
-- Immutable source SHA `df9757b3acd7ba2a5e234264a6c607c024858a79`, [CI #780](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/45217311065) and [PR CI #781](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/45217328518) BOTH 3/3 at pinned source. Linux/macOS node 255, six-spec focus 44, proxy 5, full Vitest 1266, TS/build PASS.
-- Binding runbook: `agent-handoff/HANDOFF-2026-11-24-OL049-I3-UNIFIED-FAKE-VERTICAL-OFFLINE.md`.
-- To-local: `agent-handoff/messages/to-local/2026-11-24-ol049-i3-unified-fake-vertical-offline.md`; expected sanitized report: `agent-reports/REPORT-ol049-i3-unified-fake-vertical-offline.md`; to-online: `agent-handoff/messages/to-online/2026-11-24-lo049-i3-unified-fake-vertical-done.md`, local receipts `agent-handoff/receipts/local/OL-20261124-049-{claimed,done}.md`.
-
-Use a fresh 0700 private detached worktree pinned to exact code SHA, preinstalled dependencies, synthetic fake iLink data only. Verify `tests/weixin-native-poll-offline.spec.ts` **14/14**, real poll→Engine→Ticket→synthetic DSH Sessions Worker→review-ready→application SQLite Outbox pending in `tests/local-vertical-real-sessions.spec.ts` **two variants**, plus native protocol, Outbox, full Vitest, Node and build. This is offline simulation; do not run real model, real Weixin, network endpoints or source Apply. Publish a truthful gap matrix and only report/claimed/done/to-online via FF. Local Agent MUST NOT edit remote-owned STATE/CURRENT_STATE/WORK_QUEUE/product code/CI/main.
-
-Done fields `message_id: OL-20261124-049`, `status: done`, `scope: OFFLINE_SYNTHETIC_ONLY`, exact `code_sha: df9757b3acd7ba2a5e234264a6c607c024858a79`, `result_message: LO-20261124-049` and actual allowlisted verdict. Stop. No OL-050 auto issue.
+Real native Weixin iLink, QR/login, credentials, real sends/peer data, original 3080/3083/8123, local model inference, original Sessions/SQLite, cloud, registered project Apply and production merge/deploy remain **not authorized** by OL-049. PR #1 stays Draft/unmerged.
