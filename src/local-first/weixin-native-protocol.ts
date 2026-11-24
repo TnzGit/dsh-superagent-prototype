@@ -8,6 +8,8 @@ export const DEFAULT_BASE = 'https://ilinkai.weixin.qq.com'
 export const WEIXIN_CLIENT_VERSION = '2.4.10'
 /** Conservative application-side freshness ceiling; not a guarantee of Tencent token validity. */
 export const WEIXIN_REPLY_MAX_AGE_MS = 60 * 60 * 1000
+/** Conservative application-side response body ceiling; NOT an official Tencent iLink limit. */
+export const WEIXIN_MAX_RESPONSE_BYTES = 4 * 1024 * 1024
 export interface WeixinCredentials { token: string; baseUrl: string; botId?: string }
 export interface UpdatePage { msgs?: unknown[]; get_updates_buf?: string; longpolling_timeout_ms?: number; ret?: number; errcode?: number; errmsg?: string }
 /** Error code from an iLink response; plain field works with Node's TypeScript strip-only loader. */
@@ -38,6 +40,38 @@ function assertOk(result: {ret?: number;errcode?:number;errmsg?:string},action: 
   const code=Number(result.ret ?? result.errcode ?? 0)
   if(code!==0 || Number(result.errcode ?? 0)!==0) throw new WeixinProtocolError('Weixin '+action+' refused: '+String(code),code)
 }
+/** Reads the response body off the stream with the application byte cap enforced, then parses it as strict UTF-8 JSON. Never trusts content-length alone: it is attacker-controlled, so the read loop is the real bound. An oversized body is refused BEFORE it is parsed, so a failed page never yields a cursor or items. */
+async function strictJsonBody(res: Response): Promise<UpdatePage> {
+  const declared = Number(res.headers.get('content-length') ?? NaN)
+  if (Number.isFinite(declared) && declared > WEIXIN_MAX_RESPONSE_BYTES)
+    throw new WeixinProtocolError('Weixin response body exceeds the application cap')
+  const reader = res.body?.getReader()
+  if (!reader) return JSON.parse(await res.text()) as UpdatePage
+  const chunks: Uint8Array[] = []
+  let total = 0
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > WEIXIN_MAX_RESPONSE_BYTES) {
+        await reader.cancel().catch(() => {})
+        throw new WeixinProtocolError('Weixin response body exceeds the application cap')
+      }
+      chunks.push(value)
+    }
+  } catch (error) {
+    // An abort or a transport cut mid-body: release the lock so no pending read outlives the page.
+    try { reader.releaseLock() } catch { /* already released */ }
+    throw error
+  }
+  const bytes = new Uint8Array(total)
+  let offset = 0
+  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength }
+  // Fatal decoding rejects non-Unicode payloads instead of silently replacing them.
+  const text = new TextDecoder('utf-8', { fatal: true }).decode(bytes)
+  return JSON.parse(text) as UpdatePage
+}
 /** Poll keeps the raw server cursor opaque. Caller persists it only AFTER all Triggers are durably received. */
 export async function receivePage(creds: WeixinCredentials, cursor: string, signal: AbortSignal,
   fetcher: typeof fetch=fetch, waitMs=35_000): Promise<{messages:unknown[];cursor:string;waitMs:number}> {
@@ -50,7 +84,7 @@ export async function receivePage(creds: WeixinCredentials, cursor: string, sign
       body:JSON.stringify({get_updates_buf:cursor,base_info:metadata()}),signal:combined
     })
     if(!res.ok)throw new WeixinProtocolError('Weixin poll HTTP '+res.status)
-    page=await res.json() as UpdatePage
+    page=await strictJsonBody(res)
   } catch(e) {
     if(signal.aborted)throw e
     if(timeout.aborted)return {messages:[],cursor,waitMs}
@@ -110,6 +144,6 @@ export async function sendText(creds:WeixinCredentials, outboxId:string, peer:st
     signal:AbortSignal.timeout(60_000)
   })
   if(!res.ok)throw new WeixinProtocolError('Weixin send HTTP '+res.status)
-  const body=await res.json() as {ret?:number;errcode?:number;errmsg?:string}
+  const body=await strictJsonBody(res) as {ret?:number;errcode?:number;errmsg?:string}
   assertOk(body,'send')
 }
