@@ -162,6 +162,7 @@ const stateView = (): StateView => ({
   masterId: 'master', paused: server.settings.paused,
   // The panel does not read health; the service script does.
   health: {},
+  weixinOutboxReview: { total: 0, reasons: {} },
 })
 const settingsView = (): ApiResponse<'GET settings'> => ({
   policyVersion: 'abcdef1234567890',
