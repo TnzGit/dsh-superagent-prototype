@@ -84,6 +84,30 @@ it('installed Source sends one safe reply with its original credential-bound tok
   expect(replies).toHaveLength(1)
 })
 
+it('installed native send that was accepted but loses its response is never sent twice',async()=>{
+  const outbound=message('native-ambiguous-response','acknowledgement',trigger().channel!)
+  vi.mocked(globalThis.fetch).mockImplementationOnce(async(input:unknown,init:RequestInit={})=>{
+    if(String(input)!=='https://ilinkai.weixin.qq.com/ilink/bot/sendmessage')
+      throw Error('OFFLINE EGRESS TRIPWIRE: '+String(input))
+    replies.push({url:String(input),auth:String((init.headers as Record<string,string>)?.Authorization),
+      body:JSON.parse(String(init.body)) as Record<string,unknown>})
+    // The fake endpoint accepted the client_id, then the connection failed.
+    throw Error('synthetic accepted-then-EOF')
+  })
+  h.runtime.outbox.send(outbound)
+  await h.runtime.sendReplies()
+  expect(replies).toHaveLength(1)
+  expect(h.runtime.store.receipts.get(outbound.id)).toMatchObject({
+    status:'pending',review:{reason:'ambiguous_send'}
+  })
+  const audit=new Store(join(h.directory,'orchestrator.sqlite'))
+  try{expect(audit.receipts.get(outbound.id)?.singleSendAttemptAt).toBeTruthy()}
+  finally{audit.close()}
+  await at(10_000)
+  expect(replies).toHaveLength(1)
+  expect(h.runtime.outbox.status(outbound.id)).toBe('pending')
+})
+
 it('account A pending receipt is held for review after A-to-B rotation, never sent with B credentials',async()=>{
   const old=message('old-account-A', 'acknowledgement',trigger(TOKEN_A).channel!)
   h.runtime.outbox.send(old)
