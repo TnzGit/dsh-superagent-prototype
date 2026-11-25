@@ -154,7 +154,11 @@ export function parseRealApplyCapability(raw: unknown): RealApplyCapability {
   }) as RealApplyCapability
 }
 
-/** Write-then-rename with fsync of file AND directory: the marker survives a process kill. */
+/** Write-then-rename with fsync of file AND directory: the marker survives a process kill.
+ * Exported for the OL-054 operator connector's durable preview/receipt records (same primitive). */
+export function durablePrivateMarker(path: string, body: string): void {
+  durableMarker(path, body)
+}
 function durableMarker(path: string, body: string): void {
   const temporary = path + '.writing-' + process.pid
   const fd = openSync(temporary, 'w', 0o600)
@@ -241,8 +245,14 @@ export function issueRollbackCapability(options: {
   })
 }
 
-/** Distinct per-transaction journal directory; apply and rollback never share one. */
-export function nativeTransactionDirectory(journalDirectory: string, capability: RealApplyCapability): string {
+/** Distinct per-transaction journal directory; apply and rollback never share one.
+ * A multi-file capability (OL-054 operator preview bound to a whole reviewed plan) runs one
+ * change per file, so each file gets its OWN durable transaction directory under the same
+ * transaction id; single-file plans keep the exact OL-053 directory name. */
+export function nativeTransactionDirectory(journalDirectory: string, capability: RealApplyCapability, changePath?: string): string {
+  if (capability.paths.length > 1 && changePath !== undefined) {
+    return join(journalDirectory, 'tx-' + capability.transactionId + '-' + createHash('sha256').update(changePath).digest('hex').slice(0, 16))
+  }
   return join(journalDirectory, 'tx-' + capability.transactionId)
 }
 
@@ -364,6 +374,15 @@ export function runNativeRealApply(options: NativeRunOptions): {
     capabilityFile: options.capabilityFile, action: options.action, plan: options.plan,
     projectId: options.projectId, rootFingerprint: options.rootFingerprint, now: options.now
   })
+  return { ...runVerifiedNativeChange(capability, options, true), capability }
+}
+
+/** One verified change against an ALREADY-verified capability. The consumed marker is
+ * written only when `consumeCapability` is true, so a multi-file OL-054 operator plan
+ * consumes its one-shot capability once for the whole transaction, never per file. */
+function runVerifiedNativeChange(capability: RealApplyCapability, options: NativeRunOptions, consumeCapability: boolean): {
+  stdout: string; transactionDirectory: string; consumedMarker: string; journal: Record<string, string>; observed: ObservedTarget | 'MISSING'
+} {
   const change = options.change
   if (capability.paths.length !== options.plan.changes.length ||
     !capability.paths.includes(change.path)) throw new Error('Change is outside the capability allowlist')
@@ -382,7 +401,7 @@ export function runNativeRealApply(options: NativeRunOptions): {
     throw new Error('Native add target already exists; refuse to clobber')
   }
 
-  const transactionDirectory = nativeTransactionDirectory(options.journalDirectory, capability)
+  const transactionDirectory = nativeTransactionDirectory(options.journalDirectory, capability, change.path)
   if (existsSync(transactionDirectory)) throw new Error('Transaction journal directory already exists; no silent retry')
   mkdirSync(transactionDirectory, { mode: 0o700 })
 
@@ -405,7 +424,7 @@ export function runNativeRealApply(options: NativeRunOptions): {
   }
 
   const marker = join(options.journalDirectory, 'consumed-' + capability.capabilityId)
-  durableMarker(marker, JSON.stringify({
+  if (consumeCapability) durableMarker(marker, JSON.stringify({
     version: 1, capabilityId: capability.capabilityId, action: capability.action,
     transactionId: capability.transactionId, pid: process.pid, consumedAt: new Date().toISOString()
   }) + '\n')
@@ -429,8 +448,63 @@ export function runNativeRealApply(options: NativeRunOptions): {
     throw new Error('Native apply rejected (' + capability.transactionId + '): ' + detail)
   }
   if (!outcome.stdout.startsWith('OK APPLIED')) throw new Error('Unexpected native helper output: ' + outcome.stdout.slice(0, 200))
-  return { stdout: outcome.stdout, transactionDirectory, consumedMarker: marker, capability,
+  return { stdout: outcome.stdout, transactionDirectory, consumedMarker: marker,
     journal: readNativeJournal(transactionDirectory), observed }
+}
+
+export interface NativePlanRunOptions {
+  helperBinary: string
+  journalDirectory: string
+  projectRoot: string
+  capabilityFile: string
+  action: RealApplyAction
+  plan: InspectedApplyPlan
+  projectId: string
+  rootFingerprint: string
+  /** After-image bytes keyed by change path (add/modify); delete needs no entry. */
+  afterImages: Readonly<Record<string, Uint8Array>>
+  timeoutMs?: number
+  now?: () => number
+}
+
+/**
+ * OL-054: run EVERY change of an inspected multi-file plan under ONE verified one-shot
+ * capability. The capability is verified once, consumed exactly once (durable marker before
+ * the first helper spawn), and each file gets its own durable transaction directory.
+ * A rejected change stops the sequence immediately — no silent retry, no partial replay.
+ */
+export function runNativeRealApplyPlan(options: NativePlanRunOptions): {
+  capability: RealApplyCapability; consumedMarker: string
+  results: ReadonlyArray<{ change: Readonly<ProposedApplyChange>; stdout: string; transactionDirectory: string; journal: Record<string, string>; observed: ObservedTarget | 'MISSING' }>
+} {
+  const capability = verifyRealApplyCapability({
+    journalDirectory: options.journalDirectory, projectRoot: options.projectRoot,
+    capabilityFile: options.capabilityFile, action: options.action, plan: options.plan,
+    projectId: options.projectId, rootFingerprint: options.rootFingerprint, now: options.now
+  })
+  const consumedMarker = join(options.journalDirectory, 'consumed-' + capability.capabilityId)
+  if (existsSync(consumedMarker)) throw new Error('Real Apply capability already consumed; no silent retry')
+  durableMarker(consumedMarker, JSON.stringify({
+    version: 1, capabilityId: capability.capabilityId, action: capability.action,
+    transactionId: capability.transactionId, pid: process.pid,
+    changes: capability.paths.length, consumedAt: new Date().toISOString()
+  }) + '\n')
+  const results: Array<{ change: Readonly<ProposedApplyChange>; stdout: string; transactionDirectory: string; journal: Record<string, string>; observed: ObservedTarget | 'MISSING' }> = []
+  for (const change of options.plan.changes) {
+    const afterImage = change.afterSha256 === null ? null : options.afterImages[change.path]
+    if (change.afterSha256 !== null && afterImage === undefined)
+      throw new Error('Native apply/rollback requires the after-image bytes')
+    const single = runVerifiedNativeChange(capability, {
+      helperBinary: options.helperBinary, journalDirectory: options.journalDirectory,
+      projectRoot: options.projectRoot, capabilityFile: options.capabilityFile,
+      action: options.action, plan: options.plan, projectId: options.projectId,
+      rootFingerprint: options.rootFingerprint, change,
+      afterImage, timeoutMs: options.timeoutMs, now: options.now
+    }, false)
+    results.push({ change, stdout: single.stdout, transactionDirectory: single.transactionDirectory,
+      journal: single.journal, observed: single.observed })
+  }
+  return { capability, consumedMarker, results: Object.freeze(results) }
 }
 
 function helperSpec(capability: RealApplyCapability, fields: Record<string, string | undefined>): string {
@@ -467,7 +541,7 @@ export function classifyNativeRealApplyRecovery(options: {
 }): { classification: RecoveryClassification; stdout: string; freezeMarker?: string; transactionDirectory: string } {
   const capability = parseRealApplyCapability(JSON.parse(readFileSync(options.capabilityFile, 'utf8')))
   const journalDirectory = assertPrivateJournalRoot(options.journalDirectory, options.projectRoot)
-  const transactionDirectory = nativeTransactionDirectory(journalDirectory, capability)
+  const transactionDirectory = nativeTransactionDirectory(journalDirectory, capability, options.change.path)
   const change = options.change
   const spec = helperSpec(capability, {
     tx_dir: transactionDirectory, path: change.path, action: change.action,
