@@ -154,3 +154,49 @@ test('send refuses a malformed or oversized response body without trusting conte
   await assert.rejects(sendText(creds,'outbox-9','peer-alice','reply-token','OK',async()=>new Response('{"ret":0}',{
     headers:{'content-length':String(WEIXIN_MAX_RESPONSE_BYTES+1)}})),error=>/application cap/.test(error.message))
 })
+
+// OL-20261125-053 I3: deterministic classification of send-side iLink failures at the pure adapter.
+// Every failure must REJECT (never resolve as success); the durable Outbox turns any post-claim
+// rejection into an ambiguous_send hold, so the adapter itself must never report acceptance.
+const statusFake=(status,requests=[])=>async(url,init)=>{
+  tripwire(url)
+  requests.push({url,init})
+  return new Response(JSON.stringify({ret:0}),{status,headers:{'content-type':'application/json'}})
+}
+test('send classifies HTTP 401/429/5xx as deterministic protocol failures, never success',async()=>{
+  for(const status of [401,429,500,503]){
+    const requests=[]
+    await assert.rejects(sendText(creds,'outbox-status','peer-alice','reply-token','OK',statusFake(status,requests)),
+      error=>error.name==='WeixinProtocolError' && error.message==='Weixin send HTTP '+status)
+    // One attempt per classification: the adapter never re-issues the request itself.
+    assert.equal(requests.length,1)
+  }
+})
+test('send refuses a server refusal body with its exact code and no client-side retry',async()=>{
+  const requests=[]
+  const refuse=fake({ret:-2,errcode:40001,errmsg:'invalid'},requests)
+  await assert.rejects(sendText(creds,'outbox-refused','peer-alice','reply-token','OK',refuse),
+    error=>error.name==='WeixinProtocolError' && error.code===-2 && /send refused/.test(error.message))
+  assert.equal(requests.length,1)
+  // errcode!=0 with ret==0 is still a refusal (assertOk trusts both fields), and the
+  // numeric code reported is ret's value: the message alone proves the refusal, never success.
+  await assert.rejects(sendText(creds,'outbox-refused','peer-alice','reply-token','OK',fake({ret:0,errcode:40001})),
+    error=>error.name==='WeixinProtocolError' && /send refused/.test(error.message))
+})
+test('poll classifies HTTP 401/429/5xx as deterministic protocol failures with no cursor invention',async()=>{
+  for(const status of [401,429,500,503]){
+    const requests=[]
+    await assert.rejects(receivePage(creds,'old-cursor',new AbortController().signal,statusFake(status,requests),1000),
+      error=>error.name==='WeixinProtocolError' && error.message==='Weixin poll HTTP '+status)
+    assert.equal(requests.length,1)
+  }
+})
+test('a non-2xx response body is never parsed as an accepted page or accepted send',async()=>{
+  // 5xx with a body that would otherwise look like success must still fail.
+  await assert.rejects(receivePage(creds,'old-cursor',new AbortController().signal,
+    async()=>new Response(JSON.stringify({ret:0,msgs:[received],get_updates_buf:'new-cursor'}),{status:503})),
+    error=>error.message==='Weixin poll HTTP 503')
+  await assert.rejects(sendText(creds,'outbox-body','peer-alice','reply-token','OK',
+    async()=>new Response(JSON.stringify({ret:0}),{status:401})),
+    error=>error.message==='Weixin send HTTP 401')
+})
