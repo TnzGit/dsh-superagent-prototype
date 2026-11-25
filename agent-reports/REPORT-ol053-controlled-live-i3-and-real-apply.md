@@ -30,7 +30,10 @@ held only in the local private vault.
 - SubC: separate descriptor-relative no-follow native Apply helper (`research/real-apply-helper.c`,
   1130 lines) + one-use capability driver (`src/local-first/real-apply-native-driver.ts`, 506 lines)
   + 24 adversarial tests. Commits `13e986f`, `884818a`, `833db8d`.
-- Lead merge (workflow node-test list conflict resolved by union): `324325e` = FINAL IMPLEMENTATION SHA.
+- Lead merge (workflow node-test list conflict resolved by union): `324325e`.
+- Linux portability fix (done-commit CI #861/#862 exposed GCC `-Werror=misleading-indentation` and
+  the ancestor-ABA inode-reuse assumption): `7cb8405` = FINAL IMPLEMENTATION SHA (pushed after the
+  publication commit; the done receipt records it).
 - Verification at merge HEAD on the actual operator macOS (macOS 26.3 ARM64, clang 21, Node 25.9.0):
   CI-exact 29-file node list **310/310** (exit 0; both new suites executed: helper 14 + capability 10);
   focus Vitest set **156/156**; FULL Vitest **71 files 1357/1357** (exit 0); `pnpm check` exit 0;
