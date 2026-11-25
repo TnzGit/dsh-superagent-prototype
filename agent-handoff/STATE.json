@@ -138,8 +138,8 @@
     "task_id": "OL-20261125-054",
     "status": "PENDING_ONE_TRUSTED_DIRECT_OPERATOR_INSTALLED_CONVERGENCE",
     "scope": "CONTROLLED_INSTALLED_I3_AND_PRIVATE_APPLY_OPERATOR_DIRECT",
-    "code_sha": "02d08e2aa2a81e5466746a1a84edae2808f61b15",
-    "baseline_source_sha": "c402b48276b74eba0ecf0a697cf09d1138a0f92e",
+    "code_sha": "10718a67e17667579818af870246451bd83d564b",
+    "baseline_source_sha": "10718a67e17667579818af870246451bd83d564b",
     "host_live_grant": "OPERATOR_SCOPED_CONDITIONAL",
     "operator_approval_received": true,
     "installed_i3_accepted": false,
@@ -150,9 +150,9 @@
     "real_apply_transaction_budget": 1,
     "max_concurrent_subagents": 3,
     "local_source_patch_exception": true,
-    "source_ci_push_run_id": 45621527152,
-    "source_ci_pr_run_id": 45621541411,
-    "source_ci_status": "VERIFY_FINAL_3_OF_3_BEFORE_CLAIM",
+    "source_ci_push_run_id": 45622141308,
+    "source_ci_pr_run_id": 45622155036,
+    "source_ci_status": "VERIFY_877_878_BOTH_SUCCESS_3_OF_3_BEFORE_CLAIM",
     "requires_online_ack_between_phases": false,
     "final_artifact": "agent-reports/REPORT-ol054-installed-runtime-private-apply.md",
     "no_auto_dispatch": true
@@ -269,7 +269,7 @@
   "next_stage": {
     "status": "OL054_OPERATOR_AUTHORIZED_INSTALLED_3083_AND_PRIVATE_APPLY_ONE_BATCH_PENDING",
     "last_task": "OL-20261125-053",
-    "remote_work": "OL053_ACKED_AND_SNAPSHOT_REREGISTRATION_DOCUMENTED_PREPARING_OL054_INSTALLED_CONVERGENCE",
+    "remote_work": "OL053_ACKED_DOCS_FIXED_DETERMINISTIC_ABA_SOURCE_TEST_PIN_READY_OL054",
     "real_weixin": "PILOT_PASS_INSTALLED_CUTOVER_CONDITIONALLY_AUTHORIZED",
     "real_source_apply": "REAL_REGISTERED_TEST_PASS_PRODUCT_PRIVATE_FLOW_CONDITIONALLY_AUTHORIZED",
     "auto_next_task": "FORBIDDEN",
@@ -427,7 +427,8 @@
       "real_model_sessions_budget": 2,
       "real_apply_transaction_budget": 1,
       "public_github_not_execution_authority": true,
-      "auto_dispatch": false
+      "auto_dispatch": false,
+      "source_pin_sha": "10718a67e17667579818af870246451bd83d564b"
     }
   },
   "integration_i3": {
