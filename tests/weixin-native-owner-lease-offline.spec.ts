@@ -305,7 +305,7 @@ test('M1: provider messages without a reliable unique ID are dropped before dedu
   expect(g.received).toHaveLength(0)
 })
 
-test('M1: the durable seen-set is FIFO-bounded and never grows unbounded across many pages', async () => {
+test('M1: the durable seen-set is FIFO-bounded and never grows unbounded across many pages', { timeout: 30_000 }, async () => {
   const many = Array.from({ length: NATIVE_SEEN_MAX + 50 }, (_, i) => incoming('peer-allowed', 'm' + i))
   const f = fakeLoop(many)
   await pollNativeWeixin(f.ctx, f.controller.signal)

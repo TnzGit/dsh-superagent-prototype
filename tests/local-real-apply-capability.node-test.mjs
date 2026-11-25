@@ -11,7 +11,7 @@ import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
 import { createHash } from 'node:crypto'
 import {
-  chmodSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync,
+  chmodSync, existsSync, linkSync, lstatSync, mkdirSync, mkdtempSync, renameSync,
   readFileSync, realpathSync, rmSync, symlinkSync, writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
@@ -173,11 +173,10 @@ test('verify binds the capability to project, plan, principal uid, root identity
     writeFileSync(publicText, '"looks like a capability"\n', { mode: 0o600 })
     assert.throws(() => verifyRealApplyCapability({ ...base, capabilityFile: publicText }), { message: 'Invalid capability object' })
     // registered project identity change since issuance (root ABA).
-    // A decoy allocation consumes the freed inode number first so the replacement carries a
-    // genuinely different dev/inode identity (Linux reuses just-freed inodes immediately).
-    writeFileSync(join(f.temp, 'decoy-inode-consumer'), 'x\n', { mode: 0o600 })
-    rmSync(f.root, { recursive: true, force: true })
-    writeFileSync(join(f.temp, 'decoy-inode-consumer-2'), 'x\n', { mode: 0o600 })
+    // Deterministic on both Linux and macOS: rename the original root into a tombstone
+    // so its inode stays allocated, then recreate the same name with a different
+    // identity (ext4 may otherwise reuse a just-freed inode immediately).
+    renameSync(f.root, join(f.temp, 'root-tombstone'))
     mkdirSync(f.root, { mode: 0o700 })
     assert.throws(() => verifyRealApplyCapability(base), { message: 'Registered project root identity changed since the capability was issued' })
   }))
