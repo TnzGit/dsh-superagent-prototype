@@ -44,6 +44,10 @@ export const USER_ERRORS = {
   sourceNotInstalled: ['refused', 'The {source} Source kind is not installed'],
   noLabels: ['refused', 'This Source has no names to refresh'],
   nothingToSync: ['refused', 'The {source} Source\'s part of the Policy has nothing to sync from, or the Source is off or waiting for setup'],
+  triggerEvaluated: ['refused', 'A live Eval {eval} holds this trigger: it is being assessed, not pending; reconcile its Decision, never the queue'],
+  triggerSettled: ['refused', 'Trigger {trigger} already carries a Decision; a terminal classification is only for one that is still pending'],
+  triggerNotPending: ['refused', 'Trigger is not in any pending queue; a terminal classification is only for one awaiting its next Eval'],
+  reviewHoldSettled: ['refused', 'Receipt is not a pending Weixin review hold; an already-settled ID is never reopened, claim-reset or resent'],
 } as const satisfies Record<string, readonly ['missing' | 'refused', string]>
 export type UserErrorCode = keyof typeof USER_ERRORS
 
@@ -52,10 +56,14 @@ export type UserErrorCode = keyof typeof USER_ERRORS
  * Tool handlers and HTTP routes inspect its code and missing flag to return appropriate status responses, while the web panel localizes the code.
  */
 export class UserError extends Error {
+  readonly code: UserErrorCode
+  readonly values: Record<string, string>
   readonly missing: boolean
-  constructor(readonly code: UserErrorCode, readonly values: Record<string, string> = {}) {
+  constructor(code: UserErrorCode, values: Record<string, string> = {}) {
     const [kind, text] = USER_ERRORS[code]
     super(text.replace(/\{(\w+)\}/g, (match, name: string) => values[name] ?? match))
+    this.code = code
+    this.values = values
     this.missing = kind === 'missing'
   }
 }
