@@ -1,10 +1,10 @@
 {
   "schema_version": 1,
-  "updated_utc": "2026-11-24",
+  "updated_utc": "2026-11-25",
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "LOCAL_OPERATOR_INITIATED_MULTIPHASE_OFFLINE_BATCH_OL052",
+  "owner": "REMOTE_ONLINE_POST_OL052_OFFLINE_BATCH_ACK_CLOSED_NO_ACTIVE_LOCAL_TASK",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -17,23 +17,25 @@
     "vitest_tests": 1208
   },
   "last_accepted_local": {
-    "task_id": "OL-20261124-051",
-    "result_id": "LO-20261124-051",
+    "task_id": "OL-20261124-052",
+    "result_id": "LO-20261124-052",
     "scope": "OFFLINE_SYNTHETIC_ONLY",
-    "source_code_sha": "f0179c7dee7f57ea098ae223dabfa87d0dca2e5c",
-    "claim_commit": "d6500149325b73da1741cd14b36fea8455735b8a",
-    "report_commit": "134e6146309c920ad24d64386b97c44032c66924",
-    "done_commit": "781b27df169f3a05bd4c3bb82ac62dfbd327ab7d",
-    "source_ci_push_run_id": 45395374431,
-    "source_ci_pr_run_id": 45395389128,
-    "report_ci_push_run_id": 45398788961,
-    "report_ci_pr_run_id": 45398799703,
+    "source_code_sha": "781b27df169f3a05bd4c3bb82ac62dfbd327ab7d",
+    "final_source_sha": "b9d8fb76910ee382c98bc8fba2ee1490a34d871e",
+    "claim_commit": "597832f7ec22ab606da0716349427051566e8050",
+    "report_commit": "f6e81e0481fda32f91488e628043e4fd9fc48e2c",
+    "done_commit": "58e7b5c128d352fb85ee6cd39fe6dfe1d4d5d667",
+    "source_ci_push_run_id": 45490329402,
+    "source_ci_pr_run_id": 45490346681,
+    "report_ci_push_run_id": 45490733294,
+    "report_ci_pr_run_id": 45490743472,
     "report_ci_status": "SUCCESS_BOTH_3_OF_3",
-    "online_ack": "agent-handoff/receipts/online/LO-20261124-051-done.md",
+    "online_ack": "agent-handoff/receipts/online/LO-20261124-052-done.md",
     "verdict": "ALL_OFFLINE_PASS",
-    "real_weixin_i3_accepted": false
+    "real_weixin_i3_accepted": false,
+    "real_apply_accepted": false
   },
-  "active_local_task": "OL-20261124-052",
+  "active_local_task": null,
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -95,7 +97,8 @@
     "HANDOVER.md",
     "agent-reports/REPORT-ol052-multiphase-offline-development.md",
     "agent-handoff/messages/to-local/2026-11-24-ol052-multiphase-offline.md",
-    "agent-handoff/messages/to-online/2026-11-24-lo052-multiphase-done.md"
+    "agent-handoff/messages/to-online/2026-11-24-lo052-multiphase-done.md",
+    "agent-handoff/receipts/online/LO-20261124-052-done.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -124,20 +127,25 @@
   },
   "local_batch": {
     "task_id": "OL-20261124-052",
-    "status": "PENDING_TRUSTED_OPERATOR_DIRECT_MULTIPHASE_HANDOVER",
+    "status": "ACKED_CLOSED_ALL_OFFLINE_PASS_NO_REDISPATCH",
     "scope": "OFFLINE_SYNTHETIC_ONLY",
     "code_sha": "781b27df169f3a05bd4c3bb82ac62dfbd327ab7d",
-    "baseline_source_sha": "f0179c7dee7f57ea098ae223dabfa87d0dca2e5c",
-    "host_live_grant": "NOT_GRANTED",
-    "source_ci_push_run_id": 45398788961,
-    "source_ci_pr_run_id": 45398799703,
-    "source_ci_status": "SUCCESS_BOTH_3_OF_3",
+    "final_source_sha": "b9d8fb76910ee382c98bc8fba2ee1490a34d871e",
+    "claim_commit": "597832f7ec22ab606da0716349427051566e8050",
+    "report_commit": "f6e81e0481fda32f91488e628043e4fd9fc48e2c",
+    "done_commit": "58e7b5c128d352fb85ee6cd39fe6dfe1d4d5d667",
+    "online_ack": "agent-handoff/receipts/online/LO-20261124-052-done.md",
+    "verdict": "ALL_OFFLINE_PASS",
+    "source_ci_push_run_id": 45490329402,
+    "source_ci_pr_run_id": 45490346681,
+    "report_ci_push_run_id": 45490733294,
+    "report_ci_pr_run_id": 45490743472,
+    "report_ci_status": "SUCCESS_BOTH_3_OF_3",
     "real_i3_accepted": false,
-    "no_auto_dispatch": true,
+    "real_apply_accepted": false,
     "max_concurrent_subagents": 3,
-    "local_source_patch_exception": true,
-    "requires_online_ack_between_phases": false,
-    "final_artifact": "agent-reports/REPORT-ol052-multiphase-offline-development.md"
+    "no_auto_dispatch": true,
+    "requires_online_ack_between_phases": false
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -249,15 +257,15 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "OL052_ONE_OPERATOR_INITIATED_MULTIPHASE_OFFLINE_BATCH",
-    "last_task": "OL-20261124-051",
-    "remote_work": "OL051_INDEPENDENTLY_ACKED_AND_FULL_MULTIPHASE_HANDOVER_ISSUED",
+    "status": "OL052_ACKED_CLOSED_NO_ACTIVE_LOCAL_TASK_REAL_I3_AND_APPLY_GATED",
+    "last_task": "OL-20261124-052",
+    "remote_work": "OL052_FULL_MULTIPHASE_OFFLINE_BATCH_INDEPENDENTLY_ACKED",
     "real_weixin": "FORBIDDEN_WITHOUT_SEPARATE_OPERATOR_DECISION",
     "real_source_apply": "FORBIDDEN_WITHOUT_SEPARATE_GATES_AND_AUTHORIZATION",
     "auto_next_task": "FORBIDDEN",
     "remote_automation": "PAUSED_BY_OPERATOR",
     "no_auto_dispatch": true,
-    "next_local_task": "OL-20261124-052"
+    "next_local_task": null
   },
   "integration_i2": {
     "status": "I2_ISOLATED_STAGING_PASS",
@@ -363,23 +371,25 @@
     "local_execution_requires_trusted_operator_owned_policy": true,
     "auto_dispatch": "REMAINS_DISABLED_UNTIL_VERIFIED_LOCALLY",
     "remote_automation": "REMAINS_OPERATOR_PAUSED",
-    "no_new_OL_task_yet": false,
-    "current_offline_task": "OL-20261124-052",
+    "no_new_OL_task_yet": true,
+    "current_offline_task": null,
     "multiphase_operator_direct_scope": {
       "task_id": "OL-20261124-052",
       "scope": "OFFLINE_SYNTHETIC_ONLY",
       "max_concurrent_subagents": 3,
-      "may_modify_src_tests_docs_ci_for_offline_scope": true,
-      "may_create_normal_ff_feature_branch_commits": true,
-      "may_run_ci_and_offline_fake_tests": true,
+      "may_modify_src_tests_docs_ci_for_offline_scope": false,
+      "may_create_normal_ff_feature_branch_commits": false,
+      "may_run_ci_and_offline_fake_tests": false,
       "public_github_is_not_execution_authority": true,
       "requires_new_consent_between_safe_phases": false,
-      "real_weixin_and_original_dsh_and_production_apply": false
+      "real_weixin_and_original_dsh_and_production_apply": false,
+      "status": "CLOSED_CONSUMED_NOT_REUSABLE",
+      "active": false
     }
   },
   "integration_i3": {
-    "status": "INSTALLED_FAKE_WEIXIN_OUTBOX_LOCAL_MAC_OFFLINE_ACCEPTED_REAL_I3_NOT_ACCEPTED",
-    "latest_task": "OL-20261124-051",
+    "status": "FULL_INSTALLED_FAKE_WEIXIN_VERTICAL_LOCAL_MAC_OFFLINE_ACCEPTED_REAL_I3_GATED",
+    "latest_task": "OL-20261124-052",
     "source_sha": "d6c51629855caf4b2737049cf4592cc12b912765",
     "report_commit": "7ab63f33b8cb9e6e5e6cdbf5261e25cd2efb045d",
     "online_ack": "agent-handoff/receipts/online/LO-20261124-050-done.md",
@@ -395,9 +405,9 @@
       "original_source_apply_OS_and_transaction_gates",
       "real_iLink_send_acceptance_and_server_idempotency_not_verified",
       "manual_review_reconciliation_action_not_authorized",
-      "operator_OL052_multiphase_offline_development_pending"
+      "real_tencent_iLink_sender_identity_and_live_consent_remain_gated"
     ],
-    "next": "OL052_INTEGRATED_MULTIPHASE_OFFLINE_DEVELOPMENT_REAL_I3_GATED",
+    "next": "NO_LOCAL_TASK_REMOTE_ACK_COMPLETE_REAL_I3_ONLY_AFTER_SEPARATE_USER_DECISION",
     "real_weixin_sent": false,
     "real_weixin_i3_accepted": false,
     "remote_source_sha": "d6c51629855caf4b2737049cf4592cc12b912765",
@@ -498,6 +508,43 @@
       "mac_proxy": 5,
       "mac_named": 55,
       "real_i3_accepted": false
+    },
+    "latest_local_ol052": {
+      "verdict": "ALL_OFFLINE_PASS",
+      "scope": "OFFLINE_SYNTHETIC_ONLY",
+      "baseline_sha": "781b27df169f3a05bd4c3bb82ac62dfbd327ab7d",
+      "final_source_sha": "b9d8fb76910ee382c98bc8fba2ee1490a34d871e",
+      "claim_sha": "597832f7ec22ab606da0716349427051566e8050",
+      "report_sha": "f6e81e0481fda32f91488e628043e4fd9fc48e2c",
+      "done_sha": "58e7b5c128d352fb85ee6cd39fe6dfe1d4d5d667",
+      "source_ci_runs": [
+        45490329402,
+        45490346681
+      ],
+      "done_ci_runs": [
+        45490733294,
+        45490743472
+      ],
+      "ci_status": "SUCCESS_BOTH_3_OF_3",
+      "mac_full_vitest": 1342,
+      "mac_node": 279,
+      "mac_focus": 141,
+      "mac_fake_vertical_focus": 151,
+      "mac_proxy": 5,
+      "mac_ledger": 64,
+      "linux_full_vitest": 1342,
+      "stages": [
+        "P0",
+        "P1",
+        "P2",
+        "P3",
+        "P4",
+        "P5"
+      ],
+      "real_model_turn": false,
+      "real_weixin": false,
+      "production_apply": false,
+      "online_ack": "agent-handoff/receipts/online/LO-20261124-052-done.md"
     }
   }
 }

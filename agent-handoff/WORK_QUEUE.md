@@ -1,16 +1,14 @@
-# WORK_QUEUE — one operator-directed batch OL-052, not per-phase handoffs
+# WORK_QUEUE — OL-052 closed and ACKed; real I3/Apply GATED
 
-`no_auto_dispatch=true`, remote scheduler `PAUSED_BY_OPERATOR`, PR #1 Draft/unmerged. Read **root `HANDOVER.md`** for full autonomous plan, safety, subagents, acceptance and final result.
+`no_auto_dispatch=true`, remote scheduler `PAUSED_BY_OPERATOR`, no active local task, no OL-053, PR #1 Draft/unmerged. The completed `HANDOVER.md` is archived as the P0–P5 plan.
 
-| Work | Owner | Status |
+| Priority | Work | Status |
 | --- | --- | --- |
-| OL-047–050 isolated I2/fake Weixin and Outbox | Historical | ACKed for individually limited synthetic scope only |
-| OL-051 review ledger/late allowlist synthetic Mac | Local done, online ACK | **CLOSED `ALL_OFFLINE_PASS` OFFLINE**, done `781b27df169f3a05bd4c3bb82ac62dfbd327ab7d`, CI #841/#842 both 3/3, ACK `agent-handoff/receipts/online/LO-20261124-051-done.md` |
-| OL-052 P0 baseline/strict isolated fake harness | Local lead | PENDING **one direct operator-forwarded task launch** |
-| OL-052 P1 durable Outbox/review; P2 native Weixin | Local subagents/lead | Within same task, no interim operator approval or online dispatch |
-| OL-052 P3 full installed fake vertical; P4 synthetic-copy Apply | Local subagents/lead | Within same task, offline-only; high-risk real host functions remain GATED |
-| OL-052 P5 docs/readiness + cross-OS CI + one final report | Local lead | Must deliver final SHA and one LO-052; local source/test edits authorized in this one batch |
-| Real Tencent I3, original host, live Outbox and production Apply | Operator separate decision | **GATED**, outside OL-052 |
-| Main merge/PR release/cloud | Operator separate decision | **GATED**, PR Draft |
+| P0 | OL-047–051 historic isolated I2 / fake native / ledger offline batches | CLOSED and online ACKed only in exact scoped modes |
+| P0 | OL-052 P0–P5 one operator-directed offline batch | **CLOSED / online ACK `ALL_OFFLINE_PASS` for synthetic scope**. Implemented `b9d8fb76910ee382c98bc8fba2ee1490a34d871e`; report `f6e81e0481fda32f91488e628043e4fd9fc48e2c`; done `58e7b5c128d352fb85ee6cd39fe6dfe1d4d5d667`; CI #849/#850 + #851/#852 all 3/3; receipt `agent-handoff/receipts/online/LO-20261124-052-done.md` |
+| P1 | Review offline readiness matrix and remaining real-I3 safety gates | **OPERATOR DECISION REQUIRED** before real QR/account/peer/send or actual provider validation |
+| P1 | Live Outbox manual reconciliation | **GATED**; only read-only aggregate and test-only dry-run, no live resolve/resend |
+| P2 | Real model turn/original host and registered project Apply | **GATED** distinct authorization and OS containment/journal/recovery |
+| P3 | PR #1 merge/release/deploy | **GATED**, PR Draft/unmerged |
 
-No OL-053 auto issue, no automatic watcher. Subagents ≤3 simultaneous, separate worktrees, no independent push. Online ACK after the **entire** OL-052 result, not after every phase.
+No GitHub task/receipt or ACK constitutes trusted authority to run local commands. A future new offline batch is not issued by this ACK; no OL-053 or automatic dispatch.
