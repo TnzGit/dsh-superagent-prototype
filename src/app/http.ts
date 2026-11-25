@@ -18,6 +18,7 @@ import type { Health } from '../sources/host.ts'
 import type { SourceRegistry } from '../sources/registry.ts'
 import type { Sessions } from './sessions.ts'
 import type { Store } from './store.ts'
+import type { OperatorReview, OperatorOutcome } from './operator-review.ts'
 import type { TextCache } from './cache.ts'
 import type { LinkTarget, ViewHost } from './views/records.ts'
 import type { Variable } from './execution-environment.ts'
@@ -47,6 +48,8 @@ export interface HttpHost {
   readonly deployment: Deployment
   readonly setupProblem?: SetupProblem | undefined
   readonly feishuProblem?: SetupProblem | undefined
+  /** The operator-private reconciliation service, installed only with the private 0600 grant (OL-054 M4); absent it, its routes answer 404. */
+  readonly operatorReview?: OperatorReview | undefined
   configured(): boolean
   links(): LinkTarget
   ticketEnvironment(ticket: Ticket): Variable[]
@@ -55,10 +58,10 @@ export interface HttpHost {
   models(): Promise<ModelCatalog>
 }
 /**
- * Represents a client-facing 400 or 404 error raised during management route parsing or lookup.
- * Route handlers throw it when request bodies are malformed or target records are missing, and registerHttp serializes its status and message in the HTTP response.
+ * Represents a client-facing 400, 401 or 404 error raised during management route parsing or lookup.
+ * Route handlers throw it when request bodies are malformed, a private operator grant is missing, or target records are missing, and registerHttp serializes its status and message in the HTTP response.
  */
-class RouteError extends Error { constructor(readonly status: 400 | 404, message: string) { super(message) } }
+class RouteError extends Error { constructor(readonly status: 400 | 401 | 404, message: string) { super(message) } }
 async function readBody(req: IncomingMessage, maxBytes = 128 * 1024): Promise<unknown> {
   let size = 0; const chunks: Buffer[] = []
   for await (const chunk of req) {
@@ -133,7 +136,7 @@ function promptsView(runtime: HttpHost, revision: number | undefined, offset: nu
 export type PromptsView = ReturnType<typeof promptsView>
 
 interface Input<K extends keyof Api> {
-  params: RouteParams<K>; query: Record<string, string>; body: (maxBytes?: number) => Promise<unknown>
+  params: RouteParams<K>; query: Record<string, string>; body: (maxBytes?: number) => Promise<unknown>; headers: IncomingMessage['headers']
 }
 type Routes = { [K in keyof Api]: (input: Input<K>) => ApiResponse<K> | Promise<ApiResponse<K>> }
 const offset = z.coerce.number().int().nonnegative().catch(0)
@@ -145,6 +148,8 @@ const DecisionsQuery = z.object({ kind: z.string().default(''), window: z.litera
   limit: limit(30, 200) })
 const count = z.coerce.number().int().nonnegative()
 const PromptsQuery = z.object({ revision: count.optional(), offset: count.default(0) })
+const LedgerQuery = z.object({ limit: limit(50, 200) })
+const ReconcileBody = z.object({ outcome: z.enum(['confirmed_sent', 'no_resend']) }).strict()
 const SourceBlock = z.templateLiteral(['source:', z.string().regex(/^[a-z][a-z0-9-]*$/)])
 const SettingsBlockSchema = z.union([z.enum(['policy', 'eval', 'executor']), SourceBlock])
 const SaveRequest = z.object({ value: z.unknown(), revision: z.number().int().nonnegative() })
@@ -211,6 +216,25 @@ function routes(runtime: HttpHost): Routes {
       return savePrompts(runtime, request.config, request.baseRevision, 'panel')
     },
     'POST prompts/preview': async input => runtime.prompts.preview(await promptBody(input)),
+    // Operator-private reconciliation (OL-054 M4): loopback, same-origin and a private token; absent the grant, these answer 404.
+    'GET operator/reconcile/ledger': ({ query, headers }) => {
+      const review = runtime.operatorReview
+      if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')
+      if (!review.authorized(headers)) throw new RouteError(401, 'Private operator token required')
+      return { receipts: review.ledger(LedgerQuery.parse(query).limit) }
+    },
+    'POST operator/reconcile/:id': async ({ params, body, headers }) => {
+      const review = runtime.operatorReview
+      if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')
+      if (!review.authorized(headers)) throw new RouteError(401, 'Private operator token required')
+      return review.reconcile(params.id, ReconcileBody.parse(await body()).outcome)
+    },
+    'POST operator/triggers/:id/terminal': ({ params, headers }) => {
+      const review = runtime.operatorReview
+      if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')
+      if (!review.authorized(headers)) throw new RouteError(401, 'Private operator token required')
+      return review.classifyTrigger(params.id)
+    },
   }
 }
 function decoded(segment: string): string {
@@ -241,7 +265,7 @@ export function registerHttp(ctx: Context, runtime: HttpHost): () => void {
         const route = match(table, req.method ?? 'GET', url.pathname.slice('/orchestrator/api/'.length).split('/'))
         if (!route) throw new RouteError(404, 'Unknown operation')
         const query = Object.fromEntries(url.searchParams)
-        json(res, 200, await route.run({ params: route.params as never, query, body: maxBytes => readBody(req, maxBytes) }))
+        json(res, 200, await route.run({ params: route.params as never, query, headers: req.headers, body: maxBytes => readBody(req, maxBytes) }))
       } catch (error) { json(res, ...failure(error)) }
     } })]
   return () => { for (const dispose of disposers) dispose() }

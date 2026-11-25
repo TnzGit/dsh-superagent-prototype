@@ -34,6 +34,7 @@ import { TextCache } from './cache.ts'
 import { Effects } from './effects.ts'
 import { Prompts } from './prompts.ts'
 import { registerHttp, type HttpHost } from './http.ts'
+import { OperatorReview, readOperatorToken } from './operator-review.ts'
 import type { LinkTarget } from './views/records.ts'
 import { candidateCard, repliedTo, sourceLink, type LinkHost } from './links.ts'
 import { eventNotice, followupNotice } from './notices.ts'
@@ -74,6 +75,8 @@ export class Runtime extends Service implements SourceHost {
   readonly outbox: Outbox
   private nativeRelay?: NativeRelayCoordinator
   readonly engine: Engine
+  /** The operator-private reconciliation service (OL-054 M4), installed only with the private 0600 grant file; absent it, its routes answer 404. */
+  readonly operatorReview?: OperatorReview
   readonly passes: Passes
   readonly ready: Promise<void>
   private readonly board = new HealthBoard()
@@ -177,6 +180,10 @@ export class Runtime extends Service implements SourceHost {
             for (const message of pullEndNotices(ended, request, setup.deployment.repository)) outbox.send(message)
           }
         } })
+      // Absent the private 0600 operator grant, the reconciliation service is never installed and its routes answer 404 (OL-054 M4).
+      const operatorToken = readOperatorToken()
+      if (operatorToken) this.operatorReview = new OperatorReview({ store, effects, engine, token: operatorToken,
+        journal: join(machine.stateDir, 'operator-review-journal.jsonl') })
       // Update the `evals` health entry on every pass if an evaluation failed as unavailable within the last hour.
       const evals = board.claim('evals', { state: 'ready', detail: 'No unavailable Eval in the last hour' })
       const evaluateDue = () => { engine.evaluateDue(); evals.set(evalsHealth(store)) }
@@ -246,8 +253,8 @@ export class Runtime extends Service implements SourceHost {
   }
   private httpHost(): HttpHost {
     const runtime = this
-    const { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks, setup, passes } = this
-    return { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks,
+    const { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks, setup, passes, operatorReview } = this
+    return { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks, operatorReview,
       get deployment() { return setup.deployment },
       get setupProblem() { return setup.problem }, get feishuProblem() { return setup.feishuProblem },
       configured: () => setup.configured(), links: () => runtime.links(), ticketEnvironment: ticket => runtime.ticketEnvironment(ticket),

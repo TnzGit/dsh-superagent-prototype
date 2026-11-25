@@ -164,6 +164,15 @@ export class Engine {
    * @throws UserError when the ticket is unknown, has ended, or is not retryable.
    */
   retryTicket(ticketId: string): Ticket { return this.repo.atomic(() => this.tickets.retry(ticketId)) }
+  /**
+   * The operator's terminal classification of a pending Trigger (OL-054 M4): a durable `ignore` Decision reasoned
+   * `operatorTerminal` that takes it out of its Thread's queue without deleting it, so it can never become a Ticket after
+   * processing resumes. Fails closed while a live Eval holds it; refuses a Trigger already settled or not pending; idempotent.
+   * @throws UserError when the Trigger is unknown, held by a live Eval, already settled, or not pending.
+   */
+  classifyPendingTrigger(triggerId: string): { decision: Decision; already: boolean } {
+    return this.repo.atomic(() => this.evals.classifyPending(triggerId))
+  }
 
   // The Executor
 
@@ -262,7 +271,7 @@ export type EngineForSources = Pick<Engine, 'receive' | 'bindThread' | 'threadCl
 /** What the main Session asks of the Engine. */
 export type EngineForMainSession = Pick<Engine, 'candidate' | 'candidateDelivered' | 'decide' | 'attach' | 'reply' | 'requestStatus' | 'note'>
 /** What people ask of the Engine, through the panel or the main Session. */
-export type EngineForPeople = Pick<Engine, 'stopTicket' | 'retryTicket' | 'reevaluate' | 'unsubscribe' | 'dismiss'>
+export type EngineForPeople = Pick<Engine, 'stopTicket' | 'retryTicket' | 'reevaluate' | 'unsubscribe' | 'dismiss' | 'classifyPendingTrigger'>
 /** What Settings tells the Engine. */
 export type EngineForSettings = Pick<Engine, 'policyChanged'>
 /** What the Executor tells the Engine, and what its workers ask of it. */

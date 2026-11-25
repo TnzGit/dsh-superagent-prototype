@@ -5,7 +5,7 @@
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { z } from 'zod'
 import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { Api, ApiResponse, RouteParams } from '../../src/app/api.ts'
+import type { Api, ApiResponse, OperatorLedgerEntry, RouteParams } from '../../src/app/api.ts'
 import { SKILL_NAME, SKILL_PREFIX, TEAM_SECTIONS, builtInBase, builtInPart, builtInParts, composePrompt, composeSkill, defaultPrompts,
   environmentSection, policySection, promptParts } from '../../src/app/prompts.ts'
 import type { DroppedReply, HistoryView, Problem, PromptsView, SetupView, SourceStatusRow, SourceView, StateView, ThreadPageView,
@@ -108,6 +108,8 @@ export interface PanelServer {
   opened: string[]
   dropped: DroppedReply[]
   failing: Extract<Problem, { kind: 'outgoing' }>['outgoing'][]
+  /** Sanitized held-receipt ledger for the operator reconciliation routes; absent it, the ledger is empty. */
+  operatorLedger?: OperatorLedgerEntry[]
 }
 export let server: PanelServer
 
@@ -398,6 +400,13 @@ const ROUTES: { [K in keyof Api]: Route<K> } = {
       skills: Object.fromEntries(skills),
       orchestrator: composePrompt(body, 'orchestrator'), worker: composePrompt(body, 'worker'), scope: '' }
   } },
+  'GET operator/reconcile/ledger': { query: ['limit'], answer: () => ({ receipts: server.operatorLedger ?? [] }) },
+  'POST operator/reconcile/:id': { body: true, answer: ({ params, body }) => {
+    const entry = (server.operatorLedger ?? []).find(receipt => receipt.id === params.id)
+    if (!entry) return refuse(404, 'refused', { code: 'reviewHoldSettled' })
+    return { id: params.id, status: body.outcome === 'confirmed_sent' ? 'sent' : 'dropped', outcome: body.outcome, principal: 'synthetic', journal: true }
+  } },
+  'POST operator/triggers/:id/terminal': { answer: ({ params }) => ({ triggerId: params.id, classified: true, decision: 'decision-synthetic' }) },
 }
 
 function match(method: string, segments: string[]) {
