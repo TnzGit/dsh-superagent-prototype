@@ -60,6 +60,15 @@ export class LocalProjectRegistry {
     return project
   }
   list(): Project[] { return [...this.projects.values()].map(p => ({ ...p })) }
+  /** Read-only registration-time identity evidence (root dev+ino + canonical ancestors).
+   * The OL-054 operator preview binds the exact registered identity through this accessor;
+   * like assertRegisteredRootIdentity it is evidence, not an authenticated OS capability. */
+  registeredRootIdentity(id:string):{root:string;dev:number;ino:number;ancestors:ReadonlyArray<{path:string;dev:number;ino:number}>} {
+    const evidence=this.rootIdentities.get(id)
+    if(!evidence)throw new Error('Registered project identity evidence unavailable')
+    return Object.freeze({root:evidence.root,dev:evidence.dev,ino:evidence.ino,
+      ancestors:Object.freeze(evidence.ancestors.map(a=>Object.freeze({...a})))})
+  }
   /** Read-only identity check against the actual directory captured at registration.
    * Detects same-path directory replacement, unlike a path-only fingerprint.
    * The check is NOT atomic with later uses and does not prevent external writers.
