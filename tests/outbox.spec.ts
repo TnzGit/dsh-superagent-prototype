@@ -617,3 +617,199 @@ it('the installed runtime exposes only the read-only review summary and no mutat
   expect(view.status).toBe(200)
   expect(view.body.weixinOutboxReview).toEqual({ total: 0, reasons: {} })
 })
+
+// --- OL-20261125-053 subagent B: durable-receipt, review-reconciliation and replay invariants for the real-I3 pilot.
+// Same disposable-SQLite mini harness as above: synthetic sources only, no real Weixin, model, or host service.
+
+it('a duplicate or racing holdForReview can never overwrite the first durable review reason', async () => {
+  const mini = miniHarness()
+  const worker = mini.build(mini.store)
+  worker.sources.register({ kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' }, health: [],
+    schema: z.object({}).strict(), fields: [],
+    channel: { preflight: () => ({ status: 'review', reason: 'account_mismatch' }), send: async () => 'sent', link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+  worker.effects.start()
+  const message = weixinMessage('duplicate-hold-frozen')
+  worker.outbox.send(message)
+  await worker.outbox.sent()
+  const held = mini.store.receipts.get(message.id)
+  expect(held?.review).toMatchObject({ reason: 'account_mismatch' })
+  const reviewAt = held?.review?.at
+  // A later race (different reason, second hold, direct store write) must not rewrite the first durable reason.
+  mini.store.receipts.holdForReview(message.id, 'context_missing')
+  mini.store.atomic(() => mini.store.receipts.holdForReview(message.id, 'ambiguous_send'))
+  expect(mini.store.receipts.get(message.id)).toMatchObject({ status: 'pending', review: { reason: 'account_mismatch', at: reviewAt } })
+  expect(mini.store.receipts.reviewSummary()).toEqual({ total: 1, reasons: { account_mismatch: 1 } })
+  closeMini(mini)
+})
+
+it('the automatic delivery path can never bypass a durable review hold on replay', async () => {
+  // The hold is the only sanctioned non-terminal durable state for operator reconciliation (docs/018):
+  // a re-queued (replayed) row with a hold must bail before the network and keep its first reason intact.
+  const mini = miniHarness()
+  const worker = mini.build(mini.store)
+  let sends = 0
+  worker.sources.register({ kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' }, health: [],
+    schema: z.object({}).strict(), fields: [],
+    channel: { preflight: () => ({ status: 'review', reason: 'account_mismatch' }), send: async () => { sends++; return 'sent' }, link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+  worker.effects.start()
+  const message = weixinMessage('settle-cannot-clear-hold')
+  worker.outbox.send(message)
+  await worker.outbox.sent()
+  const held = mini.store.receipts.get(message.id)
+  expect(held).toMatchObject({ status: 'pending', review: { reason: 'account_mismatch' } })
+  expect(sends).toBe(0)
+  // Replay the row directly through the store API: a second hold cannot rewrite the first reason.
+  mini.store.receipts.holdForReview(message.id, 'context_missing')
+  expect(mini.store.receipts.get(message.id)?.review).toMatchObject({ reason: 'account_mismatch', at: held?.review?.at })
+  // A duplicate queue of the same ID (the replay path) stays held with zero egress, even after the long backoff.
+  worker.outbox.send({ ...message, text: 're-queued' })
+  for (const ms of [5_000, 60_000, 300_000]) await runMini(worker.effects, ms)
+  expect(sends).toBe(0)
+  expect(mini.store.receipts.get(message.id)).toMatchObject({ status: 'pending', review: { reason: 'account_mismatch' }, text: 'synthetic' })
+  expect(mini.store.receipts.reviewSummary()).toEqual({ total: 1, reasons: { account_mismatch: 1 } })
+  closeMini(mini)
+})
+
+it('a replayed settle never rewrites an already-terminal receipt and a late response cannot re-open a withdrawn ID', async () => {
+  const mini = miniHarness()
+  const sent = weixinMessage('replayed-settle-sent')
+  mini.store.receipts.add(sent)
+  mini.store.receipts.settle(sent, 'sent')
+  const dropped = weixinMessage('replayed-settle-dropped')
+  mini.store.receipts.add(dropped)
+  mini.store.receipts.settle(dropped, 'channelGone')
+  // Replay with the OPPOSITE outcome: terminal states are never rewritten, and the drop audit survives.
+  mini.store.receipts.settle(sent, 'channelIgnored')
+  mini.store.receipts.settle(dropped, 'sent')
+  expect(mini.store.receipts.get(sent.id)).toMatchObject({ status: 'sent' })
+  expect(mini.store.receipts.get(sent.id)?.dropped).toBeUndefined()
+  expect(mini.store.receipts.get(dropped.id)).toMatchObject({ status: 'dropped', dropped: { reason: 'channelGone' } })
+  // The forensic claim + review audit survive terminalization (json_patch keeps them on the row).
+  const audited = weixinMessage('replayed-settle-audit-kept')
+  mini.store.receipts.add(audited)
+  mini.store.receipts.claimOneShotSend(audited.id)
+  mini.store.receipts.holdForReview(audited.id, 'ambiguous_send')
+  mini.store.receipts.settle(audited, 'sent')
+  expect(mini.store.receipts.get(audited.id)).toMatchObject({ status: 'sent', singleSendAttemptAt: expect.any(String) })
+  // A row withdrawn while its send is in flight is recreated terminal by the late response so the ID stays idempotent.
+  const withdrawn = weixinMessage('replayed-settle-withdrawn')
+  mini.store.receipts.add(withdrawn)
+  expect(mini.store.receipts.withdraw(withdrawn.id)).toBe(true)
+  mini.store.receipts.settle(withdrawn, 'sent')
+  expect(mini.store.receipts.get(withdrawn.id)).toMatchObject({ status: 'sent' })
+  // and that recreated ID is never re-queueable as pending again.
+  expect(mini.store.receipts.add({ ...withdrawn, text: 're-queued' })).toBe(false)
+  expect(mini.store.receipts.get(withdrawn.id)?.status).toBe('sent')
+  closeMini(mini)
+})
+
+it('durable terminal classification (sent, dropped, review-held) survives a restart over the same SQLite and is never auto-retried', async () => {
+  const mini = miniHarness()
+  const first = mini.build(mini.store)
+  first.sources.register({ kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' }, health: [],
+    schema: z.object({}).strict(), fields: [],
+    channel: { preflight: m => m.id === 'terminal-review' ? { status: 'review', reason: 'account_mismatch' } : { status: 'ready' },
+      send: async () => 'sent', link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+  first.effects.start()
+  first.outbox.send(weixinMessage('terminal-sent'))
+  first.outbox.send(weixinMessage('terminal-review'))
+  await first.outbox.sent()
+  const dropped = weixinMessage('terminal-dropped')
+  mini.store.receipts.add(dropped)
+  mini.store.receipts.settle(dropped, 'channelGone')
+  // Crash-after-claim: claimed, pending, no review yet (the restart reconciles it, never replays it).
+  const crashed = weixinMessage('terminal-crashed-claim')
+  mini.store.receipts.add(crashed)
+  expect(mini.store.atomic(() => mini.store.receipts.claimOneShotSend(crashed.id))).toBe(true)
+  mini.store.close()
+  const reopened = new Store(join(mini.directory, 'orchestrator.sqlite'))
+  expect(reopened.receipts.get('terminal-sent')?.status).toBe('sent')
+  expect(reopened.receipts.get('terminal-dropped')).toMatchObject({ status: 'dropped', dropped: { reason: 'channelGone' } })
+  expect(reopened.receipts.get('terminal-review')).toMatchObject({ status: 'pending', review: { reason: 'account_mismatch' } })
+  expect(reopened.receipts.get('terminal-crashed-claim')).toMatchObject({ status: 'pending', singleSendAttemptAt: expect.any(String) })
+  // Force a reply effect for every durable row: dispatch must bail on terminal/reviewed states and consume zero attempts.
+  const second = mini.build(reopened)
+  let attempts = 0
+  second.sources.register({ kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' }, health: [],
+    schema: z.object({}).strict(), fields: [],
+    channel: { preflight: () => ({ status: 'ready' }), send: async () => { attempts++; return 'sent' }, link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+  second.effects.start()
+  for (const id of ['terminal-sent', 'terminal-dropped', 'terminal-review', 'terminal-crashed-claim']) {
+    const receipt = reopened.receipts.get(id)!
+    second.effects.enqueue('reply', id, {})
+    reopened.receipts.add({ ...receipt, id } as OutboundMessage) // no-op add proves dedupe over the existing row
+  }
+  await second.outbox.sent()
+  expect(attempts).toBe(0)
+  expect(reopened.receipts.get('terminal-sent')?.status).toBe('sent')
+  expect(reopened.receipts.get('terminal-dropped')?.status).toBe('dropped')
+  expect(reopened.receipts.get('terminal-review')?.review?.reason).toBe('account_mismatch')
+  // The crash-claim row is reconciled into an ambiguous hold, still never replayed, and enumerable in the ledger.
+  await runMini(second.effects, 300_000)
+  expect(attempts).toBe(0)
+  expect(reopened.receipts.get('terminal-crashed-claim')).toMatchObject({ status: 'pending', review: { reason: 'ambiguous_send' } })
+  expect(reopened.receipts.reviewLedger().map(row => row.id)).toContain('terminal-crashed-claim')
+  expect(reopened.receipts.claimOneShotSend('terminal-crashed-claim')).toBe(false)
+  reopened.close()
+  closeMini(mini)
+})
+
+it('same-ticket backpressure stays durable across a restart over the same disposable SQLite', async () => {
+  const mini = miniHarness()
+  const first = mini.build(mini.store)
+  first.sources.register({ kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' }, health: [],
+    schema: z.object({}).strict(), fields: [],
+    channel: { preflight: m => m.id === 'bp-reviewed-earlier' ? { status: 'review', reason: 'account_mismatch' } : { status: 'ready' },
+      send: async () => 'sent', link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+  first.effects.start()
+  const channel = { source: 'weixin', thread: 'weixin:synthetic', address: { peer: 'synthetic' } }
+  first.outbox.send({ id: 'bp-reviewed-earlier', kind: 'acknowledgement', text: 'ack', ticketId: 'bp-ticket', channel })
+  first.outbox.send({ id: 'bp-later', kind: 'reply', text: 'reply', ticketId: 'bp-ticket', channel })
+  await first.outbox.sent()
+  expect(mini.store.receipts.behind('bp-later', 3)).toBe(true)
+  mini.store.close()
+  // Restart: a fresh Store handle over the same file; the durable review hold alone must still gate the later row.
+  const reopened = new Store(join(mini.directory, 'orchestrator.sqlite'))
+  expect(reopened.receipts.behind('bp-later', 3)).toBe(true)
+  const second = mini.build(reopened)
+  let attempts = 0
+  second.sources.register({ kind: 'weixin', title: { zh: '', en: '' }, description: { zh: '', en: '' }, health: [],
+    schema: z.object({}).strict(), fields: [],
+    channel: { preflight: () => ({ status: 'ready' }), send: async () => { attempts++; return 'sent' }, link: () => ({ url: '', label: { zh: '', en: '' } }) } })
+  second.effects.start()
+  await second.outbox.sent()
+  for (const ms of [5_000, 60_000, 300_000]) {
+    await runMini(second.effects, ms)
+    expect(reopened.receipts.get('bp-later')?.status).toBe('pending')
+    expect(reopened.receipts.behind('bp-later', 3)).toBe(true)
+    expect(attempts).toBe(0)
+  }
+  reopened.close()
+  closeMini(mini)
+})
+
+it('the manual-resolve dry-run projects a DropReason outcome and never finds an unreviewed pending row', async () => {
+  const mini = miniHarness()
+  const claimed = weixinMessage('dryrun-drop-outcome')
+  mini.store.receipts.add(claimed)
+  mini.store.receipts.claimOneShotSend(claimed.id)
+  mini.store.receipts.holdForReview(claimed.id, 'ambiguous_send')
+  const dry = mini.store.receipts.reviewResolveDryRun(claimed.id, 'channelGone')
+  expect(dry).toMatchObject({ found: true, status: 'pending', wouldSettle: { status: 'channelGone' },
+    audit: { reason: 'ambiguous_send', claimed: true, claimedAt: expect.any(String), reviewAt: expect.any(String) } })
+  // An unreviewed pending row (claimed or not) is not a reconciliation candidate: found must be false.
+  const unreviewed = weixinMessage('dryrun-no-review')
+  mini.store.receipts.add(unreviewed)
+  expect(mini.store.receipts.reviewResolveDryRun(unreviewed.id, 'channelGone').found).toBe(false)
+  expect(mini.store.receipts.reviewResolveDryRun(unreviewed.id).found).toBe(false)
+  const claimedUnreviewed = weixinMessage('dryrun-claimed-unreviewed')
+  mini.store.receipts.add(claimedUnreviewed)
+  mini.store.receipts.claimOneShotSend(claimedUnreviewed.id)
+  expect(mini.store.receipts.reviewResolveDryRun(claimedUnreviewed.id, 'channelIgnored').found).toBe(false)
+  // Strictly read-only across every variant: rows stay byte-identical.
+  const before = mini.store.db.prepare('SELECT id, value FROM outbox ORDER BY rowid').all()
+  mini.store.receipts.reviewResolveDryRun(claimed.id, 'channelIgnored')
+  mini.store.receipts.reviewResolveDryRun(claimed.id, 'sent')
+  expect(mini.store.db.prepare('SELECT id, value FROM outbox ORDER BY rowid').all()).toEqual(before)
+  closeMini(mini)
+})
