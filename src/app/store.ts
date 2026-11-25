@@ -12,8 +12,8 @@ import { storeReads } from './store-read.ts'
 
 /** A Trigger's position on its thread timeline, ordered by timestamp and then `id` as tie-breaker. */
 export interface TimelinePlace { at: string; id: string }
-/** Why a message was dropped: its conversation can never receive it (`channelGone`), or its Source no longer listens to it (`channelIgnored`). */
-export type DropReason = 'channelGone' | 'channelIgnored'
+/** Why a message was dropped: its conversation can never receive it (`channelGone`), its Source no longer listens to it (`channelIgnored`), or the operator reconciled its review hold as terminal without sending (`operatorNoResend`). */
+export type DropReason = 'channelGone' | 'channelIgnored' | 'operatorNoResend'
 /** Outbound message receipt tracked in the outbox from the moment it is queued (`pending`, `sent`, or `dropped`); delivery attempt counts live on its `reply` effect. */
 /** Durable fail-closed review: pending is intentional and has no automatic retry effect. */
 /** Stable review codes for public-safe summaries: plugin/provider error strings are never exposed. */
@@ -60,12 +60,14 @@ export { SCHEMA_VERSION }
  */
 export class Store implements Repositories {
   readonly db: DatabaseSync
+  private readonly report: (error: unknown) => void
   /**
    * Opens or creates the SQLite database at `path`, migrating schema 10 to schema 11 in a single transaction.
    * @param report - Receives errors thrown by `afterCommit` callbacks without failing the committed transaction.
    * @throws When the database schema is older than `OLDEST_SCHEMA` (10), newer than `SCHEMA_VERSION` (11), or when migration fails; in every case the database file is left unchanged and the SQLite handle is closed so a later attempt in the same process can open it.
    */
-  constructor(path: string, private readonly report: (error: unknown) => void = () => {}) {
+  constructor(path: string, report: (error: unknown) => void = () => {}) {
+    this.report = report
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
     this.db = new DatabaseSync(path)
     this.read = storeReads(this.db)
@@ -361,6 +363,25 @@ export class Store implements Repositories {
         .run(JSON.stringify(settled), id)
       if (!Number(updated.changes)) this.db.prepare('INSERT OR IGNORE INTO outbox (id, value) VALUES (?, ?)')
         .run(id, JSON.stringify({ id, channel, text, kind, ...ticketId ? { ticketId } : {}, ...settled }))
+    },
+    /**
+     * The operator's single durable terminal transition of a pending native Weixin review hold (OL-054 M4): first-writer-wins,
+     * so exactly one reconcile takes effect — a duplicate click or the loser of a controller race changes nothing.
+     * `json_patch` keeps the forensic `review` and `singleSendAttemptAt` on the terminal row and adds the sanitized operator
+     * audit (`at`, `outcome`, `principal` hash); the claim is NEVER reset, the same ID is never resent, and only an explicit
+     * `confirmed_sent` outcome marks a hold sent — an ambiguous hold ends as `dropped`/`operatorNoResend` instead.
+     * @returns Whether this call made the transition (false when the hold was already settled or never a review hold).
+     */
+    operatorSettleReview: (id: string, outcome: 'confirmed_sent' | 'no_resend', principal: string): boolean => {
+      const terminal = outcome === 'confirmed_sent'
+        ? { status: 'sent', operator: { at: new Date().toISOString(), outcome, principal } }
+        : { status: 'dropped', dropped: { at: new Date().toISOString(), reason: 'operatorNoResend' }, operator: { at: new Date().toISOString(), outcome, principal } }
+      const changed = this.db.prepare(`UPDATE outbox SET value = json_patch(value, ?)
+        WHERE id=? AND json_extract(value, '$.status')='pending'
+          AND json_extract(value, '$.channel.source')='weixin'
+          AND json_extract(value, '$.review') IS NOT NULL`)
+        .run(JSON.stringify(terminal), id)
+      return Number(changed.changes) === 1
     },
     /**
      * Withdraws only a genuinely unclaimed, unreviewed pending message.
