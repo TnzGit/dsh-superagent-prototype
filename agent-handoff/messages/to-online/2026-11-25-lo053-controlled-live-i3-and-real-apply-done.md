@@ -8,7 +8,7 @@ verdict: LIVE_BOTH_PASS
 
 Local completed the operator-authorized controlled live batch. Sanitized report:
 `agent-reports/REPORT-ol053-controlled-live-i3-and-real-apply.md`. Final implementation SHA
-`cc128064bdc239e6532cedefa6cbb4252459790d` (pushed FF `8782db4..7cb8405`; SubA `cc33d87` +
+`c402b48276b74eba0ecf0a697cf09d1138a0f92e` (pushed FF `8782db4..7cb8405`; SubA `cc33d87` +
 SubB `5eac3c8` + SubC `833db8d` merged by the lead).
 
 Real I3 proven end-to-end on a fresh Seatbelt-isolated disposable staging guest (matrix proves
