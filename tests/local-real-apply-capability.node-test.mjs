@@ -172,8 +172,12 @@ test('verify binds the capability to project, plan, principal uid, root identity
     const publicText = join(f.journal, 'cap-public-text-001.json')
     writeFileSync(publicText, '"looks like a capability"\n', { mode: 0o600 })
     assert.throws(() => verifyRealApplyCapability({ ...base, capabilityFile: publicText }), { message: 'Invalid capability object' })
-    // registered project identity change since issuance (root ABA)
+    // registered project identity change since issuance (root ABA).
+    // A decoy allocation consumes the freed inode number first so the replacement carries a
+    // genuinely different dev/inode identity (Linux reuses just-freed inodes immediately).
+    writeFileSync(join(f.temp, 'decoy-inode-consumer'), 'x\n', { mode: 0o600 })
     rmSync(f.root, { recursive: true, force: true })
+    writeFileSync(join(f.temp, 'decoy-inode-consumer-2'), 'x\n', { mode: 0o600 })
     mkdirSync(f.root, { mode: 0o700 })
     assert.throws(() => verifyRealApplyCapability(base), { message: 'Registered project root identity changed since the capability was issued' })
   }))

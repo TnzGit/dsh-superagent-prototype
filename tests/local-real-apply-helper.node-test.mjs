@@ -261,7 +261,11 @@ test('leaf-entry ABA (unlinked original + recreated same name) is never trusted 
     const tx = txDir(f)
     const original = exactSpec(f, tx)
     const originalIno = lstatSync(f.leaf, { bigint: true }).ino
+    // A decoy allocation consumes the freed inode number so the recreated leaf carries a
+    // genuinely different inode (Linux reuses just-freed inodes immediately).
+    writeFileSync(join(f.temp, 'decoy-inode-consumer'), 'x\n', { mode: 0o600 })
     rmSync(f.leaf)
+    writeFileSync(join(f.temp, 'decoy-inode-consumer-2'), 'x\n', { mode: 0o600 })
     writeFileSync(f.leaf, 'ORIGINAL SYNTHETIC\n', { mode: 0o600 })
     const recreated = lstatSync(f.leaf, { bigint: true })
     assert.equal(recreated.ino !== originalIno, true, 'recreation must produce a different inode')
