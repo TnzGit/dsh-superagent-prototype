@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "REMOTE_ONLINE_POST_OL053_CONTROLLED_LIVE_ACK_CLOSED",
+  "owner": "LOCAL_OPERATOR_DIRECT_INSTALLED_I3_AND_PRIVATE_APPLY_CONVERGENCE",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -38,7 +38,7 @@
     "installed_runtime_3083_cutover_accepted": false,
     "production_project_general_apply_accepted": false
   },
-  "active_local_task": null,
+  "active_local_task": "OL-20261125-054",
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -105,7 +105,9 @@
     "PLAN.md",
     "agent-handoff/messages/to-local/2026-11-25-ol053-live-i3-registered-apply-batch.md",
     "agent-handoff/receipts/online/LO-20261125-053-done.md",
-    "docs/020-postlive-i3-and-apply-operator-runbook.md"
+    "docs/020-postlive-i3-and-apply-operator-runbook.md",
+    "PLAN-OL054.md",
+    "agent-handoff/messages/to-local/2026-11-25-ol054-installed-i3-private-apply.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -133,26 +135,27 @@
     "merged": false
   },
   "local_batch": {
-    "task_id": "OL-20261125-053",
-    "status": "ACKED_CLOSED_LIVE_BOTH_PASS_SCOPED_PILOT",
-    "scope": "CONTROLLED_LIVE_I3_AND_REGISTERED_APPLY_OPERATOR_DIRECT",
-    "code_sha": "b6b6fc1ffd40ff4082d8488a2ed68aeb811f6ab3",
-    "final_source_sha": "c402b48276b74eba0ecf0a697cf09d1138a0f92e",
-    "claim_commit": "8782db4e359f36bd6ae46207cb03dc1286f79f38",
-    "done_commit": "c0527b087d64640d5eedfd7b4f4b23c0fde03dc3",
-    "online_ack": "agent-handoff/receipts/online/LO-20261125-053-done.md",
-    "verdict": "LIVE_BOTH_PASS",
-    "host_live_grant": "CONSUMED_NOT_REUSABLE",
+    "task_id": "OL-20261125-054",
+    "status": "PENDING_ONE_TRUSTED_DIRECT_OPERATOR_INSTALLED_CONVERGENCE",
+    "scope": "CONTROLLED_INSTALLED_I3_AND_PRIVATE_APPLY_OPERATOR_DIRECT",
+    "code_sha": "02d08e2aa2a81e5466746a1a84edae2808f61b15",
+    "baseline_source_sha": "c402b48276b74eba0ecf0a697cf09d1138a0f92e",
+    "host_live_grant": "OPERATOR_SCOPED_CONDITIONAL",
     "operator_approval_received": true,
-    "real_i3_accepted": true,
-    "real_apply_accepted": true,
-    "installed_runtime_3083_cutover_accepted": false,
-    "production_project_general_apply_accepted": false,
-    "source_ci_push_run_id": 45619033233,
-    "source_ci_pr_run_id": 45619046393,
-    "report_ci_status": "SUCCESS_BOTH_3_OF_3",
-    "no_auto_dispatch": true,
-    "max_concurrent_subagents": 3
+    "installed_i3_accepted": false,
+    "installed_apply_accepted": false,
+    "preflight_required": true,
+    "real_i3_message_budget": 3,
+    "real_model_sessions_budget": 2,
+    "real_apply_transaction_budget": 1,
+    "max_concurrent_subagents": 3,
+    "local_source_patch_exception": true,
+    "source_ci_push_run_id": 45621527152,
+    "source_ci_pr_run_id": 45621541411,
+    "source_ci_status": "VERIFY_FINAL_3_OF_3_BEFORE_CLAIM",
+    "requires_online_ack_between_phases": false,
+    "final_artifact": "agent-reports/REPORT-ol054-installed-runtime-private-apply.md",
+    "no_auto_dispatch": true
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -264,15 +267,15 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "OL053_ACKED_LIVE_PILOT_AND_REGISTERED_TEST_APPLY_PASS_NO_ACTIVE_TASK",
+    "status": "OL054_OPERATOR_AUTHORIZED_INSTALLED_3083_AND_PRIVATE_APPLY_ONE_BATCH_PENDING",
     "last_task": "OL-20261125-053",
-    "remote_work": "OL053_CONTROLLED_LIVE_PILOT_INDEPENDENTLY_ACKED_NEXT_INSTALLED_RUNTIME_CONVERGENCE",
-    "real_weixin": "CONTROLLED_STAGING_PILOT_PASS_3083_CUTOVER_PENDING",
-    "real_source_apply": "REGISTERED_TEST_PROJECT_APPLY_ROLLBACK_PASS_INSTALLED_RUNTIME_WIRING_PENDING",
+    "remote_work": "OL053_ACKED_AND_SNAPSHOT_REREGISTRATION_DOCUMENTED_PREPARING_OL054_INSTALLED_CONVERGENCE",
+    "real_weixin": "PILOT_PASS_INSTALLED_CUTOVER_CONDITIONALLY_AUTHORIZED",
+    "real_source_apply": "REAL_REGISTERED_TEST_PASS_PRODUCT_PRIVATE_FLOW_CONDITIONALLY_AUTHORIZED",
     "auto_next_task": "FORBIDDEN",
     "remote_automation": "PAUSED_BY_OPERATOR",
     "no_auto_dispatch": true,
-    "next_local_task": null
+    "next_local_task": "OL-20261125-054"
   },
   "integration_i2": {
     "status": "I2_ISOLATED_STAGING_PASS",
@@ -378,7 +381,7 @@
     "local_execution_requires_trusted_operator_owned_policy": true,
     "auto_dispatch": "REMAINS_DISABLED_UNTIL_VERIFIED_LOCALLY",
     "remote_automation": "REMAINS_OPERATOR_PAUSED",
-    "no_new_OL_task_yet": true,
+    "no_new_OL_task_yet": false,
     "current_offline_task": null,
     "multiphase_operator_direct_scope": {
       "task_id": "OL-20261124-052",
@@ -393,7 +396,7 @@
       "status": "CLOSED_CONSUMED_NOT_REUSABLE",
       "active": false
     },
-    "current_live_task": null,
+    "current_live_task": "OL-20261125-054",
     "live_i3_registered_apply_20261125": {
       "task_id": "OL-20261125-053",
       "scope": "OPERATOR_AUTHORIZED_CONTROLLED_LIVE_I3_AND_APPLY",
@@ -410,6 +413,21 @@
       "autodispatch": false,
       "status": "CLOSED_CONSUMED_ONCE",
       "active": false
+    },
+    "installed_runtime_apply_20261125": {
+      "task_id": "OL-20261125-054",
+      "scope": "OPERATOR_AUTHORIZED_INSTALLED_I3_AND_PRIVATE_APPLY",
+      "source": "OPERATOR_EXPLICIT_CHAT_APPROVAL_PLUS_NEW_OPERATOR_DIRECT_LOCAL_PROMPT",
+      "intent": "MAKE_3083_INSTALLED_I3_AND_REGISTERED_APPLY_OPERATOR_FLOW_WORK_NOT_REPEAT_STAGING",
+      "operator_approval_received": true,
+      "technical_preflight_and_private_exact_target_required": true,
+      "live_original_3083_test_orchestrator_scoped_cutover": true,
+      "max_concurrent_subagents": 3,
+      "real_outbound_budget": 3,
+      "real_model_sessions_budget": 2,
+      "real_apply_transaction_budget": 1,
+      "public_github_not_execution_authority": true,
+      "auto_dispatch": false
     }
   },
   "integration_i3": {
@@ -433,7 +451,7 @@
       "registered_project_snapshot_root_replacement_requires_explicit_re_registration",
       "live_dsh_trigger_reingestion_drift_11_to_12_paused_zero_tickets_zero_sends"
     ],
-    "next": "REMOTE_DOC_AND_INSTALLED_RUNTIME_3083_SINGLE_OWNER_HANDOVER",
+    "next": "OL054_INSTALLED_3083_SINGLE_POLL_OWNER_PRIVATE_APPLY_ONE_BATCH_PENDING",
     "real_weixin_sent": true,
     "real_weixin_i3_accepted": true,
     "remote_source_sha": "d6c51629855caf4b2737049cf4592cc12b912765",

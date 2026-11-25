@@ -1,5 +1,7 @@
 # 020 — After OL-053: controlled REAL I3 pilot and dedicated registered-project Apply
 
+**Current follow-up engineering:** `OL-20261125-054` / root `PLAN-OL054.md` (public-safe path text, not an execution token) handles installed 3083 exclusive poll owner/rollback and operator-private Apply flow. OL-053's genuine staging pilot did not install new code into 3083. No action occurs merely by reading this runbook.
+
 **As of 2026-11-25.** Read the scoped `agent-reports/REPORT-ol053-controlled-live-i3-and-real-apply.md` and `agent-handoff/receipts/online/LO-20261125-053-done.md`. This is an operating runbook and engineering status; **not a public GitHub command, secret container, reusable send budget, or production deploy switch**. A first genuine staging-guest live I3 with real local model-driven edit and two self/consenting-peer outbound sends plus one genuine operator-registered **dedicated test-project** Apply/rollback passed under the owner's task-scoped run. PR #1 remains Draft.
 
 ## Operator action: registered project root replaced at same path

@@ -1,14 +1,17 @@
-# WORK_QUEUE — OL-053 live pilot ACKed; installed integration follows
+# WORK_QUEUE — OL-054 installed-product convergence, one autonomous batch
 
-`no_auto_dispatch=true`, remote scheduler `PAUSED_BY_OPERATOR`, PR #1 Draft/unmerged.
+Current: `OL-20261125-054`, pending **direct operator-forwarded launch**, no watcher/auto-dispatch. See root `PLAN-OL054.md` for complete M0–M6 schedule, ≤3 concurrent offline subagents, source edits and final verdicts. PR #1 remains Draft/unmerged.
 
-| Work | Status |
-| --- | --- |
-| OL-053 real iLink + true local model staging guest + real dedicated registered-project Apply/rollback | **CLOSED `LIVE_BOTH_PASS` scoped pilot, independently ACKed**, source `c402b48276b74eba0ecf0a697cf09d1138a0f92e`, done `c0527b087d64640d5eedfd7b4f4b23c0fde03dc3`, CI #869/#870 each 3/3, ACK `agent-handoff/receipts/online/LO-20261125-053-done.md` |
-| Fix operator procedure for new same-path ABA fail-closed root identity | **DOCUMENTED**, `docs/020-postlive-i3-and-apply-operator-runbook.md`; explicit re-register/new Ticket, no old grant replay |
-| Installed 3083 updated Source/native I3/Worker/Outbox and cursor owner migration | **NEXT technical milestone**, original 3083 not yet cut over; prevent concurrent poll/duplicate trigger |
-| Research Apply helper → installed private capability boundary with safe rollback/recovery | **NEXT technical milestone**, test project real Apply passed, no general production Runtime wiring |
-| Human-reviewed live Outbox reconciliation of ambiguous-send state | **PENDING engineering**, never automatic resend/claim reset |
-| PR #1 main merge, mass recipient expansion, broad deploy | **NOT part of pilot**, Draft/unmerged |
+| Phase | Work | Status |
+| --- | --- | --- |
+| Prev | OL-053 controlled real iLink/model and registered-test-project Apply+rollback | CLOSED `LIVE_BOTH_PASS` scoped, independently ACKed; CI #869/#870 each 3/3 |
+| Doc | Re-register if same-path registered root/ancestor replaced, new Ticket and capability | DONE `docs/020-postlive-i3-and-apply-operator-runbook.md` |
+| M0 | Private installed 3083 inventory and consistent backup/restore dry run | PENDING one trusted OL-054 launch |
+| M1 | Single account poll-owner lease/fencing + durable inbound dedup, no trigger 12 replay | NOT IMPLEMENTED, assigned |
+| M2 | Staged reversible new 3083 test-orchestrator cutover | NOT EXECUTED, assigned |
+| M3 | Real Tencent→**installed 3083**→genuine local model→Outbox→self-peer | NOT EXECUTED, assigned |
+| M4 | Operator-private auditable manual review hold terminal settlement, no resend | NOT IMPLEMENTED, assigned |
+| M5 | Native fd-relative Apply helper→private product review→real registered low-risk test source | NOT WIRED, assigned |
+| M6 | Cross-OS CI, host rollback/evidence and one final LO-054 | PENDING final |
 
-No OL-054 auto-dispatch from ACK. Root `PLAN.md` is now historical OL-053 task, not reusable host authority.
+Technical host/OS/identity gates are checked locally, NOT interpreted as need for another abstract consent. Lead-only live actions; no OL-055 auto issue; original OL-053 send/model/Apply budgets consumed.
