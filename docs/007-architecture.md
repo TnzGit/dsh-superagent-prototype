@@ -343,6 +343,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `src/app/setup.ts` | Setup, and `setupChanged`, whether a save changes a field setup reads |
 | `src/app/passes.ts` | Passes, the pass scheduler |
 | `src/app/outbox.ts` | The Outbox: the Engine's `Outbox` port, the receipts and the `reply` effects that send them |
+| `src/app/operator-review.ts` | The operator's private reconciliation (OL-054 M4): the owner-only token grant, the sanitized ledger, the first-writer-wins terminal transition of a held receipt, the terminal classification of a pending Trigger, and the append-only fsynced audit journal that freezes mutations when its tail is interrupted |
 | `src/app/notices.ts` | The main Session's notices and relays: `eventNotice`, `reportRelay`, `resultRelay` and `followupRelay` |
 | `src/app/store.ts` | The Store, and `Receipt`, a message of the outbox |
 | `src/app/store-read.ts` | `storeReads`: the Store's read queries for the views, the tools and the Sources' polls, which never write |
@@ -439,6 +440,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `research/os-path-inspector.c` + `tests/os-path-inspector.node-test.mjs` | Test-only POSIX read-only fd-rooted `openat` no-follow prototype; disposable Linux/macOS fixture refusals; no Apply or production ABI |
 | `research/real-apply-helper.c` + `tests/local-real-apply-helper.node-test.mjs` | Descriptor-relative no-follow native Apply/rollback/recovery helper (openat per component, pinned-fd preimage re-verification, atomic renameat, fsync'd journal); adversarial refusals, crash-injection classification, portable `-Werror` compile; synthetic 0700 fixtures only |
 | `tests/local-real-apply-capability.node-test.mjs` | One-use unguessable capability enforcement on the native driver: strict schema, expiry, consumed-on-use no-retry marker, exact-file-list/plan/root-identity/principal bindings, ambiguity freeze; synthetic fixtures only |
+| `tests/local-operator-review-journal.node-test.mjs` | The operator grant's owner-only file guards, constant-time token checks, first-writer-wins reconciliation with one fsynced journal record, and the interrupted-tail freeze; synthetic 0700 fixtures and fake stores only |
 | `tests/local-vertical-real-sessions.spec.ts` | I1E synthetic-chat and I3 fake-native-Weixin **actual poll loop** → real Engine/Ticket → DshExecutor/Sessions (simulated DSH Agent, NO model) → isolated preview/ready → application SQLite Outbox pending receipt with Source OFF; no real Weixin/Apply |
 | `tests/local-vertical-native-fake-delivery.spec.ts` | I3 fake-delivery vertical: fake `getupdates` → real native poll loop → real Engine intake → Ticket → disposable Worker copy (mocked agent, NO model) → installed native Source → durable Outbox → fake `sendmessage` acceptance, review holds, restart replay, expiry/rotation gates; no real Weixin, network, model or Apply |
 | `tests/local-sessions-worker-boundary.spec.ts` | I1D actual Sessions.ensure/initializeRoleModel/AgentDelivery worker lifecycle on a disposable DSH SessionController/agent context; source and host untouched |
@@ -458,6 +460,7 @@ Some generic modules still refer directly to GitHub or Feishu:
 | `tests/effects.spec.ts` | The effect queue: coalescing, limits, retries with backoff, health and shutdown |
 | `tests/passes.spec.ts` | Passes: one at a time, the ones asked for during a pass run as one after it, and the runtime health a failed pass reports |
 | `tests/outbox.spec.ts` | The Outbox on a running Runtime: messages wait while processing is paused or their Source is not installed |
+| `tests/operator-reconcile.spec.ts` | The operator's private reconciliation on a running Runtime with a synthetic 0600 grant: the token checks, the sanitized ledger, one effect per race, terminal classification of a held receipt and of a pending Trigger, the interrupted journal, and replayed historical intake that creates no Ticket and no second reply |
 | `tests/cache.spec.ts` | `TextCache` |
 | `tests/queue.spec.ts` | The Runtime's work through the effect queue, and what earlier versions stored |
 | `tests/followups.spec.ts` | A person's follow-up on a Ticket's Thread: its notice to the main Session, the tools that act on it, what a burst costs; a worker's hand-back and context follow, and the main Session's note |
