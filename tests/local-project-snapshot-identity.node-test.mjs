@@ -39,18 +39,25 @@ test('replacing the registered source with a fresh inode at the same path fails 
   assert.equal(readFileSync(join(root, 'a.txt'), 'utf8'), 'original\n')
 }))
 
-test('replacing a registered ancestor directory fails the snapshot creation identity gate even when the project root inode is moved back', async () => fixture(async ({ projects, workspaces }) => {
+test('replacing a registered ancestor directory fails the snapshot creation identity gate even when the project root inode is moved back', async () => fixture(async ({ base, projects, workspaces }) => {
   const root = join(projects, 'doc'); mkdirSync(root)
   writeFileSync(join(root, 'a.txt'), 'original\n')
+  // Decoy allocation consumes the freed inode number so each replacement carries a
+  // genuinely different dev/inode identity (Linux reuses just-freed inodes immediately).
+  const decoy = () => { mkdirSync(join(base, 'decoy-' + decoy.n++), { mode: 0o700 }) }
+  decoy.n = 0
   const registry = new LocalProjectRegistry([projects], [{ id: 'doc', root, kind: 'local' }])
   const fingerprint = projectFingerprint(registry.get('doc'))
   const request = { registry, projectId: 'doc', directory: join(workspaces, 'doc', 'ticket-ancestor'), fingerprint }
   await registry.write('doc', () => createProjectSnapshot(request))
   // Swap the allowlist root (an ancestor of the project) for a fresh directory and recreate the project inside it.
-  rmSync(projects, { recursive: true, force: true })
-  mkdirSync(projects, { mode: 0o700 })
-  rmSync(root, { recursive: true, force: true })
-  mkdirSync(root, { mode: 0o700 }); writeFileSync(join(root, 'a.txt'), 'original\n')
+  // Filesystems reuse just-freed inode numbers for the next allocation (certain on Linux ext4/xfs),
+  // so each replacement is preceded by a decoy directory that consumes the freed inode; the swap then
+  // carries a genuinely different dev/inode identity on every platform.
+  decoy(); rmSync(projects, { recursive: true, force: true })
+  decoy(); mkdirSync(projects, { mode: 0o700 })
+  decoy(); rmSync(root, { recursive: true, force: true })
+  decoy(); mkdirSync(root, { mode: 0o700 }); writeFileSync(join(root, 'a.txt'), 'original\n')
   const second = { registry, projectId: 'doc', directory: join(workspaces, 'doc', 'ticket-2'), fingerprint }
   await assert.rejects(() => registry.write('doc', () => createProjectSnapshot(second)), /identity changed/)
   assert.equal(existsSync(second.directory), false)

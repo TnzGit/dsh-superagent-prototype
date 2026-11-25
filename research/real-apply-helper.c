@@ -792,14 +792,16 @@ static int do_write(const char *subcommand) {
             if (n == 0) break;
             if (n < 0) {
                 close(stage); close(src); close(jdir); close(parent);
-                if (target >= 0) close(target); close(root);
+                if (target >= 0) { close(target); }
+                close(root);
                 unlinkat(parent, stage_name, 0);
                 return REJECT("after-image-read-failure");
             }
             total += n;
             if (total > MAX_IMAGE_BYTES) {
                 close(stage); close(src); close(jdir); close(parent);
-                if (target >= 0) close(target); close(root);
+                if (target >= 0) { close(target); }
+                close(root);
                 unlinkat(parent, stage_name, 0);
                 return REJECT("after-image-too-large");
             }
@@ -807,7 +809,8 @@ static int do_write(const char *subcommand) {
             const ssize_t w = write(stage, chunk, (size_t)n);
             if (w != n) {
                 close(stage); close(src); close(jdir); close(parent);
-                if (target >= 0) close(target); close(root);
+                if (target >= 0) { close(target); }
+                close(root);
                 unlinkat(parent, stage_name, 0);
                 return REJECT("stage-write-failure");
             }
