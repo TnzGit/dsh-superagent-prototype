@@ -1,17 +1,18 @@
-# CURRENT_STATE — OL-053 real I3 + registered Apply authorized, pending one trusted local launch (2026-11-25)
+# CURRENT_STATE — OL-053 controlled live pilot independently ACKed (2026-11-25)
 
-**Authoritative:** `agent-handoff/STATE.json`; full current plan: **root `PLAN.md`**. The operator explicitly authorized real Weixin I3 progression and bounded real registered-project Apply in the direct private conversation on 2026-11-25, correcting the previous repeated generic consent requirement. **Do not ask again for a generic yes/no.** Task `OL-20261125-053` is the *only* active pending local task; up to 3 concurrent offline subagents, single lead for live sends/model/Apply. Local needs one direct operator-forwarded launch, not an automatic public GitHub command.
+**Canonical:** `agent-handoff/STATE.json`. OL-053 is **CLOSED / online-ACKed `LIVE_BOTH_PASS`** for **one staging-guest real I3 and one dedicated registered real test-project Apply/rollback**. No active local task yet; no OL-054 dispatched by ACK. `no_auto_dispatch=true`, remote scheduler `PAUSED_BY_OPERATOR`. PR #1 Draft/unmerged.
 
-## Last complete accepted batch
+## Evidence
 
-- OL-052 P0–P5 is CLOSED/ACKed `ALL_OFFLINE_PASS` for `OFFLINE_SYNTHETIC_ONLY`: final implementation `b9d8fb76910ee382c98bc8fba2ee1490a34d871e`, done `58e7b5c128d352fb85ee6cd39fe6dfe1d4d5d667`, online ACK `agent-handoff/receipts/online/LO-20261124-052-done.md` at `b6b6fc1ffd40ff4082d8488a2ed68aeb811f6ab3`; source CI #849/#850, done CI #851/#852, ACK CI #853/#854 all 3/3 at exact respective SHA. Linux Vitest 1342, Node 279, focus 141, proxy 5; Mac local same plus additional synthetic tests. Real I3 and Apply are not yet implemented/accepted by these tests.
+- Task baseline `b6b6fc1ffd40ff4082d8488a2ed68aeb811f6ab3`; unique claim `8782db4e359f36bd6ae46207cb03dc1286f79f38`; final source `c402b48276b74eba0ecf0a697cf09d1138a0f92e`; done `c0527b087d64640d5eedfd7b4f4b23c0fde03dc3`; private-host results summarized at `agent-reports/REPORT-ol053-controlled-live-i3-and-real-apply.md`, online ACK `agent-handoff/receipts/online/LO-20261125-053-done.md`.
+- Exact final done source CI [#869 push](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/45619033233) + [#870 PR](https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/45619046393) each 3/3 success. Linux full Vitest **1357/1357**, Linux/macOS Node **310/310**, focus **156/156**, proxy **5/5**. SubA synthetic iLink guards, SubB snapshot root dev/inode check, SubC native fd-relative helper + one-use driver + 24 adversarial tests; no production product Runtime Apply wiring.
+- Privately attested true Tencent incoming from owner-controlled consented peer, true local model 6-tool native edit in isolated staging guest, two real outbound receipts sent, one registered dedicated REAL test project Apply + exact rollback. First model boot 502 / operator-granted retry honestly recorded. 3083 was restored with **12 vs 11** triggers on resumed cursor, paused executor and **zero Ticket/send drift**. CI cannot independently inspect private live events.
 
-## NEW user authorization and work
+## Next engineering issues, not generic consent blockers
 
-- `OL-20261125-053` scope `OPERATOR_AUTHORIZED_CONTROLLED_LIVE_I3_AND_APPLY`; task-start SHA `b6b6fc1ffd40ff4082d8488a2ed68aeb811f6ab3`; expected result `LO-20261125-053`. Real native iLink QR account (operator-assisted), single consenting/self-owned test peer, ≤3 real outbound messages; one genuine OS-confined model-turn; read-only original host health/localhost 8123; engineering of verified OS helper and one bounded real registered-project Apply (≤2 low-risk text files, ≤8 KiB, complete before-image+journal/rollback). Normal feature-branch source/test/docs/CI edits permitted. All steps L0–L5 autonomously in one batch with no online ACK between phases. Tech preflight remains mandatory; authorization is already received.
-- Strict separation between real Tencent/provider acceptance, real model inference, real registered project Apply, and synthetic CI. Do not fake live PASS. Only lead can execute live side effects, no subagent has credentials or write authority. Public results sanitized.
-- `no_auto_dispatch=true` and remote scheduler `PAUSED_BY_OPERATOR`. PR #1 Draft/unmerged. Old root `HANDOVER.md` is historical and OL-052's scoped grants are consumed.
+1. Installed **3083 version/Source/Worker/Outbox cutover**, one account one cursor owner and durable duplicate suppression.
+2. Re-register operator-trusted project roots after intentional same-path inode replacement; never reuse old Ticket/capability. See `docs/020-postlive-i3-and-apply-operator-runbook.md`.
+3. Wire Apply helper through an operator-private transaction boundary with backup, journal, recovery and no bypass. Remaining same-UID/quiescence/ancestor/power-loss limits are real technical issues.
+4. Live review-hold human reconciliation workflow remains missing, no automatic resend of ambiguous messages.
 
-## Scope still excluded
-
-Arbitrary peers/messages, private history scraping, unrelated cloud/credential/provider/system changes, arbitrary original service restarts or config edits, unbounded production edits/deletes, broad deployment, force-push or merge. These are not steps required for the operator-authorized pilot. Actual target values and robust OS/backup gates are checked locally as engineering prerequisites, not treated as need for a repeat blanket authorization.
+No new live task by this ACK and no re-use of OL-053 send/model/Apply attempt budgets. Operator has already approved normal project development; a future specific direct handover can include host-side validation without asking for another generic approval.

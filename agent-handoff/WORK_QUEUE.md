@@ -1,16 +1,14 @@
-# WORK_QUEUE — OL-053 ONE operator-approved live integration batch (2026-11-25)
+# WORK_QUEUE — OL-053 live pilot ACKed; installed integration follows
 
-The operator has authorized both controlled real Weixin I3 and bounded real registered-project Apply. Do not repeat generic consent questions. Root `PLAN.md` is the canonical complete L0–L5 runbook. `no_auto_dispatch=true`, scheduler `PAUSED_BY_OPERATOR`, PR #1 Draft/unmerged.
+`no_auto_dispatch=true`, remote scheduler `PAUSED_BY_OPERATOR`, PR #1 Draft/unmerged.
 
-| Order | Work | Responsible | Status |
-| --- | --- | --- | --- |
-| Done | OL-052 P0–P5 comprehensive offline synthetic batch | Remote/local | CLOSED, independent ACK and CI #849–#854 verified |
-| L0 | One trusted launch, private host/target/ledger preflight | Local lead | PENDING one operator-direct handoff |
-| L1 | Genuine iLink QR auth, real incoming + ≤3 real sends to one consented/self peer | Local lead + subA offline support | AUTHORIZED, target/transport checks pending |
-| L2 | One isolated genuine model turn correlated to native I3 & Outbox | Local lead + subB offline support | AUTHORIZED, OS/tools/budget preflight pending |
-| L3 | Native descriptor-relative safe Apply helper, backups+journals, adversarial macOS tests | subC offline support + lead | AUTHORIZED to engineer; technical gates pending |
-| L4 | One true registered project Apply on low-risk ≤2 text files / ≤8KiB, optional verified rollback | Local lead only | AUTHORIZED subject to target, safety and private capability gates |
-| L5 | Final CI, privacy/redaction, one live evidence matrix, LO-053 | Local lead | After all feasible stages |
-| After | PR main merge/deploy, mass messaging, unrelated services/config/security changes | Operator | NOT INCLUDED in this batch |
+| Work | Status |
+| --- | --- |
+| OL-053 real iLink + true local model staging guest + real dedicated registered-project Apply/rollback | **CLOSED `LIVE_BOTH_PASS` scoped pilot, independently ACKed**, source `c402b48276b74eba0ecf0a697cf09d1138a0f92e`, done `c0527b087d64640d5eedfd7b4f4b23c0fde03dc3`, CI #869/#870 each 3/3, ACK `agent-handoff/receipts/online/LO-20261125-053-done.md` |
+| Fix operator procedure for new same-path ABA fail-closed root identity | **DOCUMENTED**, `docs/020-postlive-i3-and-apply-operator-runbook.md`; explicit re-register/new Ticket, no old grant replay |
+| Installed 3083 updated Source/native I3/Worker/Outbox and cursor owner migration | **NEXT technical milestone**, original 3083 not yet cut over; prevent concurrent poll/duplicate trigger |
+| Research Apply helper → installed private capability boundary with safe rollback/recovery | **NEXT technical milestone**, test project real Apply passed, no general production Runtime wiring |
+| Human-reviewed live Outbox reconciliation of ambiguous-send state | **PENDING engineering**, never automatic resend/claim reset |
+| PR #1 main merge, mass recipient expansion, broad deploy | **NOT part of pilot**, Draft/unmerged |
 
-No intermediate OL tasks, no generic repeated authorization, no automatic OL-054 or CI-to-host dispatch. A missing QR scan or concrete real project target is an operand the human may need to provide privately, not a reason to stop unrelated progress.
+No OL-054 auto-dispatch from ACK. Root `PLAN.md` is now historical OL-053 task, not reusable host authority.

@@ -1,3 +1,5 @@
+> **CURRENT 2026-11-25:** OL-053 true controlled staging-guest I3 and dedicated REAL registered-test-project Apply/rollback **independently ACKed `LIVE_BOTH_PASS`** for this pilot scope. Final source `c402b48276b74eba0ecf0a697cf09d1138a0f92e`, done `c0527b087d64640d5eedfd7b4f4b23c0fde03dc3`, [online ACK](agent-handoff/receipts/online/LO-20261125-053-done.md). 3083 installed cutover and general production Apply caller are NOT implied. **NO ACTIVE TASK** after this ACK; no OL-054 auto-dispatch, remote scheduler PAUSED, `no_auto_dispatch=true`. Root `PLAN.md` is historical and consumed. Read `STATE.json`, `LOCAL_AGENT_TASK.md`, `docs/020-postlive-i3-and-apply-operator-runbook.md` for next technical gates.
+
 # 014 — Real registered-project Apply: OS boundary architecture decision (PROPOSAL ONLY)
 
 **Status: DESIGN REQUIRED / NO REAL WRITE ENABLED.** Human standing in-principle agreement for reasonable Apply is known, but none of these design notes is a private signed grant. `agent-handoff/REAL_APPLY_GATES.md` remains controlling. Do not connect synthetic approval APIs directly to production Runtime/Worker.
