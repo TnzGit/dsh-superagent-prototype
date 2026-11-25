@@ -152,10 +152,15 @@
     "local_source_patch_exception": true,
     "source_ci_push_run_id": 45622141308,
     "source_ci_pr_run_id": 45622155036,
-    "source_ci_status": "VERIFY_877_878_BOTH_SUCCESS_3_OF_3_BEFORE_CLAIM",
+    "source_ci_status": "SUPERSEDED_CANCELLED_DO_NOT_CLAIM_GREEN_FINAL_HANDOFF_CI_REQUIRED",
     "requires_online_ack_between_phases": false,
     "final_artifact": "agent-reports/REPORT-ol054-installed-runtime-private-apply.md",
-    "no_auto_dispatch": true
+    "no_auto_dispatch": true,
+    "handoff_ci_requirement": "FINAL_HEAD_PUSH_AND_DRAFT_PR_3_OF_3_EXACT_SHA",
+    "source_ci_original_runs": [
+      45622141308,
+      45622155036
+    ]
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -269,7 +274,7 @@
   "next_stage": {
     "status": "OL054_OPERATOR_AUTHORIZED_INSTALLED_3083_AND_PRIVATE_APPLY_ONE_BATCH_PENDING",
     "last_task": "OL-20261125-053",
-    "remote_work": "OL053_ACKED_DOCS_FIXED_DETERMINISTIC_ABA_SOURCE_TEST_PIN_READY_OL054",
+    "remote_work": "OL054_PINNED_SOURCE_DETERMINISTIC_ABA_FINAL_HANDOFF_CI_GATES_NO_SUPERSEDED_RUN_CLAIMS",
     "real_weixin": "PILOT_PASS_INSTALLED_CUTOVER_CONDITIONALLY_AUTHORIZED",
     "real_source_apply": "REAL_REGISTERED_TEST_PASS_PRODUCT_PRIVATE_FLOW_CONDITIONALLY_AUTHORIZED",
     "auto_next_task": "FORBIDDEN",
