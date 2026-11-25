@@ -263,7 +263,9 @@ static int no_extended_attributes(int fd) {
 
 /* ---------- fsync helpers ---------- */
 static int fsync_fd(int fd) {
-#ifdef _POSIX_SYNCHRONIZED_IO
+    /* fdatasync is Linux-only; Apple's SDK defines _POSIX_SYNCHRONIZED_IO but
+     * never declares fdatasync, so gate on __linux__ for GCC-style portability. */
+#if defined(__linux__) && defined(_POSIX_SYNCHRONIZED_IO)
     if (fdatasync(fd) == 0) return 0;
 #endif
     return fsync(fd) == 0 ? 0 : -1;
