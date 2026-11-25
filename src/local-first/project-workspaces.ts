@@ -103,6 +103,9 @@ export async function createProjectSnapshot(input: SnapshotRequest): Promise<voi
   const project = registry.get(projectId)
   if (!PROJECT.test(projectId) || project.readOnly) throw new Error('Project is not writable')
   if (projectFingerprint(project) !== input.fingerprint) throw new Error('Local project registry changed since Ticket creation')
+  // Same-path replacement (ABA) of the registered source passes the path-only fingerprint; the captured
+  // dev/inode identity is the only evidence that the copy is made from the project the operator registered.
+  registry.assertRegisteredRootIdentity(projectId)
   if (!isAbsolute(directory)) throw new Error('Ticket workspace must be absolute')
   assertWorkspaceOutsideProject(project, directory)
   await mkdir(dirname(directory), { recursive: true, mode: 0o700 })
@@ -151,6 +154,9 @@ export async function createProjectSnapshot(input: SnapshotRequest): Promise<voi
 export async function verifyProjectSnapshot(input: SnapshotRequest): Promise<void> {
   const project = input.registry.get(input.projectId)
   if (projectFingerprint(project) !== input.fingerprint) throw new Error('Project configuration differs from original Ticket')
+  // The same-path ABA replacement can also land between snapshot creation and launch; re-proving the
+  // registered dev/inode identity here keeps the Worker from opening a look-alike project.
+  input.registry.assertRegisteredRootIdentity(input.projectId)
   const info = await lstat(input.directory)
   if (!info.isDirectory() || info.isSymbolicLink()) throw new Error('Ticket workspace is not a normal directory')
   const root = realpathSync(input.directory)

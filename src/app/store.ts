@@ -351,6 +351,8 @@ export class Store implements Repositories {
     /**
      * Marks a pending receipt as sent or dropped (with drop reason and timestamp), recreating the receipt if the message
      * was withdrawn while being sent so its ID cannot be queued again.
+     * `json_patch` keeps the durable forensic fields (`singleSendAttemptAt`, `review` audit) on the terminal row, and
+     * already-terminal receipts are never rewritten by a replayed settle (the recreate is `INSERT OR IGNORE`).
      */
     settle: (message: OutboundMessage, outcome: 'sent' | DropReason): void => {
       const settled = outcome === 'sent' ? { status: 'sent' } : { status: 'dropped', dropped: { at: new Date().toISOString(), reason: outcome } }
