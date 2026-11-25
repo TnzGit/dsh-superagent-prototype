@@ -736,7 +736,8 @@ static int do_write(const char *subcommand) {
 
     const int jdir = open_tx_dir(SP_VALUES[SP_TX_DIR], &why);
     if (jdir < 0) {
-        close(parent); if (target >= 0) close(target); close(root);
+        close(parent); if (target >= 0) { close(target); }
+        close(root);
         return REJECT(why);
     }
 
@@ -754,7 +755,8 @@ static int do_write(const char *subcommand) {
         }
     }
     if (write_record(jdir, "prepared", target >= 0 ? &st : NULL, tdev, tino, &why) != 0) {
-        close(jdir); close(parent); if (target >= 0) close(target); close(root);
+        close(jdir); close(parent); if (target >= 0) { close(target); }
+        close(root);
         return REJECT(why);
     }
     stop_here("prepared");
@@ -763,24 +765,28 @@ static int do_write(const char *subcommand) {
     const char *leaf = basename_of(SP_VALUES[SP_PATH]);
     char stage_name[160];
     if (snprintf(stage_name, sizeof stage_name, ".dsh-apply-%s.tmp", SP_VALUES[SP_NONCE]) >= (int)sizeof stage_name) {
-        close(jdir); close(parent); if (target >= 0) close(target); close(root);
+        close(jdir); close(parent); if (target >= 0) { close(target); }
+        close(root);
         return REJECT("stage-name-too-long");
     }
     if (has_after) {
         const int src = openat(jdir, SP_VALUES[SP_AFTER_IMAGE], O_RDONLY | O_NONBLOCK | O_CLOEXEC | O_NOFOLLOW);
         if (src < 0) {
-            close(jdir); close(parent); if (target >= 0) close(target); close(root);
+            close(jdir); close(parent); if (target >= 0) { close(target); }
+            close(root);
             return REJECT("after-image-open-failure");
         }
         struct stat sst;
         if (fstat(src, &sst) != 0 || !S_ISREG(sst.st_mode) ||
             sst.st_uid != geteuid() || sst.st_nlink != 1) {
-            close(src); close(jdir); close(parent); if (target >= 0) close(target); close(root);
+            close(src); close(jdir); close(parent); if (target >= 0) { close(target); }
+            close(root);
             return REJECT("after-image-unsafe");
         }
         const int stage = openat(parent, stage_name, O_WRONLY | O_CREAT | O_EXCL | O_CLOEXEC | O_NOFOLLOW, 0600);
         if (stage < 0) {
-            close(src); close(jdir); close(parent); if (target >= 0) close(target); close(root);
+            close(src); close(jdir); close(parent); if (target >= 0) { close(target); }
+            close(root);
             return REJECT("stage-create-failure");
         }
         uint8_t chunk[65536];
@@ -819,14 +825,16 @@ static int do_write(const char *subcommand) {
         sha256_final(&c, hex);
         if (strcmp(hex, SP_VALUES[SP_AFTER_SHA]) != 0) {
             close(stage); close(src); close(jdir); close(parent);
-            if (target >= 0) close(target); close(root);
+            if (target >= 0) { close(target); }
+            close(root);
             unlinkat(parent, stage_name, 0);
             return REJECT("after-image-drift");
         }
         long long want_bytes = 0;
         if (parse_ll(SP_VALUES[SP_AFTER_BYTES], &want_bytes) != 0 || total != want_bytes) {
             close(stage); close(src); close(jdir); close(parent);
-            if (target >= 0) close(target); close(root);
+            if (target >= 0) { close(target); }
+            close(root);
             unlinkat(parent, stage_name, 0);
             return REJECT("after-image-size-drift");
         }
@@ -835,31 +843,36 @@ static int do_write(const char *subcommand) {
             want_mode < 0400 || want_mode > 0755 ||
             (want_mode & 0022) != 0 || (want_mode & 07000) != 0) {
             close(stage); close(src); close(jdir); close(parent);
-            if (target >= 0) close(target); close(root);
+            if (target >= 0) { close(target); }
+            close(root);
             unlinkat(parent, stage_name, 0);
             return REJECT("after-mode-unsafe");
         }
         if (fchmod(stage, (mode_t)want_mode) != 0) {
             close(stage); close(src); close(jdir); close(parent);
-            if (target >= 0) close(target); close(root);
+            if (target >= 0) { close(target); }
+            close(root);
             unlinkat(parent, stage_name, 0);
             return REJECT("stage-chmod-failure");
         }
         if (fsync_fd(stage) != 0) {
             close(stage); close(src); close(jdir); close(parent);
-            if (target >= 0) close(target); close(root);
+            if (target >= 0) { close(target); }
+            close(root);
             unlinkat(parent, stage_name, 0);
             return REJECT("stage-fsync-failure");
         }
         close(stage);
         close(src);
         if (sync_dir_fd(parent) != 0) {
-            close(jdir); close(parent); if (target >= 0) close(target); close(root);
+            close(jdir); close(parent); if (target >= 0) { close(target); }
+            close(root);
             return REJECT("stage-dir-fsync-failure");
         }
     }
     if (write_record(jdir, "staged", target >= 0 ? &st : NULL, tdev, tino, &why) != 0) {
-        close(jdir); close(parent); if (target >= 0) close(target); close(root);
+        close(jdir); close(parent); if (target >= 0) { close(target); }
+        close(root);
         return REJECT(why);
     }
     stop_here("staged");
@@ -889,7 +902,8 @@ static int do_write(const char *subcommand) {
         }
     }
     if (write_record(jdir, "applying", target >= 0 ? &st : NULL, tdev, tino, &why) != 0) {
-        close(jdir); close(parent); if (target >= 0) close(target); close(root);
+        close(jdir); close(parent); if (target >= 0) { close(target); }
+        close(root);
         return REJECT(why);
     }
     stop_here("applying");
@@ -908,18 +922,21 @@ static int do_write(const char *subcommand) {
         }
     } else if (is_modify) {
         if (renameat(parent, stage_name, parent, leaf) != 0) {
-            close(jdir); close(parent); if (target >= 0) close(target); close(root);
+            close(jdir); close(parent); if (target >= 0) { close(target); }
+            close(root);
             unlinkat(parent, stage_name, 0);
             return REJECT("renameat-failure");
         }
     } else {
         if (unlinkat(parent, leaf, 0) != 0) {
-            close(jdir); close(parent); if (target >= 0) close(target); close(root);
+            close(jdir); close(parent); if (target >= 0) { close(target); }
+            close(root);
             return REJECT("unlinkat-failure");
         }
     }
     if (sync_dir_fd(parent) != 0) {
-        close(jdir); close(parent); if (target >= 0) close(target); close(root);
+        close(jdir); close(parent); if (target >= 0) { close(target); }
+        close(root);
         return REJECT("write-dir-fsync-failure");
     }
     if (target >= 0) { close(target); target = -1; }

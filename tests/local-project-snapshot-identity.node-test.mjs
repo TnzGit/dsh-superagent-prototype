@@ -19,9 +19,13 @@ async function fixture(work) {
   finally { rmSync(base, { recursive: true, force: true }) }
 }
 
-test('replacing the registered source with a fresh inode at the same path fails the snapshot creation identity gate', async () => fixture(async ({ projects, workspaces }) => {
+test('replacing the registered source with a fresh inode at the same path fails the snapshot creation identity gate', async () => fixture(async ({ base, projects, workspaces }) => {
   const root = join(projects, 'doc'); mkdirSync(root)
   writeFileSync(join(root, 'a.txt'), 'original\n')
+  // Decoy allocation consumes the freed inode number so the replacement carries a
+  // genuinely different dev/inode identity (Linux reuses just-freed inodes immediately).
+  const decoy = () => { mkdirSync(join(base, 'decoy-' + decoy.n++), { mode: 0o700 }) }
+  decoy.n = 0
   const registry = new LocalProjectRegistry([projects], [{ id: 'doc', root, kind: 'local' }])
   const fingerprint = projectFingerprint(registry.get('doc'))
   const first = { registry, projectId: 'doc', directory: join(workspaces, 'doc', 'ticket-1'), fingerprint }
@@ -29,8 +33,8 @@ test('replacing the registered source with a fresh inode at the same path fails 
   await verifyProjectSnapshot(first)
   // ABA: an external writer deletes the source and recreates it at the SAME path with a NEW inode.
   // The path-derived fingerprint is byte-identical, so only the captured dev/inode identity can catch it.
-  rmSync(root, { recursive: true, force: true })
-  mkdirSync(root, { mode: 0o700 }); writeFileSync(join(root, 'a.txt'), 'original\n')
+  decoy(); rmSync(root, { recursive: true, force: true })
+  decoy(); mkdirSync(root, { mode: 0o700 }); writeFileSync(join(root, 'a.txt'), 'original\n')
   assert.equal(projectFingerprint(registry.get('doc')), fingerprint, 'path fingerprint is unchanged by ABA')
   const second = { registry, projectId: 'doc', directory: join(workspaces, 'doc', 'ticket-2'), fingerprint }
   await assert.rejects(() => registry.write('doc', () => createProjectSnapshot(second)), /identity changed/)
