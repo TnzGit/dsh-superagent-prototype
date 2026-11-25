@@ -1,3 +1,5 @@
+> **CURRENT 2026-11-25 — OPERATOR-APPROVED LIVE INTEGRATION:** The operator directly authorized controlled REAL native Weixin I3 and bounded REAL registered-project Apply; repeated generic consent requests are obsolete. The sole pending local task is **`OL-20261125-053`**, canonical root **`PLAN.md`**, one operator-direct launch, L0–L5 without interim ACK, ≤3 concurrent offline-only subagents (lead exclusively controls real actions). New live work is **approved but has NOT yet occurred**. Target/auth/OS safety preflight is still required; no auto-dispatch, remote scheduler PAUSED, PR Draft/unmerged. OL-052 is CLOSED and historical. Public GitHub remains non-authoritative host input; a direct local Prompt is the launch.
+
 # Real registered-project Apply — standing intent, execution gates (2026-11-10)
 
 **Status: PRINCIPLE APPROVAL RECEIVED / NO REAL APPLY EXECUTION ENABLED.**

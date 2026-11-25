@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "REMOTE_ONLINE_POST_OL052_OFFLINE_BATCH_ACK_CLOSED_NO_ACTIVE_LOCAL_TASK",
+  "owner": "LOCAL_OPERATOR_DIRECT_CONTROLLED_LIVE_I3_AND_REGISTERED_APPLY_BATCH",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -35,7 +35,7 @@
     "real_weixin_i3_accepted": false,
     "real_apply_accepted": false
   },
-  "active_local_task": null,
+  "active_local_task": "OL-20261125-053",
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -98,7 +98,9 @@
     "agent-reports/REPORT-ol052-multiphase-offline-development.md",
     "agent-handoff/messages/to-local/2026-11-24-ol052-multiphase-offline.md",
     "agent-handoff/messages/to-online/2026-11-24-lo052-multiphase-done.md",
-    "agent-handoff/receipts/online/LO-20261124-052-done.md"
+    "agent-handoff/receipts/online/LO-20261124-052-done.md",
+    "PLAN.md",
+    "agent-handoff/messages/to-local/2026-11-25-ol053-live-i3-registered-apply-batch.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -126,26 +128,23 @@
     "merged": false
   },
   "local_batch": {
-    "task_id": "OL-20261124-052",
-    "status": "ACKED_CLOSED_ALL_OFFLINE_PASS_NO_REDISPATCH",
-    "scope": "OFFLINE_SYNTHETIC_ONLY",
-    "code_sha": "781b27df169f3a05bd4c3bb82ac62dfbd327ab7d",
-    "final_source_sha": "b9d8fb76910ee382c98bc8fba2ee1490a34d871e",
-    "claim_commit": "597832f7ec22ab606da0716349427051566e8050",
-    "report_commit": "f6e81e0481fda32f91488e628043e4fd9fc48e2c",
-    "done_commit": "58e7b5c128d352fb85ee6cd39fe6dfe1d4d5d667",
-    "online_ack": "agent-handoff/receipts/online/LO-20261124-052-done.md",
-    "verdict": "ALL_OFFLINE_PASS",
-    "source_ci_push_run_id": 45490329402,
-    "source_ci_pr_run_id": 45490346681,
-    "report_ci_push_run_id": 45490733294,
-    "report_ci_pr_run_id": 45490743472,
-    "report_ci_status": "SUCCESS_BOTH_3_OF_3",
+    "task_id": "OL-20261125-053",
+    "status": "PENDING_ONE_TRUSTED_DIRECT_OPERATOR_LIVE_BATCH",
+    "scope": "CONTROLLED_LIVE_I3_AND_REGISTERED_APPLY_OPERATOR_DIRECT",
+    "code_sha": "b6b6fc1ffd40ff4082d8488a2ed68aeb811f6ab3",
+    "host_live_grant": "OPERATOR_SCOPED_CONDITIONAL",
+    "operator_approval_received": true,
     "real_i3_accepted": false,
     "real_apply_accepted": false,
+    "preflight_required": true,
+    "live_i3_message_budget": 3,
+    "real_model_turn_budget": 1,
+    "real_apply_transaction_budget": 1,
     "max_concurrent_subagents": 3,
-    "no_auto_dispatch": true,
-    "requires_online_ack_between_phases": false
+    "local_source_patch_exception": true,
+    "requires_online_ack_between_phases": false,
+    "final_artifact": "agent-reports/REPORT-ol053-controlled-live-i3-registered-apply.md",
+    "no_auto_dispatch": true
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -257,15 +256,15 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "OL052_ACKED_CLOSED_NO_ACTIVE_LOCAL_TASK_REAL_I3_AND_APPLY_GATED",
+    "status": "OL053_OPERATOR_AUTHORIZED_CONTROLLED_REAL_I3_AND_APPLY_PENDING_ONE_DIRECT_LAUNCH",
     "last_task": "OL-20261124-052",
-    "remote_work": "OL052_FULL_MULTIPHASE_OFFLINE_BATCH_INDEPENDENTLY_ACKED",
-    "real_weixin": "FORBIDDEN_WITHOUT_SEPARATE_OPERATOR_DECISION",
-    "real_source_apply": "FORBIDDEN_WITHOUT_SEPARATE_GATES_AND_AUTHORIZATION",
+    "remote_work": "OPERATOR_EXPLICITLY_APPROVED_REAL_I3_AND_BOUNDED_REGISTERED_APPLY",
+    "real_weixin": "OPERATOR_AUTHORIZED_CONTROLLED_LIVE_PRECHECK_REQUIRED",
+    "real_source_apply": "OPERATOR_AUTHORIZED_SCOPED_TRANSACTION_PRECHECK_REQUIRED",
     "auto_next_task": "FORBIDDEN",
     "remote_automation": "PAUSED_BY_OPERATOR",
     "no_auto_dispatch": true,
-    "next_local_task": null
+    "next_local_task": "OL-20261125-053"
   },
   "integration_i2": {
     "status": "I2_ISOLATED_STAGING_PASS",
@@ -371,7 +370,7 @@
     "local_execution_requires_trusted_operator_owned_policy": true,
     "auto_dispatch": "REMAINS_DISABLED_UNTIL_VERIFIED_LOCALLY",
     "remote_automation": "REMAINS_OPERATOR_PAUSED",
-    "no_new_OL_task_yet": true,
+    "no_new_OL_task_yet": false,
     "current_offline_task": null,
     "multiphase_operator_direct_scope": {
       "task_id": "OL-20261124-052",
@@ -385,6 +384,22 @@
       "real_weixin_and_original_dsh_and_production_apply": false,
       "status": "CLOSED_CONSUMED_NOT_REUSABLE",
       "active": false
+    },
+    "current_live_task": "OL-20261125-053",
+    "live_i3_registered_apply_20261125": {
+      "task_id": "OL-20261125-053",
+      "scope": "OPERATOR_AUTHORIZED_CONTROLLED_LIVE_I3_AND_APPLY",
+      "from": "DIRECT_PRIVATE_OPERATOR_CHAT_2026_11_25",
+      "intent": "EXPLICIT_APPROVAL_TO_PROGRESS_REAL_WEIXIN_I3_AND_REAL_REGISTERED_PROJECT_APPLY_WITHOUT_REPEATED_GENERAL_CONSENT",
+      "operator_approval_received": true,
+      "requires_target_and_technical_preflight": true,
+      "max_simultaneous_subagents": 3,
+      "maximum_real_outbound_messages": 3,
+      "maximum_model_turns": 1,
+      "maximum_real_apply_transactions": 1,
+      "approval_not_public_github_execution_token": true,
+      "requires_direct_handover": true,
+      "autodispatch": false
     }
   },
   "integration_i3": {
@@ -405,9 +420,9 @@
       "original_source_apply_OS_and_transaction_gates",
       "real_iLink_send_acceptance_and_server_idempotency_not_verified",
       "manual_review_reconciliation_action_not_authorized",
-      "real_tencent_iLink_sender_identity_and_live_consent_remain_gated"
+      "operator_authorized_real_i3_live_preflight_QR_target_and_provider_semantics_unverified"
     ],
-    "next": "NO_LOCAL_TASK_REMOTE_ACK_COMPLETE_REAL_I3_ONLY_AFTER_SEPARATE_USER_DECISION",
+    "next": "OL053_REAL_I3_OPERATOR_APPROVED_PENDING_LOCAL_HOST_PREFLIGHT_AND_LIVE_EVIDENCE",
     "real_weixin_sent": false,
     "real_weixin_i3_accepted": false,
     "remote_source_sha": "d6c51629855caf4b2737049cf4592cc12b912765",

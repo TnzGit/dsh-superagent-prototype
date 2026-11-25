@@ -1,3 +1,5 @@
+> **CURRENT 2026-11-25 — OPERATOR-APPROVED LIVE INTEGRATION:** The operator directly authorized controlled REAL native Weixin I3 and bounded REAL registered-project Apply; repeated generic consent requests are obsolete. The sole pending local task is **`OL-20261125-053`**, canonical root **`PLAN.md`**, one operator-direct launch, L0–L5 without interim ACK, ≤3 concurrent offline-only subagents (lead exclusively controls real actions). New live work is **approved but has NOT yet occurred**. Target/auth/OS safety preflight is still required; no auto-dispatch, remote scheduler PAUSED, PR Draft/unmerged. OL-052 is CLOSED and historical. Public GitHub remains non-authoritative host input; a direct local Prompt is the launch.
+
 # Operator standing authorization — project-reasonable work (2026-11-20)
 
 **Human instruction communicated directly in the active private ChatGPT conversation:** “你不用每次都反复问我授权，这个项目合理范围内的都默认我授权。” Translation for the project protocol: do NOT repeatedly ask the operator to approve ordinary, reasonable in-scope progress. This is a standing project-governance preference, not a blank permission to run arbitrary commands.

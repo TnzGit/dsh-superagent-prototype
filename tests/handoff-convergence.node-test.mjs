@@ -18,6 +18,12 @@ const largest=(names,re)=>Math.max(-1,...names.map(n=>getNum(n,re)))
  */
 const I2_SCOPE='CONDITIONAL_I2_OS_ISOLATED_DISPOSABLE_STAGING_ONE_SHOT'
 const I2_STATE_SCOPE='CONDITIONAL_ONE_SHOT_OS_ISOLATED_DISPOSABLE_DSH_I2'
+const LIVE_SCOPE='OPERATOR_AUTHORIZED_CONTROLLED_LIVE_I3_AND_APPLY'
+const LIVE_STATE_SCOPE='CONTROLLED_LIVE_I3_AND_REGISTERED_APPLY_OPERATOR_DIRECT'
+const LIVE_VERDICTS=new Set([
+  'LIVE_BOTH_PASS','LIVE_I3_PASS_APPLY_BLOCKED','LIVE_APPLY_PASS_I3_BLOCKED',
+  'LIVE_PARTIAL','LIVE_BLOCKED_TARGET','LIVE_BLOCKED_ENV','LIVE_AMBIGUOUS_FREEZE','LIVE_FAIL'
+])
 const I2_VERDICTS=new Set([
   'I2_ISOLATED_STAGING_PASS',
   'I2_PARTIAL_NO_EDIT',
@@ -37,6 +43,7 @@ const OFFLINE_VERDICTS=new Set([
 const scopeVerdict=(scope,verdict)=>
   scope==='OFFLINE_SYNTHETIC_ONLY' ? OFFLINE_VERDICTS.has(verdict)
   : scope===I2_SCOPE ? I2_VERDICTS.has(verdict)
+  : scope===LIVE_SCOPE ? LIVE_VERDICTS.has(verdict)
   : false
 const field=(body,name)=>{
   const prefix=name+': '
@@ -94,6 +101,7 @@ test('last accepted result is acked and a newer OL is at most one and independen
     const receipt=doneReceipt(pending)
     assert.equal(receipt.sha,state.local_batch.code_sha)
     if(state.local_batch.scope===I2_STATE_SCOPE) assert.equal(receipt.scope,I2_SCOPE)
+    else if(state.local_batch.scope===LIVE_STATE_SCOPE) assert.equal(receipt.scope,LIVE_SCOPE)
     else assert.equal(receipt.scope,'OFFLINE_SYNTHETIC_ONLY')
     const resultMessages=readdirSync(path('agent-handoff/messages/to-online')).filter(name=>
       name.includes('-lo'+pending.slice(-3)+'-'))
@@ -118,7 +126,13 @@ test('historical long documents remain losslessly archived and active state is s
   assert.ok(statSync(path('agent-handoff/archive/WORK_QUEUE-through-OL040-2026-11-14.md')).size>100000)
   if(state.active_local_task){
     assert.ok(read('LOCAL_AGENT_TASK.md').includes(state.active_local_task))
-    assert.equal(state.local_batch.host_live_grant,'NOT_GRANTED')
+    if(state.local_batch.scope===LIVE_STATE_SCOPE){
+      assert.equal(state.local_batch.host_live_grant,'OPERATOR_SCOPED_CONDITIONAL')
+      assert.equal(state.local_batch.operator_approval_received,true)
+      assert.equal(state.local_batch.real_i3_accepted,false)
+      assert.equal(state.local_batch.real_apply_accepted,false)
+      assert.equal(state.local_batch.max_concurrent_subagents,3)
+    } else assert.equal(state.local_batch.host_live_grant,'NOT_GRANTED')
     assert.match(state.local_batch.code_sha,/^[0-9a-f]{40}$/)
     assert.ok(read('LOCAL_AGENT_TASK.md').includes(state.local_batch.code_sha))
     const sequence=state.active_local_task.slice(-3)
@@ -157,6 +171,12 @@ test('verdict guards reject dishonest pass/partial mixing and prose marker spoof
   assert.equal(scopeVerdict(I2_SCOPE,'I2_ISOLATED_STAGING_PASS'),true)
   assert.equal(scopeVerdict(I2_SCOPE,'ALL_OFFLINE_PASS'),false)
   assert.equal(scopeVerdict(I2_SCOPE,'I2_BYPASS_PRODUCTION'),false)
+  assert.equal(scopeVerdict(LIVE_SCOPE,'LIVE_BOTH_PASS'),true)
+  assert.equal(scopeVerdict(LIVE_SCOPE,'LIVE_PARTIAL'),true)
+  assert.equal(scopeVerdict(LIVE_SCOPE,'LIVE_AMBIGUOUS_FREEZE'),true)
+  assert.equal(scopeVerdict(LIVE_SCOPE,'ALL_OFFLINE_PASS'),false)
+  assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','LIVE_BOTH_PASS'),false)
+  assert.equal(scopeVerdict(I2_SCOPE,'LIVE_BOTH_PASS'),false)
   assert.equal(scopeVerdict('UNKNOWN_FUTURE_SCOPE','I2_PARTIAL_NO_EDIT'),false)
   assert.throws(()=>field(['verdict: I2_PARTIAL_NO_EDIT','verdict: ALL_OFFLINE_PASS'].join(String.fromCharCode(10)),'verdict'))
   assert.throws(()=>field('the body says ALL_OFFLINE_PASS','verdict'))
