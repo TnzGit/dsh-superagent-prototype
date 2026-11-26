@@ -5,7 +5,7 @@ Operator-authorized single batch (S0–S6, direct operator chat grant 2026-11-26
 ## 1. Baselines and immutable SHAs
 
 - Task baseline `code_sha: a38b394d4a47a97d7f1ce3cb4332a05253a4d030`; dispatch head `f16885e80c5dab511291e24e5d22ff00e3485b3b`; claim commit `9618b9442c9550abac40269977318c149daa3fc9` (non-force FF push verified first).
-- Final source SHA (all code+docs): `1d7a614c8d3bcdaf3c6e73ba7778783ac1b28093` (12 integration commits + 1 runbook commit on the claim head).
+- Final source SHA (all code+docs): `89090b3eb02844030a592d8d87e500471599b2b7` (12 integration commits + 1 runbook commit + 1 forward-fix commit on the claim head; `1d7a614c8d3bcdaf3c6e73ba7778783ac1b28093` was the first candidate final SHA, superseded by the honest forward-fix below).
 - Baseline→dispatch diff: 14 files, docs/task/state/handoff-verdict-test only, zero src/, zero workflows, zero lockfiles. Push CI #898 (run 45751194856) and Draft PR CI #899 (run 45751202266): 3/3 each before claim.
 
 ## 2. S0 — offline baseline at the pinned source (all exit 0, local macOS, Node v25.9.0)
@@ -64,7 +64,9 @@ Canary decision: `CANARY_NOT_NEEDED` — OL-053/OL-054 already proved the genuin
 
 ## 8. S6 — merged integration and exact CI
 
-Three private worktree branches (`ol055-a` 3 commits, `ol055-b` 5 commits, `ol055-c` 3 commits) cherry-picked and rebased onto the claim head as 12 commits ending `c7a40212c7f55e71d9ddcadf272248f2caf519a7`, plus the runbook commit → final source `1d7a614c8d3bcdaf3c6e73ba7778783ac1b28093`. Merge conflicts (workflow Node/focus list overlap, `weixin-poll-lease.ts` import, `docs/007` row) resolved as unions; a stray-YAML repair commit followed (list-union script left bare continuation lines inside the workflow; `yaml.safe_load` validated after repair). No guard was weakened; no test removed.
+Three private worktree branches (`ol055-a` 3 commits, `ol055-b` 5 commits, `ol055-c` 3 commits) cherry-picked and rebased onto the claim head as 12 commits ending `c7a40212c7f55e71d9ddcadf272248f2caf519a7`, plus the runbook commit → candidate final source `1d7a614c8d3bcdaf3c6e73ba7778783ac1b28093`. Merge conflicts (workflow Node/focus list overlap, `weixin-poll-lease.ts` import, `docs/007` row) resolved as unions; a stray-YAML repair commit followed (list-union script left bare continuation lines inside the workflow; `yaml.safe_load` validated after repair). No guard was weakened; no test removed.
+
+Honest intermediate GitHub CI record at the first candidate SHA/publish commit: runs at `1d7a614` (#45897171181 push, #45897178047 PR) were **cancelled** — superseded by the immediately following done-commit push before they completed; the runs at the publish commit `061163b` (#45897191701 push, #45897200741 PR) came back `local-first-core = failure` on the ubuntu runner: the S4 kill-matrix fuzz cleaned its synthetic xattr via the `setfattr` tool, which the ubuntu image does not provide (`spawnSync` ENOENT silently ignored), so the later `inspect` returned `REJECT target-xattr` where the test expected `OK TARGET`. Forward-fixed (test fixture only, no guard weakened): a compiled `tests/fixtures/os-xattr-clearer.c` (`removexattr`, clang-clean with `-Werror`, GCC-16 `-Wmisleading-indentation`-clean) replaces the `setfattr` path → final source `89090b3eb02844030a592d8d87e500471599b2b7`. The macOS job and `dsh-typecheck-and-build` were success in both runs; local re-verification at the forward-fix SHA: CI-exact Node **387/387**, kill-matrix + trust-hardening **17/17**, `pnpm check` exit 0.
 
 Measured at the final source SHA on this host (Node v25.9.0; the ubuntu CI step pins Node 22 and the macOS step Node 25 — sources are strip-only-safe, whole Node list verified under Node 25):
 

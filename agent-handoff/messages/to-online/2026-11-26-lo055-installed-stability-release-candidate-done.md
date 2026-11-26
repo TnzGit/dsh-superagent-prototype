@@ -5,7 +5,7 @@ type: result
 scope: OPERATOR_AUTHORIZED_INSTALLED_STABILITY_RELEASE_CANDIDATE
 verdict: RC_READY
 code_sha: a38b394d4a47a97d7f1ce3cb4332a05253a4d030
-final_source_sha: 1d7a614c8d3bcdaf3c6e73ba7778783ac1b28093
+final_source_sha: 89090b3eb02844030a592d8d87e500471599b2b7
 related_task: OL-20261126-055
 report: agent-reports/REPORT-ol055-installed-stability-release-candidate.md
 
@@ -18,9 +18,13 @@ and `agent-handoff/receipts/local/OL-20261126-055-done.md`.
 Merged integration: three private subagent branches (poll-lease/replay; operator journal/UI + status page +
 pre-accept first-line selector feedback; Apply trust helper/driver) cherry-picked onto the claim head as 12
 commits ending `c7a40212c7f55e71d9ddcadf272248f2caf519a7`, plus `docs/023` runbook commit → final source
-`1d7a614c8d3bcdaf3c6e73ba7778783ac1b28093`. Merge conflicts resolved as unions only (workflow lists,
+`89090b3eb02844030a592d8d87e500471599b2b7`. Merge conflicts resolved as unions only (workflow lists,
 `weixin-poll-lease.ts` imports, `docs/007` rows); one repair commit for stray-YAML from the union script;
-no test removed, no guard weakened.
+no test removed, no guard weakened. Honest intermediate CI: the first candidate `1d7a614` runs were cancelled
+(superseded by the publish push); the publish-commit `061163b` runs showed `local-first-core` failure on ubuntu —
+the S4 kill-matrix fuzz cleaned its synthetic xattr via the `setfattr` tool, which the ubuntu image lacks;
+forward-fixed with a compiled `tests/fixtures/os-xattr-clearer.c` (`removexattr`; clang `-Werror` and GCC-16 clean)
+→ final source above. macOS + typecheck-and-build were success in both runs.
 
 Measured at the final source SHA (local macOS, Node v25.9.0): CI-exact Node **387/387** (baseline 340; +47 =
 SubA 8, SubB 22, SubC 17), focus Vitest **216/216 across 16 files** (baseline 190), full Vitest **1427/77 files**
