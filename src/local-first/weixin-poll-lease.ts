@@ -11,7 +11,7 @@
  * instances can share one credentials file while having different state directories (the OL-053 replay), and
  * only the shared credentials path fences them against each other.
  */
-import { chmodSync, closeSync, constants as fsConstants, fstatSync, mkdirSync, openSync, realpathSync } from 'node:fs'
+import { chmodSync, closeSync, constants as fsConstants, fstatSync, mkdirSync, openSync, realpathSync, statSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
@@ -56,6 +56,9 @@ export function acquireWeixinPollOwnerLease(credentialsFile: string, accountHash
   assertLeaseDirectory(dir)
   const file = join(dir, `account-${accountHash}.sqlite`)
   const db = new DatabaseSync(file)
+  // Pin the exact inode this holder locked: an ABA swap (unlink + recreate under a live holder)
+  // gives the same path a NEW inode, and a stale holder must never trust the replacement file.
+  const identity = statSync(file)
   let held = false, generation = 0
   try {
     db.exec('PRAGMA journal_mode=WAL')
@@ -75,6 +78,12 @@ export function acquireWeixinPollOwnerLease(credentialsFile: string, accountHash
   return {
     generation,
     fenceCurrent: () => {
+      // The path must still be the exact inode this holder acquired the lease on; an ABA
+      // replacement (or hostile move) under a live holder fences the old owner out.
+      try {
+        const now = statSync(file)
+        if (now.ino !== identity.ino || now.dev !== identity.dev) return false
+      } catch { return false }
       // A read-only peek never blocks on the RESERVED lock the live holder keeps.
       let reader: DatabaseSync | undefined
       try {
