@@ -440,7 +440,13 @@ test('adversarial pre-mutation fuzz: every tamper class is refused with an exact
     assert.equal(cleared.status, 0, 'fixture xattr must be removable: ' + (cleared.stderr ?? ''))
     assert.match(runHelper(f, inspectArgs).stdout, /^OK TARGET /)
   } else {
-    spawnSync('setfattr', ['-x', 'user.dsh-inspector-synthetic', f.leaf], { timeout: 5_000 })
+    const clearer = join(f.temp, 'xattr-clearer')
+    const compiled = spawnSync(compiler,
+      ['-std=c11', '-Wall', '-Wextra', '-Werror', '-O2', join(repoRoot, 'tests', 'fixtures', 'os-xattr-clearer.c'), '-o', clearer],
+      { encoding: 'utf8', timeout: 45_000 })
+    assert.equal(compiled.status, 0, 'xattr fixture cleaner must compile: ' + (compiled.stderr ?? '').slice(0, 2000))
+    const cleared = spawnSync(clearer, [f.leaf], { encoding: 'utf8', timeout: 5_000 })
+    assert.equal(cleared.status, 0, 'fixture xattr must be removable: ' + (cleared.stderr ?? ''))
     assert.match(runHelper(f, inspectArgs).stdout, /^OK TARGET /)
   }
 
