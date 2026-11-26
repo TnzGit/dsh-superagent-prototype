@@ -253,8 +253,11 @@ export class Runtime extends Service implements SourceHost {
   }
   private httpHost(): HttpHost {
     const runtime = this
-    const { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks, setup, passes, operatorReview } = this
-    return { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks, operatorReview,
+    const { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks, setup, passes } = this
+    return { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks,
+      // The grant is read when the service is installed and never hot-swapped; a reinstall replaces the whole service at once,
+      // so every operator route honors the same grant and none of it is left half-rotated.
+      get operatorReview() { return runtime.operatorReview },
       get deployment() { return setup.deployment },
       get setupProblem() { return setup.problem }, get feishuProblem() { return setup.feishuProblem },
       configured: () => setup.configured(), links: () => runtime.links(), ticketEnvironment: ticket => runtime.ticketEnvironment(ticket),
