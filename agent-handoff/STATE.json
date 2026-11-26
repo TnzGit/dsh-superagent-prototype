@@ -4,7 +4,7 @@
   "repository": "TnzGit/dsh-superagent-prototype",
   "branch": "feat/local-first-wechat-foundation",
   "phase": "INTEGRATION_CONVERGENCE",
-  "owner": "REMOTE_ONLINE_POST_OL054_INSTALLED_REAL_PILOT_ACK_CLOSED",
+  "owner": "LOCAL_OPERATOR_DIRECT_INSTALLED_STABILITY_RELEASE_CANDIDATE",
   "source_baseline_sha": "9adced9a40b5ef80c05d2d7916a54add65c6a8f0",
   "source_ci": {
     "run_number": 485,
@@ -42,7 +42,7 @@
     "live_apply_budget_remaining": 0,
     "private_host_provenance": "LOCAL_AGENT_PRIVATE_VAULT_ATTESTATION_NOT_INDEPENDENT_GITHUB"
   },
-  "active_local_task": null,
+  "active_local_task": "OL-20261126-055",
   "pending_online_ack": null,
   "remote_automation": "PAUSED_BY_OPERATOR",
   "local_dsh_scheduler": "NOT_VERIFIED_NO_CHANGE",
@@ -113,7 +113,9 @@
     "PLAN-OL054.md",
     "agent-handoff/messages/to-local/2026-11-25-ol054-installed-i3-private-apply.md",
     "agent-handoff/receipts/online/LO-20261125-054-done.md",
-    "docs/021-installed-i3-operator-apply-stabilization.md"
+    "docs/021-installed-i3-operator-apply-stabilization.md",
+    "PLAN-OL055.md",
+    "agent-handoff/messages/to-local/2026-11-26-ol055-stabilization-release-candidate.md"
   ],
   "no_auto_dispatch": true,
   "integration_i1a": {
@@ -141,28 +143,26 @@
     "merged": false
   },
   "local_batch": {
-    "task_id": "OL-20261125-054",
-    "status": "ACKED_CLOSED_INSTALLED_I3_AND_APPLY_PASS",
-    "scope": "CONTROLLED_INSTALLED_I3_AND_PRIVATE_APPLY_OPERATOR_DIRECT",
-    "code_sha": "10718a67e17667579818af870246451bd83d564b",
-    "final_source_sha": "d9d7e3e488fab500a5f57cc64952455ce1cbd0f5",
-    "claim_commit": "47f37daa2c1156c6b42a35be67942eeb286d240e",
-    "done_commit": "5f1f6f26980df9d9fd085f144aac5c711c4dde0d",
-    "online_ack": "agent-handoff/receipts/online/LO-20261125-054-done.md",
-    "verdict": "INSTALLED_I3_AND_APPLY_PASS",
-    "host_live_grant": "CONSUMED_NOT_REUSABLE",
+    "task_id": "OL-20261126-055",
+    "status": "PENDING_ONE_TRUSTED_DIRECT_OPERATOR_STABILIZATION_BATCH",
+    "scope": "INSTALLED_STABILITY_RELEASE_CANDIDATE_OPERATOR_DIRECT",
+    "code_sha": "a38b394d4a47a97d7f1ce3cb4332a05253a4d030",
+    "source_baseline_sha": "a38b394d4a47a97d7f1ce3cb4332a05253a4d030",
+    "host_live_grant": "OPERATOR_SCOPED_CONDITIONAL",
     "operator_approval_received": true,
-    "installed_i3_accepted": true,
-    "installed_apply_accepted": true,
-    "source_ci_push_run_id": 45691296827,
-    "source_ci_pr_run_id": 45691303816,
-    "report_ci_push_run_id": 45749234301,
-    "report_ci_pr_run_id": 45749241151,
-    "report_ci_status": "SUCCESS_BOTH_3_OF_3",
-    "allowed_test_3083_cutover_executed": true,
-    "feature_branch_merge_allowed": false,
+    "installed_stability_accepted": false,
+    "release_candidate_accepted": false,
+    "preflight_required": true,
+    "live_outbound_budget": 2,
+    "live_model_sessions_budget": 1,
+    "live_registered_test_apply_budget": 1,
+    "live_controlled_test_3083_maintenance_budget": 1,
+    "max_concurrent_subagents": 3,
+    "local_source_patch_exception": true,
+    "requires_online_ack_between_phases": false,
+    "final_artifact": "agent-reports/REPORT-ol055-installed-stability-release-candidate.md",
     "no_auto_dispatch": true,
-    "max_concurrent_subagents": 3
+    "handoff_ci_requirement": "CURRENT_FINAL_HEAD_PUSH_AND_DRAFT_PR_3_OF_3_EXACT_SHA"
   },
   "integration_i1b": {
     "status": "FAKE_HOST_PARTIAL_PASS",
@@ -274,15 +274,15 @@
     "installed_dsh_api": "F2_HOST_API_COMPATIBLE"
   },
   "next_stage": {
-    "status": "OL054_ACKED_INSTALLED_REAL_I3_PRIVATE_APPLY_PASS_NO_ACTIVE_TASK",
+    "status": "OL055_OPERATOR_DIRECT_INSTALLED_STABILITY_RELEASE_CANDIDATE_PENDING",
     "last_task": "OL-20261125-054",
-    "remote_work": "OL054_INDEPENDENTLY_ACKED_INSTALLED_TEST_3083_NEEDS_STABILITY_UX_RELEASE_HARDENING",
-    "real_weixin": "INSTALLED_TEST_3083_REAL_I3_ACCEPTED_EXECUTOR_PAUSED",
-    "real_source_apply": "OPERATOR_PRIVATE_BOUNDED_REGISTERED_TEST_PROJECT_APPLY_AND_ROLLBACK_ACCEPTED_PRODUCTION_GENERAL_GATED",
+    "remote_work": "OL054_ACKED_SOURCE_STABILITY_AND_MAINTAINABLE_OPERATOR_PRODUCT_BATCH",
+    "real_weixin": "INSTALLED_TEST_I3_PASS_ONLY_BOUNDED_OL055_STABILITY_CANARY_ALLOWED",
+    "real_source_apply": "PRIVATE_REGISTERED_TEST_APPLY_PASS_OL055_TRUST_HARDENING",
     "auto_next_task": "FORBIDDEN",
     "remote_automation": "PAUSED_BY_OPERATOR",
     "no_auto_dispatch": true,
-    "next_local_task": null
+    "next_local_task": "OL-20261126-055"
   },
   "integration_i2": {
     "status": "I2_ISOLATED_STAGING_PASS",
@@ -388,7 +388,7 @@
     "local_execution_requires_trusted_operator_owned_policy": true,
     "auto_dispatch": "REMAINS_DISABLED_UNTIL_VERIFIED_LOCALLY",
     "remote_automation": "REMAINS_OPERATOR_PAUSED",
-    "no_new_OL_task_yet": true,
+    "no_new_OL_task_yet": false,
     "current_offline_task": null,
     "multiphase_operator_direct_scope": {
       "task_id": "OL-20261124-052",
@@ -403,7 +403,7 @@
       "status": "CLOSED_CONSUMED_NOT_REUSABLE",
       "active": false
     },
-    "current_live_task": null,
+    "current_live_task": "OL-20261126-055",
     "live_i3_registered_apply_20261125": {
       "task_id": "OL-20261125-053",
       "scope": "OPERATOR_AUTHORIZED_CONTROLLED_LIVE_I3_AND_APPLY",
@@ -438,6 +438,22 @@
       "source_pin_sha": "10718a67e17667579818af870246451bd83d564b",
       "status": "CLOSED_CONSUMED_ONCE",
       "active": false
+    },
+    "installed_stabilization_20261126": {
+      "task_id": "OL-20261126-055",
+      "scope": "OPERATOR_AUTHORIZED_INSTALLED_STABILITY_RELEASE_CANDIDATE",
+      "source": "DIRECT_OPERATOR_EXISTING_PROJECT_APPROVAL_PLUS_NEW_TRUSTED_DIRECT_HANDOFF",
+      "intent": "FINISH_INSTALLED_I3_RELIABILITY_OPERATOR_UI_AND_RELEASE_READINESS_WITHOUT_REPEATED_GENERIC_CONSENT",
+      "operator_approval_received": true,
+      "host_side_technical_gates": true,
+      "max_concurrent_subagents": 3,
+      "maximum_new_live_outbound": 2,
+      "maximum_new_real_model_sessions": 1,
+      "maximum_new_test_project_apply": 1,
+      "maximum_protected_test_3083_maintenance_windows": 1,
+      "old_ol054_budgets_consumed": true,
+      "autodispatch": false,
+      "public_github_not_execution_token": true
     }
   },
   "integration_i3": {
@@ -462,7 +478,7 @@
       "real_peer_outbox_review_reconcile_not_exercised_with_a_real_ambiguous_send_and_must_not_provoke_duplicate",
       "production_main_merge_and_autonomous_apply_not_enabled"
     ],
-    "next": "INSTALLED_3083_STABILITY_REPLAY_DURABILITY_OPERATOR_UX_AND_RELEASE_HARDENING",
+    "next": "OL055_INSTALLED_STABILITY_OPERATOR_UI_RELEASE_CANDIDATE_BATCH_PENDING",
     "real_weixin_sent": true,
     "real_weixin_i3_accepted": true,
     "remote_source_sha": "d6c51629855caf4b2737049cf4592cc12b912765",

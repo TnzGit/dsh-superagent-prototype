@@ -22,6 +22,11 @@ const LIVE_SCOPE='OPERATOR_AUTHORIZED_CONTROLLED_LIVE_I3_AND_APPLY'
 const LIVE_STATE_SCOPE='CONTROLLED_LIVE_I3_AND_REGISTERED_APPLY_OPERATOR_DIRECT'
 const INSTALLED_SCOPE='OPERATOR_AUTHORIZED_INSTALLED_I3_AND_PRIVATE_APPLY'
 const INSTALLED_STATE_SCOPE='CONTROLLED_INSTALLED_I3_AND_PRIVATE_APPLY_OPERATOR_DIRECT'
+const RC_SCOPE='OPERATOR_AUTHORIZED_INSTALLED_STABILITY_RELEASE_CANDIDATE'
+const RC_STATE_SCOPE='INSTALLED_STABILITY_RELEASE_CANDIDATE_OPERATOR_DIRECT'
+const RC_VERDICTS=new Set([
+  'RC_READY','RC_SAFE_PARTIAL','RC_BLOCKED_ENV','RC_BLOCKED_TARGET','RC_AMBIGUOUS_FREEZE','RC_FAIL'
+])
 const INSTALLED_VERDICTS=new Set([
   'INSTALLED_I3_AND_APPLY_PASS','INSTALLED_I3_PASS_APPLY_PARTIAL','INSTALLED_APPLY_PASS_I3_PARTIAL',
   'INSTALLED_PARTIAL','INSTALLED_BLOCKED_ENV','INSTALLED_BLOCKED_TARGET',
@@ -52,6 +57,7 @@ const scopeVerdict=(scope,verdict)=>
   : scope===I2_SCOPE ? I2_VERDICTS.has(verdict)
   : scope===LIVE_SCOPE ? LIVE_VERDICTS.has(verdict)
   : scope===INSTALLED_SCOPE ? INSTALLED_VERDICTS.has(verdict)
+  : scope===RC_SCOPE ? RC_VERDICTS.has(verdict)
   : false
 const field=(body,name)=>{
   const prefix=name+': '
@@ -111,6 +117,7 @@ test('last accepted result is acked and a newer OL is at most one and independen
     if(state.local_batch.scope===I2_STATE_SCOPE) assert.equal(receipt.scope,I2_SCOPE)
     else if(state.local_batch.scope===LIVE_STATE_SCOPE) assert.equal(receipt.scope,LIVE_SCOPE)
     else if(state.local_batch.scope===INSTALLED_STATE_SCOPE) assert.equal(receipt.scope,INSTALLED_SCOPE)
+    else if(state.local_batch.scope===RC_STATE_SCOPE) assert.equal(receipt.scope,RC_SCOPE)
     else assert.equal(receipt.scope,'OFFLINE_SYNTHETIC_ONLY')
     const resultMessages=readdirSync(path('agent-handoff/messages/to-online')).filter(name=>
       name.includes('-lo'+pending.slice(-3)+'-'))
@@ -135,15 +142,18 @@ test('historical long documents remain losslessly archived and active state is s
   assert.ok(statSync(path('agent-handoff/archive/WORK_QUEUE-through-OL040-2026-11-14.md')).size>100000)
   if(state.active_local_task){
     assert.ok(read('LOCAL_AGENT_TASK.md').includes(state.active_local_task))
-    if(state.local_batch.scope===LIVE_STATE_SCOPE || state.local_batch.scope===INSTALLED_STATE_SCOPE){
+    if(state.local_batch.scope===LIVE_STATE_SCOPE || state.local_batch.scope===INSTALLED_STATE_SCOPE || state.local_batch.scope===RC_STATE_SCOPE){
       assert.equal(state.local_batch.host_live_grant,'OPERATOR_SCOPED_CONDITIONAL')
       assert.equal(state.local_batch.operator_approval_received,true)
       if(state.local_batch.scope===LIVE_STATE_SCOPE){
         assert.equal(state.local_batch.real_i3_accepted,false)
         assert.equal(state.local_batch.real_apply_accepted,false)
-      } else {
+      } else if(state.local_batch.scope===INSTALLED_STATE_SCOPE) {
         assert.equal(state.local_batch.installed_i3_accepted,false)
         assert.equal(state.local_batch.installed_apply_accepted,false)
+      } else {
+        assert.equal(state.local_batch.installed_stability_accepted,false)
+        assert.equal(state.local_batch.release_candidate_accepted,false)
       }
       assert.equal(state.local_batch.max_concurrent_subagents,3)
     } else assert.equal(state.local_batch.host_live_grant,'NOT_GRANTED')
@@ -195,6 +205,11 @@ test('verdict guards reject dishonest pass/partial mixing and prose marker spoof
   assert.equal(scopeVerdict(INSTALLED_SCOPE,'INSTALLED_PARTIAL'),true)
   assert.equal(scopeVerdict(INSTALLED_SCOPE,'ALL_OFFLINE_PASS'),false)
   assert.equal(scopeVerdict(LIVE_SCOPE,'INSTALLED_I3_AND_APPLY_PASS'),false)
+  assert.equal(scopeVerdict(RC_SCOPE,'RC_READY'),true)
+  assert.equal(scopeVerdict(RC_SCOPE,'RC_SAFE_PARTIAL'),true)
+  assert.equal(scopeVerdict(RC_SCOPE,'ALL_OFFLINE_PASS'),false)
+  assert.equal(scopeVerdict(INSTALLED_SCOPE,'RC_READY'),false)
+  assert.equal(scopeVerdict('OFFLINE_SYNTHETIC_ONLY','RC_READY'),false)
   assert.equal(scopeVerdict('UNKNOWN_FUTURE_SCOPE','I2_PARTIAL_NO_EDIT'),false)
   assert.throws(()=>field(['verdict: I2_PARTIAL_NO_EDIT','verdict: ALL_OFFLINE_PASS'].join(String.fromCharCode(10)),'verdict'))
   assert.throws(()=>field('the body says ALL_OFFLINE_PASS','verdict'))
