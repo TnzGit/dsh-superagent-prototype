@@ -30,7 +30,7 @@ import {
   closeSync, existsSync, fsyncSync, lstatSync, mkdirSync, openSync, readFileSync,
   renameSync, writeSync
 } from 'node:fs'
-import { isAbsolute, join, relative, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, sep } from 'node:path'
 import { inspectProposedApplyPlan, type InspectedApplyPlan, type ProposedApplyChange } from './real-apply-contract.ts'
 
 const CAPABILITY_ID = /^[a-z0-9][a-z0-9_-]{7,63}$/
@@ -38,14 +38,18 @@ const TRANSACTION_ID = /^[a-z0-9][a-z0-9-]{7,79}$/
 const SHA = /^[a-f0-9]{64}$/
 const NONCE = /^[a-f0-9]{32,64}$/
 const TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/
-/** Exact capability field set. Public grant text pasted into the file fails validation. */
+/** Exact capability field set. Public grant text pasted into the file fails validation.
+ * `ancestors` is OPTIONAL (legacy hand-written capabilities stay parseable) but EVERY newly
+ * issued capability carries it: the canonical ancestor chain captured at issuance, so a
+ * stale root+ancestor identity is refused at verification time, not only at preview time. */
 const CAPABILITY_FIELDS = [
   'version', 'capabilityId', 'action', 'transactionId', 'projectId', 'rootFingerprint',
   'rootPath', 'rootDev', 'rootIno', 'principalUid', 'paths', 'pathsDigest', 'planDigest',
-  'nonce', 'issuedAt', 'expiresAt', 'rollbackOfTransactionId'
+  'nonce', 'issuedAt', 'expiresAt', 'rollbackOfTransactionId', 'ancestors', 'previewId'
 ] as const
+const PREVIEW_ID = /^pv-[a-f0-9]{32}$/
 export type RealApplyAction = 'apply' | 'rollback'
-export type NativeStep = 'prepared' | 'staged' | 'applying' | 'written'
+export type NativeStep = 'prepared' | 'staged' | 'applying' | 'renamed' | 'written'
 export type RecoveryClassification = 'APPLIED' | 'PREPARED_CRASH' | 'AMBIGUOUS'
 
 export interface RealApplyCapability {
@@ -67,6 +71,15 @@ export interface RealApplyCapability {
   issuedAt: string
   expiresAt: string
   rollbackOfTransactionId?: string
+  /** The exact operator preview id this one-use grant was issued from. Optional for
+   * hand-written fixtures; set by the OL-054 operator connector so an execution cannot
+   * be rebound onto a DIFFERENT preview that happens to share the same plan digest
+   * (docs/022 threat: multiple preview ids over one plan with the wrong principal). */
+  previewId?: string
+  /** Canonical ancestor identities (path+dev+ino) captured at issuance. Optional for
+   * legacy hand-written fixtures; always present on freshly issued capabilities so a
+   * stale root+ancestor identity can be refused at verification time (docs/022 threat 2). */
+  ancestors?: ReadonlyArray<{ path: string; dev: number; ino: number }>
 }
 
 export interface ObservedTarget {
@@ -108,10 +121,16 @@ export function assertPrivateJournalRoot(journalDirectory: string, projectRoot: 
 export function parseRealApplyCapability(raw: unknown): RealApplyCapability {
   const value = object(raw, 'capability')
   const owned = Object.keys(value)
-  const required = CAPABILITY_FIELDS.slice(0, CAPABILITY_FIELDS.length - 1) // all but the optional rollback reference
-  const allowed = owned.length === required.length || owned.length === CAPABILITY_FIELDS.length
-  if (!allowed || owned.some(k => !(CAPABILITY_FIELDS as readonly string[]).includes(k)))
+  if (owned.some(k => !(CAPABILITY_FIELDS as readonly string[]).includes(k)))
     throw new Error('Invalid capability fields')
+  const optional = new Set(['rollbackOfTransactionId', 'ancestors', 'previewId'])
+  const requiredCount = CAPABILITY_FIELDS.length - optional.size
+  if (owned.length < requiredCount || owned.length > CAPABILITY_FIELDS.length)
+    throw new Error('Invalid capability fields')
+  for (const key of CAPABILITY_FIELDS) {
+    if (optional.has(key)) continue
+    if (!Object.prototype.hasOwnProperty.call(value, key)) throw new Error('Invalid capability fields')
+  }
   if (value.version !== 1) throw new Error('Invalid capability version')
   const capabilityId = str(value.capabilityId, 'capabilityId')
   if (!CAPABILITY_ID.test(capabilityId)) throw new Error('Invalid capability id')
@@ -146,11 +165,26 @@ export function parseRealApplyCapability(raw: unknown): RealApplyCapability {
   if (action === 'rollback' && typeof rollbackOf !== 'string') throw new Error('Rollback capability must name the original transaction')
   if (action === 'apply' && rollbackOf !== undefined) throw new Error('Apply capability must not reference a transaction')
   if (typeof rollbackOf === 'string' && !TRANSACTION_ID.test(rollbackOf)) throw new Error('Invalid rollback reference')
+  const previewId = value.previewId
+  if (previewId !== undefined && (typeof previewId !== 'string' || !PREVIEW_ID.test(previewId)))
+    throw new Error('Invalid capability preview binding')
+  const rawAncestors = value.ancestors
+  let ancestors: ReadonlyArray<{ path: string; dev: number; ino: number }> | undefined
+  if (rawAncestors !== undefined) {
+    if (!Array.isArray(rawAncestors) || !rawAncestors.length) throw new Error('Invalid capability ancestor list')
+    ancestors = Object.freeze(rawAncestors.map(entry => {
+      const item = object(entry, 'capability ancestor')
+      return Object.freeze({ path: str(item.path, 'ancestor path'),
+        dev: num(item.dev, 'ancestor dev'), ino: num(item.ino, 'ancestor ino') })
+    }))
+  }
   return Object.freeze({
     version: 1, capabilityId, action: action as RealApplyAction, transactionId, projectId,
     rootFingerprint, rootPath, rootDev, rootIno, principalUid,
     paths: Object.freeze([...paths]), pathsDigest, planDigest, nonce, issuedAt, expiresAt,
-    ...(rollbackOf !== undefined ? { rollbackOfTransactionId: rollbackOf } : {})
+    ...(rollbackOf !== undefined ? { rollbackOfTransactionId: rollbackOf } : {}),
+    ...(previewId !== undefined ? { previewId } : {}),
+    ...(ancestors !== undefined ? { ancestors } : {})
   }) as RealApplyCapability
 }
 
@@ -177,6 +211,25 @@ function isoTime(ms: number): string {
   return new Date(ms).toISOString().replace(/\.\d{3}Z$/, 'Z')
 }
 
+/** Canonical (realpath) ancestor identities of a project root, walking to the filesystem
+ * root without following symlinks — the same chain the registry preserves at registration.
+ * The capability binds this chain so an ancestor replaced by a different directory (with
+ * the original project inode moved back into it) is refused at verification, not only at
+ * preview time. Evidence, never an authenticated OS capability. */
+export function canonicalAncestorIdentities(projectRoot: string): ReadonlyArray<{ path: string; dev: number; ino: number }> {
+  const ancestors: Array<{ path: string; dev: number; ino: number }> = []
+  let parent = dirname(projectRoot)
+  for (;;) {
+    const stat = lstatSync(parent)
+    if (!stat.isDirectory() || stat.isSymbolicLink()) throw new Error('Capability ancestor identity unavailable')
+    ancestors.push({ path: parent, dev: stat.dev, ino: stat.ino })
+    const next = dirname(parent)
+    if (next === parent) break
+    parent = next
+  }
+  return Object.freeze(ancestors.map(a => Object.freeze({ ...a })))
+}
+
 /** Issue the private one-shot capability into the owner-only journal root as a 0600 file. */
 export function issueRealApplyCapability(options: {
   journalDirectory: string
@@ -187,6 +240,8 @@ export function issueRealApplyCapability(options: {
   action?: RealApplyAction
   transactionId?: string
   rollbackOfTransactionId?: string
+  /** Exact operator preview id this grant is issued from (OL-054 connector). */
+  previewId?: string
   ttlSeconds?: number
 }): { capability: RealApplyCapability; capabilityFile: string } {
   const journalDirectory = assertPrivateJournalRoot(options.journalDirectory, options.projectRoot)
@@ -212,6 +267,8 @@ export function issueRealApplyCapability(options: {
     nonce: randomBytes(16).toString('hex'),
     issuedAt: isoTime(nowMs),
     expiresAt: isoTime(nowMs + ttl * 1000),
+    ancestors: canonicalAncestorIdentities(options.projectRoot),
+    ...(options.previewId ? { previewId: options.previewId } : {}),
     ...(options.rollbackOfTransactionId ? { rollbackOfTransactionId: options.rollbackOfTransactionId } : {})
   })
   const file = join(journalDirectory, capability.capabilityId + '.json')
@@ -266,6 +323,9 @@ export function verifyRealApplyCapability(options: {
   projectId: string
   rootFingerprint: string
   now?: () => number
+  /** When provided, the capability file is probed through the helper's own no-follow fd
+   * (Apple flags / ACL / xattr are not observable from Node's lstat on macOS). */
+  helperBinary?: string
 }): RealApplyCapability {
   const journalDirectory = assertPrivateJournalRoot(options.journalDirectory, options.projectRoot)
   if (!options.capabilityFile.startsWith(journalDirectory + sep)) throw new Error('Capability file must live inside the private journal root')
@@ -275,6 +335,12 @@ export function verifyRealApplyCapability(options: {
   if (info.nlink !== 1) throw new Error('Capability file must not be hardlinked')
   const uid = process.getuid?.()
   if (uid === undefined || info.uid !== uid) throw new Error('Capability file must be owned by the local operator principal')
+  if (options.helperBinary) {
+    // Fail closed on Apple flags/ACL/xattr the Node lstat cannot see (docs/022 threat 2:
+    // journal-marker tamper). A same-UID writer that stamped the 0600 grant with an ACL,
+    // a UF_* flag or a non-provenance xattr is refused before the grant is trusted.
+    inspectNativeMarker({ helperBinary: options.helperBinary, markerFile: options.capabilityFile })
+  }
   const capability = parseRealApplyCapability(JSON.parse(readFileSync(options.capabilityFile, 'utf8')))
   if (capability.action !== options.action) throw new Error('Capability action does not match this operation')
   if (capability.projectId !== options.projectId) throw new Error('Capability project binding mismatch')
@@ -285,6 +351,16 @@ export function verifyRealApplyCapability(options: {
   const realRoot = lstatSync(capability.rootPath)
   if (realRoot.dev !== capability.rootDev || realRoot.ino !== capability.rootIno)
     throw new Error('Registered project root identity changed since the capability was issued')
+  if (capability.ancestors !== undefined) {
+    for (const ancestor of capability.ancestors) {
+      let actual
+      try { actual = lstatSync(ancestor.path) }
+      catch { throw new Error('Capability ancestor identity unavailable since the capability was issued') }
+      if (!actual.isDirectory() || actual.isSymbolicLink() ||
+        actual.dev !== ancestor.dev || actual.ino !== ancestor.ino)
+        throw new Error('Capability ancestor identity changed since the capability was issued')
+    }
+  }
   const planPaths = options.plan.changes.map(c => c.path).sort()
   if (capability.paths.join('\n') !== planPaths.join('\n')) throw new Error('Capability exact-file-list binding mismatch')
   const now = (options.now ?? Date.now)()
@@ -332,6 +408,29 @@ export function inspectNativeTarget(options: {
   }
 }
 
+/** Read-only marker observation through the helper's own no-follow fd. Node's lstat
+ * cannot observe Apple special flags, ACLs or extended attributes on macOS, so the
+ * owner-only 0600 journal markers (capability, preview, review, receipt, opt-in) are
+ * probed HERE with the same policy predicates the Apply path uses. Tamper detection on
+ * grant evidence, never an authenticated capability (docs/022 threat 1). */
+export function inspectNativeMarker(options: {
+  helperBinary: string
+  markerFile: string
+  timeoutMs?: number
+}): { dev: number; ino: number; mode: number; nlink: number } {
+  const outcome = runHelper(options.helperBinary, ['marker', options.markerFile],
+    undefined, options.timeoutMs ?? 10_000)
+  if (outcome.code !== 0) throw new Error('Native marker probe rejected: ' + outcome.stdout.slice(0, 200))
+  const fields = outcome.stdout.split(/\s+/)
+  if (fields[0] !== 'OK' || fields[1] !== 'MARKER' || fields.length !== 6)
+    throw new Error('Unexpected marker probe output: ' + outcome.stdout.slice(0, 200))
+  const n = (i: number): number => Number(fields[i])
+  if (!Number.isSafeInteger(n(2)) || !Number.isSafeInteger(n(3)) ||
+    !Number.isSafeInteger(n(4)) || !Number.isSafeInteger(n(5)))
+    throw new Error('Unexpected marker probe numbers')
+  return { dev: n(2), ino: n(3), mode: n(4), nlink: n(5) }
+}
+
 /** Parse the helper's durable journal.rec (key=value lines) out of a transaction directory. */
 export function readNativeJournal(transactionDirectory: string): Record<string, string> {
   const text = readFileSync(join(transactionDirectory, 'journal.rec'), 'utf8')
@@ -372,7 +471,8 @@ export function runNativeRealApply(options: NativeRunOptions): {
   const capability = verifyRealApplyCapability({
     journalDirectory: options.journalDirectory, projectRoot: options.projectRoot,
     capabilityFile: options.capabilityFile, action: options.action, plan: options.plan,
-    projectId: options.projectId, rootFingerprint: options.rootFingerprint, now: options.now
+    projectId: options.projectId, rootFingerprint: options.rootFingerprint, now: options.now,
+    helperBinary: options.helperBinary
   })
   return { ...runVerifiedNativeChange(capability, options, true), capability }
 }

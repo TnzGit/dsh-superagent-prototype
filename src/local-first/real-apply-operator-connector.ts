@@ -40,7 +40,7 @@ import { join } from 'node:path'
 import { inspectProposedApplyPlan, type InspectedApplyPlan, type ProposedApplyChange } from './real-apply-contract.ts'
 import {
   assertPrivateJournalRoot, classifyNativeRealApplyRecovery, durablePrivateMarker,
-  inspectNativeTarget, issueRealApplyCapability, nativeTransactionDirectory, parseRealApplyCapability,
+  inspectNativeMarker, inspectNativeTarget, issueRealApplyCapability, nativeTransactionDirectory, parseRealApplyCapability,
   readNativeJournal, runNativeRealApplyPlan,
   type ObservedTarget, type RealApplyAction, type RealApplyCapability, type RecoveryClassification
 } from './real-apply-native-driver.ts'
@@ -60,6 +60,56 @@ const PREVIEW_ID = /^pv-[a-f0-9]{32}$/
 export function realApplyOperatorEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   const value = env[REAL_APPLY_OPERATOR_FLAG]
   return value === '1' || value === 'true'
+}
+
+/** Durable protected operator opt-in record, inside the owner-only 0700 journal root.
+ * The env flag alone does not survive a restart; this marker is the ONLY thing that keeps
+ * real Apply enabled after the operator's process restarts. Strict shape + owner-only file
+ * guards fail closed: a forged or malformed marker never enables the product path. */
+export const OPERATOR_APPLY_OPTIN_FILE = 'apply-opt-in'
+const TIME = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z$/
+
+export function readOperatorApplyOptIn(input: {
+  journalDirectory: string; projectRoot: string; helperBinary?: string
+}): Readonly<{ version: 1; enabled: true; principalUid: number; updatedAt: string; source: string }> | null {
+  const journalDirectory = assertPrivateJournalRoot(input.journalDirectory, input.projectRoot)
+  const file = join(journalDirectory, OPERATOR_APPLY_OPTIN_FILE)
+  if (!existsSync(file)) return null
+  requirePrivateJournalFile(file, journalDirectory, 'operator apply opt-in')
+  if (input.helperBinary) probePrivateJournalMarker(file, 'operator apply opt-in', input.helperBinary)
+  const raw = JSON.parse(readFileSync(file, 'utf8')) as Record<string, unknown>
+  if (raw.version !== 1 || raw.enabled !== true || typeof raw.principalUid !== 'number' ||
+    typeof raw.updatedAt !== 'string' || !TIME.test(raw.updatedAt) || typeof raw.source !== 'string')
+    throw new Error('Operator apply opt-in record is malformed; real Apply stays OFF')
+  const uid = process.getuid?.()
+  if (uid === undefined || raw.principalUid !== uid)
+    throw new Error('Operator apply opt-in is bound to a different principal uid; real Apply stays OFF')
+  return Object.freeze({ version: 1 as const, enabled: true as const,
+    principalUid: raw.principalUid, updatedAt: raw.updatedAt, source: raw.source })
+}
+
+/** The product gate is ON only if the explicit env flag is set OR a well-formed, owner-only
+ * durable opt-in record exists in the private journal (the restart-surviving config). */
+export function operatorApplyEnabled(input: {
+  env?: NodeJS.ProcessEnv; journalDirectory: string; projectRoot: string; helperBinary?: string
+}): boolean {
+  if (realApplyOperatorEnabled(input.env ?? process.env)) return true
+  return readOperatorApplyOptIn({ journalDirectory: input.journalDirectory, projectRoot: input.projectRoot,
+    helperBinary: input.helperBinary }) !== null
+}
+
+/** Record the durable opt-in (write-then-rename, fsync of file AND directory). */
+export function writeOperatorApplyOptIn(input: {
+  journalDirectory: string; projectRoot: string; source: string
+}): { optInFile: string; record: Readonly<{ version: 1; enabled: true; principalUid: number; updatedAt: string; source: string }> } {
+  const journalDirectory = assertPrivateJournalRoot(input.journalDirectory, input.projectRoot)
+  const uid = process.getuid?.()
+  if (uid === undefined) throw new Error('Operator apply opt-in requires a local principal uid')
+  const record = Object.freeze({ version: 1 as const, enabled: true as const,
+    principalUid: uid, updatedAt: new Date().toISOString().replace(/\.\d{3}Z$/, 'Z'), source: input.source })
+  const optInFile = join(journalDirectory, OPERATOR_APPLY_OPTIN_FILE)
+  durablePrivateMarker(optInFile, JSON.stringify(record) + '\n')
+  return { optInFile, record }
 }
 
 /** Same derivation as project-workspaces.projectFingerprint, kept local so this module
@@ -120,6 +170,18 @@ function requirePrivateJournalFile(file: string, journalDirectory: string, what:
   if (info.nlink !== 1) throw new Error(what + ' file must not be hardlinked')
   const uid = process.getuid?.()
   if (uid === undefined || info.uid !== uid) throw new Error(what + ' file must be owned by the local operator principal')
+}
+
+/** Probe a private journal marker through the helper's own no-follow fd: Apple special
+ * flags, ACLs and extended attributes are not observable from Node's lstat on macOS, so
+ * the grant evidence (preview/review/capability/receipt/opt-in) is checked with the SAME
+ * policy predicates the Apply path uses. Tamper detection, never authentication. */
+function probePrivateJournalMarker(file: string, what: string, helperBinary: string, timeoutMs?: number): void {
+  try {
+    inspectNativeMarker({ helperBinary, markerFile: file, timeoutMs })
+  } catch (error) {
+    throw new Error('Unsafe ' + what + ' file: ' + (error instanceof Error ? error.message : String(error)))
+  }
 }
 
 const hashHex = (bytes: Uint8Array): string => createHash('sha256').update(bytes).digest('hex')
@@ -185,8 +247,9 @@ function parseOperatorPreviewRecord(raw: unknown): OperatorApplyPreviewRecord {
   })
 }
 
-function readOperatorPreviewRecord(previewFile: string, journalDirectory: string): OperatorApplyPreviewRecord {
+function readOperatorPreviewRecord(previewFile: string, journalDirectory: string, helperBinary?: string): OperatorApplyPreviewRecord {
   requirePrivateJournalFile(previewFile, journalDirectory, 'preview')
+  if (helperBinary) probePrivateJournalMarker(previewFile, 'preview', helperBinary)
   return parseOperatorPreviewRecord(JSON.parse(readFileSync(previewFile, 'utf8')))
 }
 
@@ -301,8 +364,9 @@ export function recordOperatorReview(input: {
   return { reviewFile, reviewRecord }
 }
 
-function readOperatorReviewRecord(reviewFile: string, journalDirectory: string, preview: OperatorApplyPreviewRecord): void {
+function readOperatorReviewRecord(reviewFile: string, journalDirectory: string, preview: OperatorApplyPreviewRecord, helperBinary?: string): void {
   requirePrivateJournalFile(reviewFile, journalDirectory, 'review')
+  if (helperBinary) probePrivateJournalMarker(reviewFile, 'review', helperBinary)
   const raw = JSON.parse(readFileSync(reviewFile, 'utf8')) as Record<string, unknown>
   if (raw.version !== 1 || raw.previewId !== preview.previewId || raw.planDigest !== preview.planDigest)
     throw new Error('Operator review does not bind this preview and diff digest')
@@ -333,13 +397,14 @@ export function issueOperatorCapability(input: {
   env?: NodeJS.ProcessEnv
 }): { capability: RealApplyCapability; capabilityFile: string; plan: InspectedApplyPlan } {
   const env = input.env ?? process.env
-  if (!realApplyOperatorEnabled(env))
-    throw new Error('Real Apply product path is disabled; enable ' + REAL_APPLY_OPERATOR_FLAG + ' only after local technical gates pass')
   const project = input.registry.get(input.projectId)
   input.registry.assertRegisteredRootIdentity(input.projectId)
   const journalDirectory = assertPrivateJournalRoot(input.journalDirectory, project.root)
-  const preview = readOperatorPreviewRecord(input.previewFile, journalDirectory)
-  readOperatorReviewRecord(input.reviewFile, journalDirectory, preview)
+  if (!operatorApplyEnabled({ env, journalDirectory, projectRoot: project.root, helperBinary: input.helperBinary }))
+    throw new Error('Real Apply product path is disabled; enable ' + REAL_APPLY_OPERATOR_FLAG +
+      ' or the durable owner-only apply-opt-in record only after local technical gates pass')
+  const preview = readOperatorPreviewRecord(input.previewFile, journalDirectory, input.helperBinary)
+  readOperatorReviewRecord(input.reviewFile, journalDirectory, preview, input.helperBinary)
   const currentIdentity = input.registry.registeredRootIdentity(input.projectId)
   if (!identityEquals(preview.identity, currentIdentity))
     throw new Error('Operator preview is bound to a superseded registration; re-preview required (no stale rebind)')
@@ -365,7 +430,8 @@ export function issueOperatorCapability(input: {
   const issued = issueRealApplyCapability({
     journalDirectory, projectRoot: project.root, projectId: preview.projectId,
     rootFingerprint: preview.rootFingerprint, plan, action,
-    rollbackOfTransactionId: input.rollbackOfTransactionId, ttlSeconds: input.ttlSeconds
+    rollbackOfTransactionId: input.rollbackOfTransactionId, ttlSeconds: input.ttlSeconds,
+    previewId: preview.previewId
   })
   return { ...issued, plan }
 }
@@ -395,14 +461,15 @@ export function executeOperatorApply(input: {
   results: ReadonlyArray<{ change: Readonly<ProposedApplyChange>; stdout: string; transactionDirectory: string; journal: Record<string, string>; observed: ObservedTarget | 'MISSING' }>
 } {
   const env = input.env ?? process.env
-  if (!realApplyOperatorEnabled(env))
-    throw new Error('Real Apply product path is disabled; enable ' + REAL_APPLY_OPERATOR_FLAG + ' only after local technical gates pass')
   if (env[WORKER_SESSION_MARKER])
     throw new Error('Worker process must never invoke real Apply; only the protected operator context executes')
   const project = input.registry.get(input.projectId)
   input.registry.assertRegisteredRootIdentity(input.projectId)
   const journalDirectory = assertPrivateJournalRoot(input.journalDirectory, project.root)
-  const preview = readOperatorPreviewRecord(input.previewFile, journalDirectory)
+  if (!operatorApplyEnabled({ env, journalDirectory, projectRoot: project.root, helperBinary: input.helperBinary }))
+    throw new Error('Real Apply product path is disabled; enable ' + REAL_APPLY_OPERATOR_FLAG +
+      ' or the durable owner-only apply-opt-in record only after local technical gates pass')
+  const preview = readOperatorPreviewRecord(input.previewFile, journalDirectory, input.helperBinary)
   const plan = inspectProposedApplyPlan({
     version: 1, projectId: preview.projectId, rootFingerprint: preview.rootFingerprint,
     sourceRevision: preview.sourceRevision, changes: preview.changes
@@ -419,12 +486,50 @@ export function executeOperatorApply(input: {
       throw new Error('Operator apply after-image size does not match the reviewed plan')
   }
   const action: RealApplyAction = input.action ?? 'apply'
+  // The grant must be bound to the EXACT preview this execution is reading. Two different
+  // preview ids can share one plan digest (same changes, different principals/sessions);
+  // without this binding an execution could silently consume a capability issued from a
+  // different preview whose review was never the operator's own (docs/022 threat 2).
+  // A capability whose digest was forged fails the driver's digest binding below.
+  const granted = parseRealApplyCapability(JSON.parse(readFileSync(input.capabilityFile, 'utf8')))
+  if (granted.previewId !== undefined && granted.planDigest === preview.planDigest &&
+    granted.previewId !== preview.previewId)
+    throw new Error('Capability preview binding does not match this operator preview; re-issue required (no cross-preview rebind)')
   const run = runNativeRealApplyPlan({
     helperBinary: input.helperBinary, journalDirectory, projectRoot: project.root,
     capabilityFile: input.capabilityFile, action, plan, projectId: preview.projectId,
     rootFingerprint: preview.rootFingerprint, afterImages: input.afterImages,
     timeoutMs: input.timeoutMs, now: input.now
   })
+  // Post-apply re-observation through the helper's own pinned fd chain: a same-UID
+  // external writer that swapped the leaf AFTER the renameat but BEFORE the receipt
+  // must not be recorded as the applied result (docs/022 threat: exact target switch
+  // after apply). The identity reported by the helper (dev/ino) must match the fresh
+  // inspect, and the bytes must match the reviewed after-image.
+  const postObservations: Array<{ path: string; observed: ObservedTarget | 'MISSING'; helperDev: number; helperIno: number }> = []
+  for (const result of run.results) {
+    const fields = result.stdout.split(/\s+/)
+    const helperDev = Number(fields[2]); const helperIno = Number(fields[3])
+    const observed = inspectNativeTarget({
+      helperBinary: input.helperBinary, projectRoot: project.root, relativePath: result.change.path,
+      expectedRootDev: run.capability.rootDev, expectedRootIno: run.capability.rootIno,
+      timeoutMs: input.timeoutMs
+    })
+    postObservations.push({ path: result.change.path, observed, helperDev, helperIno })
+    if (result.change.afterSha256 !== null) {
+      if (observed === 'MISSING')
+        throw new Error('Applied target vanished immediately after Apply; no silent retry')
+      if (observed.ino !== helperIno || observed.dev !== helperDev)
+        throw new Error('Applied target inode was swapped by an external writer after Apply; no silent retry')
+      if (observed.sha256 !== result.change.afterSha256 || observed.bytes !== result.change.afterBytes ||
+        observed.mode !== result.change.afterMode)
+        throw new Error('Applied target no longer matches the reviewed after-image; no silent retry')
+      if (observed.nlink !== 1)
+        throw new Error('Applied target is hardlinked after Apply; refuse')
+    } else if (observed !== 'MISSING') {
+      throw new Error('Deleted target reappeared after Apply; no silent retry')
+    }
+  }
   const receiptFile = join(journalDirectory, 'receipt-' + run.capability.transactionId + '.json')
   if (existsSync(receiptFile)) throw new Error('Operator apply receipt already exists; no silent retry')
   durablePrivateMarker(receiptFile, JSON.stringify({
@@ -435,6 +540,14 @@ export function executeOperatorApply(input: {
       path: result.change.path, transactionDirectory: result.transactionDirectory,
       journalStatus: result.journal.status,
       post: result.stdout.split(/\s+/).slice(2).join(' ')
+    })),
+    postObservations: postObservations.map(entry => ({
+      path: entry.path, helperDev: entry.helperDev, helperIno: entry.helperIno,
+      observed: entry.observed === 'MISSING' ? 'MISSING' : {
+        dev: entry.observed.dev, ino: entry.observed.ino, sha256: entry.observed.sha256,
+        bytes: entry.observed.bytes, mode: entry.observed.mode,
+        mtimeSec: entry.observed.mtimeSec, mtimeNsec: entry.observed.mtimeNsec, nlink: entry.observed.nlink
+      }
     }))
   }) + '\n')
   return { capability: run.capability, consumedMarker: run.consumedMarker, receiptFile, results: run.results }
@@ -465,7 +578,7 @@ export function buildOperatorRollbackPreview(input: {
   input.registry.assertRegisteredRootIdentity(input.projectId)
   const identity = input.registry.registeredRootIdentity(input.projectId)
   const journalDirectory = assertPrivateJournalRoot(input.journalDirectory, project.root)
-  const preview = readOperatorPreviewRecord(input.originalPreviewFile, journalDirectory)
+  const preview = readOperatorPreviewRecord(input.originalPreviewFile, journalDirectory, input.helperBinary)
   const originalPlan = inspectProposedApplyPlan({
     version: 1, projectId: preview.projectId, rootFingerprint: preview.rootFingerprint,
     sourceRevision: preview.sourceRevision, changes: preview.changes
@@ -594,8 +707,9 @@ export function executeOperatorRollback(input: Parameters<typeof executeOperator
 
 /** Read-only receipt/preview evidence for the operator UI: never a mutation. */
 export function readOperatorApplyReceipt(input: {
-  journalDirectory: string; receiptFile: string
+  journalDirectory: string; receiptFile: string; helperBinary?: string
 }): Readonly<Record<string, unknown>> {
   requirePrivateJournalFile(input.receiptFile, input.journalDirectory, 'receipt')
+  if (input.helperBinary) probePrivateJournalMarker(input.receiptFile, 'receipt', input.helperBinary)
   return Object.freeze(JSON.parse(readFileSync(input.receiptFile, 'utf8')) as Record<string, unknown>)
 }
