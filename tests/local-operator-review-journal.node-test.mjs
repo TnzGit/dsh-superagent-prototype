@@ -26,8 +26,22 @@ function fakeStore(...receipts) {
     row.operator = { outcome, principal }
     return true
   }
+  // The authoritative durable audit ledger, stubbed the way Store.operatorAudit works: first-writer-wins per (kind, id, principal).
+  const audit = []
+  const auditKey = record => `${record.kind}\u0000${record.id}\u0000${record.principal}`
   return {
     atomic: fn => fn(),
+    operatorAudit: {
+      append: record => {
+        if (audit.some(entry => auditKey(entry) === auditKey(record))) return false
+        audit.push({ seq: audit.length + 1, ...record })
+        return true
+      },
+      remove: record => { const index = audit.findIndex(entry => auditKey(entry) === auditKey(record)); if (index >= 0) audit.splice(index, 1) },
+      list: limit => audit.slice(0, limit).map(entry => ({ ...entry })),
+      count: () => audit.length,
+    },
+    triggers: { get: id => ({ id }) },
     receipts: { get: id => rows.get(id),
       operatorSettleReview: settle,
       reviewLedger: limit => [...rows.values()].filter(row => row.status === 'pending' && row.channel.source === 'weixin' && row.review)
@@ -129,7 +143,8 @@ test('an interrupted journal tail freezes every mutation with a human-reconcilia
 test('journal records are sanitized: ID, kind, outcome and the principal hash â€” never the token itself', () => {
   const dir = fixture()
   const journal = join(dir, 'journal.jsonl')
-  const review = new OperatorReview({ store: fakeStore(held('sanitized')), effects: { cancel: () => {} },
+  const store = fakeStore(held('sanitized'))
+  const review = new OperatorReview({ store, effects: { cancel: () => {} },
     engine: { classifyPendingTrigger: () => ({ decision: { id: 'evaluation-id' }, already: false }) }, token: TOKEN, journal })
   review.classifyTrigger('trigger-one')
   review.reconcile('sanitized', 'no_resend')
@@ -138,8 +153,11 @@ test('journal records are sanitized: ID, kind, outcome and the principal hash â€
   const records = text.trim().split('\n').map(line => JSON.parse(line))
   assert.deepEqual(records.map(record => [record.kind, record.id]), [['trigger', 'trigger-one'], ['receipt', 'sanitized']])
   assert.equal(records[0].principal, records[1].principal)
+  // The durable audit ledger is the authority: both records it carries corroborate the projection, and the journal is current.
+  assert.deepEqual(review.auditLedger().map(record => [record.kind, record.id]), [['trigger', 'trigger-one'], ['receipt', 'sanitized']])
+  assert.deepEqual(review.journalStatus(), { entries: 2, projected: 2, current: true })
   // A second classification of the same Trigger is idempotent and journals nothing more.
-  const again = new OperatorReview({ store: fakeStore(), effects: { cancel: () => {} },
+  const again = new OperatorReview({ store, effects: { cancel: () => {} },
     engine: { classifyPendingTrigger: () => ({ decision: { id: 'evaluation-id' }, already: true }) }, token: TOKEN, journal })
   assert.equal(again.classifyTrigger('trigger-one').classified, false)
   assert.equal(readFileSync(journal, 'utf8').trim().split('\n').length, 2)

@@ -92,6 +92,8 @@ export class Store implements Repositories {
             CREATE TABLE IF NOT EXISTS effect (kind TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, seq INTEGER NOT NULL,
               generation INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, error TEXT NOT NULL DEFAULT '', due INTEGER NOT NULL,
               since TEXT NOT NULL, PRIMARY KEY (kind, key));
+            CREATE TABLE IF NOT EXISTS operator_audit (seq INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, kind TEXT NOT NULL,
+              id TEXT NOT NULL, outcome TEXT NOT NULL DEFAULT '', principal TEXT NOT NULL, UNIQUE (kind, id, principal));
             CREATE INDEX IF NOT EXISTS trigger_at ON trigger(at);
             CREATE INDEX IF NOT EXISTS trigger_thread_at ON trigger_thread(thread, at);
             CREATE INDEX IF NOT EXISTS decision_thread ON decision(thread);
@@ -256,6 +258,27 @@ export class Store implements Repositories {
     get: (id: string): Decision | undefined => { const row = this.db.prepare('SELECT value FROM decision WHERE id=?').get(id); return row ? JSON.parse(String(row.value)) as Decision : undefined },
     save: (decision: Decision): void => { this.db.prepare('INSERT INTO decision VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value, thread=excluded.thread').run(decision.id, decision.threadKey, JSON.stringify(decision)) },
     byThread: (threadKeyValue: string): Decision[] => this.db.prepare('SELECT value FROM decision WHERE thread=? ORDER BY rowid').all(threadKeyValue).map(row => JSON.parse(String(row.value)) as Decision),
+  }
+  /**
+   * The operator's authoritative durable audit ledger (OL-055 S1): ONE row per durable terminal action, committed in the SAME
+   * transaction as the change it attests to. The external JSONL journal is only a projection of it. First-writer-wins: the same
+   * (kind, ID, principal) may be attested only once, so a replayed reviewed hold can never authorize a second send.
+   */
+  readonly operatorAudit = {
+    /** Appends one audit record; `false` when this exact action was already durably attested (the first-writer-wins refusal). */
+    append: (record: { at: string; kind: string; id: string; outcome?: string; principal: string }): boolean =>
+      Number(this.db.prepare(`INSERT INTO operator_audit (at, kind, id, outcome, principal) VALUES (?,?,?,?,?)
+        ON CONFLICT(kind, id, principal) DO NOTHING`).run(record.at, record.kind, record.id, record.outcome ?? '', record.principal).changes) === 1,
+    /** Drops an audit record this transaction has not committed yet (the CAS refused after the append was made). */
+    remove: (record: { kind: string; id: string; principal: string }): void =>
+      { this.db.prepare('DELETE FROM operator_audit WHERE kind=? AND id=? AND principal=?').run(record.kind, record.id, record.principal) },
+    /** The ledger in commit order, oldest first, capped by `limit`; sanitized columns only. */
+    list: (limit: number): { seq: number; at: string; kind: string; id: string; outcome?: string; principal: string }[] =>
+      this.db.prepare('SELECT seq, at, kind, id, outcome, principal FROM operator_audit ORDER BY seq LIMIT ?').all(limit)
+        .map(row => ({ seq: Number(row.seq), at: String(row.at), kind: String(row.kind), id: String(row.id), principal: String(row.principal),
+          ...(row.outcome ? { outcome: String(row.outcome) } : {}) })),
+    /** How many durable audit records the ledger carries (the projection is current when it matches this). */
+    count: (): number => Number(this.db.prepare('SELECT COUNT(*) AS total FROM operator_audit').get()?.total ?? 0),
   }
   /** Read-only queries for management views, orchestrator tools, and source polling (see `storeReads`). */
   readonly read: ReturnType<typeof storeReads>

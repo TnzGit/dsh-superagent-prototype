@@ -1,7 +1,7 @@
-/** Operator-private live reconciliation (OL-054 M4): an authenticated loopback-only interface for listing and settling held native Weixin review receipts, and for terminal classification of pending Triggers, with an irreversible owner-only audit journal. */
-import { constants, closeSync, existsSync, fchmodSync, fsyncSync, fstatSync, lstatSync, openSync, readFileSync, writeFileSync, writeSync } from 'node:fs'
+/** Operator-private live reconciliation (OL-054 M4, hardened by OL-055 S1): an authenticated loopback-only interface for listing and settling held native Weixin review receipts, and for terminal classification of pending Triggers, with ONE authoritative durable audit commit and a hardened append-only projection. */
+import { constants, closeSync, fchmodSync, fsyncSync, fstatSync, lstatSync, openSync, readFileSync, realpathSync, writeSync } from 'node:fs'
 import { createHash, timingSafeEqual } from 'node:crypto'
-import { isAbsolute } from 'node:path'
+import { dirname, isAbsolute } from 'node:path'
 import type { IncomingMessage } from 'node:http'
 import { UserError } from '../core/errors.ts'
 import type { Decision } from '../core/model.ts'
@@ -13,8 +13,19 @@ import type { Store, WeixinReviewReason } from './store.ts'
 export const OPERATOR_TOKEN_FILE_ENV = 'DSH_OPERATOR_RECONCILE_TOKEN_FILE'
 /** How a reviewed hold ends: only an explicit operator confirmation of a completed send marks it sent; anything else is a terminal no-resend. */
 export type OperatorOutcome = 'confirmed_sent' | 'no_resend'
-/** One durable audit record: sanitized (ID, kind, outcome, principal hash) — never peer IDs, payload text, tokens or provider strings. */
-export interface OperatorJournalRecord { at: string; kind: 'receipt' | 'trigger'; id: string; outcome?: OperatorOutcome; principal: string }
+/** What kind of durable action one audit record attests to. */
+export type OperatorAuditKind = 'receipt' | 'trigger'
+/** One sanitized audit record: ID, kind, outcome, principal hash — never peer IDs, payload text, tokens or provider strings. */
+export interface OperatorAuditRecord { at: string; kind: OperatorAuditKind; id: string; outcome?: OperatorOutcome; principal: string }
+/** The same record as the authoritative ledger stores it: a monotonic sequence orders the commit history. */
+export interface OperatorAuditEntry extends OperatorAuditRecord { seq: number }
+/** The external projection may lag the ledger; this is what a caller needs to know to stay fail-closed. */
+export interface OperatorJournalStatus { entries: number; projected: number; current: boolean }
+
+/** The journal may never grow without bound: a human must reconcile a file past this size before it is used again. */
+export const OPERATOR_JOURNAL_MAX_BYTES = 64 * 1024 * 1024
+/** The token grant file is bounded the same way the native Weixin credentials are. */
+export const OPERATOR_TOKEN_MAX_BYTES = 64 * 1024
 
 /**
  * Reads the private operator reconcile token from an owner-owned, owner-only (0600) regular file, never a symlink, read through one `O_NOFOLLOW` descriptor with its `fstat` checked before reading (the same guard as the native Weixin credentials).
@@ -29,7 +40,7 @@ export function readOperatorToken(file = process.env[OPERATOR_TOKEN_FILE_ENV]): 
   const fd = openSync(file, constants.O_RDONLY | constants.O_NOFOLLOW)
   try {
     const stats = fstatSync(fd)
-    if (!stats.isFile() || (stats.mode & 0o077) !== 0 || stats.size > 64 * 1024)
+    if (!stats.isFile() || (stats.mode & 0o077) !== 0 || stats.size > OPERATOR_TOKEN_MAX_BYTES)
       throw new Error('Operator reconcile token must be an owner-owned, owner-only regular file (max 64 KiB)')
     if (process.getuid && stats.uid !== process.getuid())
       throw new Error('Operator reconcile token must be owned by the current user')
@@ -39,22 +50,30 @@ export function readOperatorToken(file = process.env[OPERATOR_TOKEN_FILE_ENV]): 
   } finally { closeSync(fd) }
 }
 
+/** The canonical JSONL projection of one audit record: field order is fixed so a re-projection is exact and idempotent. */
+export function journalLineOf(record: OperatorAuditRecord): string {
+  const ordered: Record<string, unknown> = { at: record.at, kind: record.kind, id: record.id, principal: record.principal }
+  if (record.outcome !== undefined) ordered.outcome = record.outcome
+  return JSON.stringify(ordered)
+}
+
 export interface OperatorReviewHost {
   store: Store
   effects: Pick<Effects, 'cancel'>
   engine: Pick<Engine, 'classifyPendingTrigger'>
   /** The token read from the private grant file; the only secret this service holds. */
   token: string
-  /** Path of the append-only, owner-only, fsynced audit journal (inside the 0700 state directory). */
+  /** Path of the append-only, owner-only, fsynced journal projection (inside the 0700 state directory). */
   journal: string
 }
 
 /**
  * The operator-private reconciliation service, installed only when the private 0600 grant exists (docs/018 runbook, OL-054 M4).
- * Auth: requests must carry `x-operator-token`, compared in constant time against hashes of the token; same-origin and loopback are enforced by the HTTP layer.
- * Reconciliation is first-writer-wins: exactly one durable terminal transition per receipt ID, journaled and fsynced inside the same Store transaction; a duplicate click or a second controller gets a refusal, never a second effect.
+ * Auth: requests must carry `x-operator-token`, compared in constant time against hashes of the token; same-origin and loopback are enforced by the HTTP layer. Carrying the token proves possession of a secret, never the identity of a named human.
+ * ONE authoritative durable audit commit: the terminal transition and its audit row are written in the SAME SQLite transaction (the ledger is the authority), and the external JSONL journal is a validated idempotent projection appended only AFTER that commit. A crash before the commit leaves nothing; a crash after the commit but before the projection re-projects on the next construction; a projection the ledger or the durable receipt state cannot corroborate freezes reconciliation until a human reconciles it. No transition ever authorizes a second send, loses a terminal Trigger classification, or declares an uncommitted effect accepted.
+ * Reconciliation is first-writer-wins: a duplicate click or a losing controller gets a refusal, never a second effect.
  * A terminal classification never resets the durable one-shot claim, never resends the same ID, and never marks an ambiguous hold sent without an explicit confirmation; a warranted follow-up needs a NEW message ID.
- * The journal is append-only with no repair: an interrupted (partial or malformed) tail freezes every mutation and reports a human-reconciliation error, while the sanitized ledger stays readable and uncertain receipts stay frozen.
+ * Every journal access opens the exact path with `O_NOFOLLOW` — read, append and validation independently — and checks the file it actually opened on its own descriptor: a regular file, owner-only mode, exactly one hard link, the current user's ownership, a bounded size, and every real ancestor a directory owned by the operator or root and not group/world writable unless sticky. Each descriptor is closed explicitly. A symlink, a hardlink or a foreign owner can neither be modified nor read through, and no foreign content is ever echoed into a diagnostic.
  */
 export class OperatorReview {
   /** A stable hash of the token, published in audit records in place of the secret itself. */
@@ -66,8 +85,9 @@ export class OperatorReview {
     this.host = host
     this.tokenHash = createHash('sha256').update(host.token).digest()
     this.principal = this.tokenHash.toString('hex').slice(0, 12)
-    if (!existsSync(host.journal)) writeFileSync(host.journal, '', { mode: 0o600 })
-    else fchmodSync(openSync(host.journal, constants.O_RDWR), 0o600)
+    this.validateJournal()
+    // The ledger is the authority: whatever it already committed must be projected, even if a crash lost the external write.
+    this.reprojectLedger()
     this.frozen = this.inspectJournal()
   }
   /** Whether `headers` carry the operator's private token (constant-time over SHA-256 digests, so length and content do not leak). */
@@ -80,60 +100,187 @@ export class OperatorReview {
   ledger(limit = 50): { id: string; kind: 'acknowledgement' | 'reply' | 'notice'; ticketId?: string; claimed: boolean; claimedAt?: string; reviewAt: string; reason: WeixinReviewReason }[] {
     return this.host.store.receipts.reviewLedger(limit)
   }
+  /** The authoritative durable audit ledger, oldest first: what this operator actually committed, in commit order. */
+  auditLedger(limit = 200): OperatorAuditEntry[] { return this.ledgerEntries(limit) }
+  private ledgerEntries(limit: number): OperatorAuditEntry[] {
+    return this.host.store.operatorAudit.list(limit).map(({ outcome, ...row }) =>
+      ({ ...row, kind: row.kind as OperatorAuditKind, ...(outcome ? { outcome: outcome as OperatorOutcome } : {}) }))
+  }
+  /** Whether the external projection has caught up with the authoritative ledger (read-only; never repairs anything). */
+  journalStatus(): OperatorJournalStatus {
+    const entries = this.host.store.operatorAudit.count()
+    const projected = this.readJournal().length
+    return { entries, projected, current: entries === projected }
+  }
   /**
-   * Reconciles ONE held receipt by exact ID: the single durable, irreversible terminal transition, journaled and fsynced inside the same
-   * Store transaction as the compare-and-swap, then the pending `reply` effect is cancelled so nothing retries it.
+   * Reconciles ONE held receipt by exact ID: the single durable, irreversible terminal transition, recorded in the authoritative
+   * SQLite audit ledger inside the SAME Store transaction as the compare-and-swap; the pending `reply` effect is cancelled in that
+   * same transaction so nothing retries it. The external journal is projected only after the commit, so losing the file write can
+   * never lose the audit, and an aborted transaction can never leave a projection behind.
    * @throws UserError `reviewHoldSettled` when the ID is unknown, already terminal, or never a pending Weixin review hold (also the
    * first-writer-wins refusal for a duplicate click or the losing controller of a race); a frozen journal throws a plain error (HTTP 500).
    */
   reconcile(id: string, outcome: OperatorOutcome): { id: string; status: 'sent' | 'dropped'; outcome: OperatorOutcome; principal: string; journal: true } {
     this.assertUnfrozen()
     const { store, effects } = this.host
-    return store.atomic(() => {
+    const result = store.atomic(() => {
       const receipt = store.receipts.get(id)
       if (!receipt || receipt.channel.source !== 'weixin' || receipt.status !== 'pending' || !receipt.review) throw new UserError('reviewHoldSettled')
-      if (!store.receipts.operatorSettleReview(id, outcome, this.principal)) throw new UserError('reviewHoldSettled')
-      this.append({ at: new Date().toISOString(), kind: 'receipt', id, outcome, principal: this.principal })
+      const record: OperatorAuditRecord = { at: new Date().toISOString(), kind: 'receipt', id, outcome, principal: this.principal }
+      // First-writer-wins at the audit ledger: the same (kind, ID, principal) may be attested only once.
+      if (!store.operatorAudit.append(record)) throw new UserError('reviewHoldSettled')
+      if (!store.receipts.operatorSettleReview(id, outcome, this.principal)) { store.operatorAudit.remove(record); throw new UserError('reviewHoldSettled') }
       effects.cancel('reply', id)
       const settled = store.receipts.get(id)!
-      return { id, status: settled.status as 'sent' | 'dropped', outcome, principal: this.principal, journal: true as const }
+      return { id, status: settled.status as 'sent' | 'dropped', record }
     })
+    this.project(result.record)
+    return { id: result.id, status: result.status, outcome, principal: this.principal, journal: true }
   }
   /**
    * Terminal classification of ONE pending Trigger by exact ID: a durable ignore Decision that takes it out of its Thread's queue
    * without deleting the Trigger row or any receipt, so it can never become a Ticket after processing resumes. Idempotent (a repeat
-   * reports `classified: false` and journals nothing); fails closed when a live Eval already holds the Trigger, and refuses a Trigger
+   * reports `classified: false` and audits nothing); fails closed when a live Eval already holds the Trigger, and refuses a Trigger
    * that already carries a different Decision or one that is not pending.
    */
   classifyTrigger(triggerId: string): { triggerId: string; classified: boolean; decision: string } {
     this.assertUnfrozen()
-    return this.host.store.atomic(() => {
-      const result = this.host.engine.classifyPendingTrigger(triggerId)
-      if (!result.already) this.append({ at: new Date().toISOString(), kind: 'trigger', id: triggerId, principal: this.principal })
-      return { triggerId, classified: !result.already, decision: result.decision.id }
+    const result = this.host.store.atomic(() => {
+      const classified = this.host.engine.classifyPendingTrigger(triggerId)
+      if (classified.already) return { decision: classified.decision, already: true, record: undefined }
+      const record: OperatorAuditRecord = { at: new Date().toISOString(), kind: 'trigger', id: triggerId, principal: this.principal }
+      // The audit row commits with the Decision: a crash can never lose the terminal classification.
+      this.host.store.operatorAudit.append(record)
+      return { decision: classified.decision, already: false, record }
     })
+    if (result.record) this.project(result.record)
+    return { triggerId, classified: !result.already, decision: result.decision.id }
   }
   private assertUnfrozen(): void {
     if (this.frozen) throw new Error(`Operator review journal has an interrupted record; reconciliation is frozen until a human reconciles it: ${this.frozen}`)
   }
-  /** Appends one audit record and fsyncs it; the journal is append-only, and nothing here rewrites or repairs it. */
-  private append(record: OperatorJournalRecord): void {
-    const fd = openSync(this.host.journal, constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT)
-    try { writeSync(fd, `${JSON.stringify(record)}\n`); fsyncSync(fd) } finally { closeSync(fd) }
+  /** Creates the journal owner-only when absent, or validates the file that already exists, through one `O_NOFOLLOW` descriptor that is closed explicitly. */
+  private validateJournal(): void {
+    const existed = this.exists(this.host.journal)
+    const fd = this.openJournal(constants.O_RDWR | constants.O_CREAT)
+    try { if (!existed) fsyncSync(fd) } finally { closeSync(fd) }
   }
-  /** Whether the journal's last record is incomplete or malformed, which freezes every mutation until a human reconciles it. */
-  private inspectJournal(): string | undefined {
+  /** Appends one ledger record to the exact journal path and fsyncs it, AFTER the commit that made it durable; nothing here rewrites or repairs the journal. */
+  private project(record: OperatorAuditRecord): void {
+    const line = journalLineOf(record)
+    if (this.readJournal().includes(line)) return
+    const fd = this.openJournal(constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT)
+    try {
+      writeSync(fd, `${line}\n`)
+      fsyncSync(fd)
+    } finally { closeSync(fd) }
+  }
+  /** Re-appends every authoritative ledger record the external journal is missing; the ledger is the authority, so nothing is discarded. */
+  private reprojectLedger(): void {
+    const projected = new Set(this.readJournal())
+    for (const entry of this.ledgerEntries(Number.MAX_SAFE_INTEGER)) {
+      const line = journalLineOf(entry)
+      if (projected.has(line)) continue
+      const fd = this.openJournal(constants.O_WRONLY | constants.O_APPEND | constants.O_CREAT)
+      try {
+        writeSync(fd, `${line}\n`)
+        fsyncSync(fd)
+      } finally { closeSync(fd) }
+    }
+  }
+  /** Whether the journal path exists as anything at all (a dangling symlink counts as absent and is rejected by the open). */
+  private exists(path: string): boolean {
+    try { return lstatSync(path).isFile() } catch { return false }
+  }
+  /**
+   * Opens the exact journal path with `O_NOFOLLOW`, creating it owner-only when absent, and refuses anything the descriptor did
+   * not actually land on: a symlink target, a shared-inode hardlink, a foreign owner or an unbounded file. Only a file proven to
+   * be our own inode has its mode tightened; a foreign file is never modified.
+   */
+  private openJournal(flags: number): number {
+    const path = this.host.journal
+    if (!isAbsolute(path)) throw new Error('Operator review journal path must be absolute')
+    this.assertAncestors(path)
+    const existed = this.exists(path)
+    let fd: number
+    // The open itself is refused when the path is a symlink (`O_NOFOLLOW`), and the diagnostic names only the path, never the target.
+    try { fd = openSync(path, flags | constants.O_NOFOLLOW) }
+    catch { throw new Error(`Operator review journal must be opened without following symlinks: ${path}`) }
+    // Identity first: a foreign inode is refused before any descriptor operation can change it.
+    this.assertJournalOwnership(fstatSync(fd), path)
+    // A file this descriptor just created is made owner-only immediately; a pre-existing journal of ours is tightened the way the
+    // installed constructor always did, so an older valid journal keeps working without a migration.
+    if (!existed || (Number(fstatSync(fd).mode) & 0o077) !== 0) fchmodSync(fd, 0o600)
+    if ((Number(fstatSync(fd).mode) & 0o077) !== 0) throw new Error('Operator review journal must be an owner-only file (0600)')
+    return fd
+  }
+  /** Reads the journal through its own `O_NOFOLLOW` descriptor, so a swapped root or a symlink can never be read through. */
+  private readJournal(): string[] {
+    const fd = this.openJournal(constants.O_RDONLY)
     let text: string
-    try { text = readFileSync(this.host.journal, 'utf8') } catch { return undefined }
-    const lines = text.split('\n').filter(line => line.length > 0)
+    try { text = readFileSync(fd, 'utf8') } finally { closeSync(fd) }
+    return text.split('\n').filter(line => line.length > 0)
+  }
+  /** The journal must be a regular file on its own inode, owned by the current user, and of a bounded size — never a symlink target or a hardlink to a foreign inode. */
+  private assertJournalOwnership(stats: ReturnType<typeof fstatSync>, path: string): void {
+    if (!stats.isFile()) throw new Error(`Operator review journal must be a regular file, not a ${path}`)
+    if (process.getuid && stats.uid !== process.getuid()) throw new Error('Operator review journal must be owned by the current user')
+    if (stats.nlink !== 1) throw new Error('Operator review journal must have exactly one hard link to its own inode')
+    if (stats.size > OPERATOR_JOURNAL_MAX_BYTES) throw new Error('Operator review journal exceeds its bounded size; a human must reconcile it')
+  }
+  /** Every real ancestor of the journal must be a directory owned by the current user or root, and not group/world writable unless sticky (the same rule as the Weixin credentials). */
+  private assertAncestors(file: string): void {
+    const uid = process.getuid ? process.getuid() : undefined
+    let dir: string
+    try { dir = realpathSync(dirname(file)) }
+    catch { throw new Error(`Operator review journal ancestor directory cannot be resolved: ${dirname(file)}`) }
+    for (;;) {
+      let fd: number
+      try { fd = openSync(dir, constants.O_RDONLY | constants.O_NOFOLLOW | constants.O_DIRECTORY) }
+      catch { throw new Error(`Operator review journal ancestor directory cannot be opened without following symlinks: ${dir}`) }
+      try {
+        const stats = fstatSync(fd)
+        const sticky = Number(stats.mode) & 0o1000
+        if (!stats.isDirectory() || (uid !== undefined && stats.uid !== uid && stats.uid !== 0)
+          || ((stats.mode & 0o022) !== 0 && !sticky))
+          throw new Error('Operator review journal ancestors must be operator/root-owned directories, not group or world writable unless sticky')
+      } finally { closeSync(fd) }
+      const parent = dirname(dir)
+      if (parent === dir) break
+      dir = parent
+    }
+  }
+  /**
+   * Whether the journal's tail is unusable or its records contradict the durable state, which freezes every mutation until a human
+   * reconciles it. Only the shape of the record is echoed — never a foreign line's content.
+   */
+  private inspectJournal(): string | undefined {
+    let lines: string[]
+    try { lines = this.readJournal() } catch { return undefined }
     if (!lines.length) return undefined
     const last = lines[lines.length - 1]!
     try {
-      const record = JSON.parse(last) as OperatorJournalRecord
-      if (record.kind !== 'receipt' && record.kind !== 'trigger') return `unrecognized journal record: ${last}`
-      if (typeof record.at !== 'string' || typeof record.id !== 'string' || typeof record.principal !== 'string') return `incomplete journal record: ${last}`
-      return undefined
-    } catch { return `interrupted journal record: ${last}` }
+      const record = JSON.parse(last) as OperatorAuditRecord
+      if (record.kind !== 'receipt' && record.kind !== 'trigger') return 'unrecognized journal record'
+      if (typeof record.at !== 'string' || typeof record.id !== 'string' || typeof record.principal !== 'string') return 'incomplete journal record'
+    } catch { return 'interrupted journal record' }
+    // Corroboration: every well-formed projection must match a durable fact. A line the ledger never carried, or a receipt the
+    // durable state still shows as pending, means the projection is not trustworthy and reconciliation must stop.
+    const ledger = new Set(this.ledgerEntries(Number.MAX_SAFE_INTEGER).map(entry => journalLineOf(entry)))
+    for (const line of lines) {
+      if (ledger.has(line)) continue
+      let record: OperatorAuditRecord
+      try { record = JSON.parse(line) as OperatorAuditRecord } catch { continue }
+      if (record.kind === 'receipt') {
+        const receipt = this.host.store.receipts.get(record.id)
+        if (!receipt || receipt.status === 'pending') return 'journal record the durable receipt state cannot corroborate'
+        continue
+      }
+      // A Trigger classification is durable in its Decision; a projection the ledger lost is still corroborated by that Decision.
+      if (this.host.store.triggers.get(record.id)) continue
+      return 'journal record the durable Trigger state cannot corroborate'
+    }
+    return undefined
   }
 }
 export type { Decision }
