@@ -55,6 +55,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/xattr.h>
+#if defined(__APPLE__)
+#include <sys/acl.h>
+#endif
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -228,6 +231,31 @@ static int no_special_flags(const struct stat *st) {
     return 1;
 #endif
 }
+/* Darwin: an absent ACL is reported as NULL with ENOENT; any NON-NULL acl_t with
+ * at least one entry is a tamper vector (an ACL can widen or deny access behind the
+ * mode bits) and is refused fail-closed, including on a NULL with another errno.
+ * Linux (CI) has no POSIX-ACL-at-fd path here; the mode-bit checks stand. */
+static int no_acl(int fd) {
+#if defined(__APPLE__)
+    const acl_t acl = acl_get_fd(fd);
+    if (acl == NULL) {
+        return errno == ENOENT ? 1 : 0;
+    }
+    int count = 0;
+    acl_entry_t entry;
+    for (int i = 0; ; ++i) {
+        if (acl_get_entry(acl, i, &entry) != 0) {
+            break;
+        }
+        ++count;
+    }
+    acl_free(acl);
+    return count == 0;
+#else
+    (void)fd;
+    return 1;
+#endif
+}
 /* Exactly one com.apple.provenance NAME allowed on Darwin (system stamp);
  * every other observable attribute refused; Linux refuses any nonempty list. */
 static int no_extended_attributes(int fd) {
@@ -319,6 +347,7 @@ static int open_root_bound(const char *root, long long exp_dev, long long exp_in
     struct stat st;
     if (fstat(fd, &st) != 0) { close(fd); *why = "root-fstat-failure"; return -1; }
     if (!private_dir(&st) || !no_special_flags(&st)) { close(fd); *why = "root-unsafe"; return -1; }
+    if (!no_acl(fd)) { close(fd); *why = "root-acl"; return -1; }
     if (exp_dev != 0 && (st_dev(&st) != exp_dev || st_ino(&st) != exp_ino)) {
         close(fd); *why = "root-identity-drift"; return -1;
     }
@@ -390,6 +419,11 @@ static int walk_to(const int root, const char *path, int *parent_out, int *targe
                 *why = "component-unsafe-directory";
                 return -1;
             }
+            if (!no_acl(fd)) {
+                close(fd);
+                *why = "component-acl";
+                return -1;
+            }
             if (current != root) close(current);
             current = fd;
             cursor = slash + 1;
@@ -402,6 +436,7 @@ static int walk_to(const int root, const char *path, int *parent_out, int *targe
         if (!narrow_mode(st.st_mode)) { close(fd); *why = "target-unsafe-mode"; return -1; }
         if (!no_special_flags(&st)) { close(fd); *why = "target-flags"; return -1; }
         if (!no_extended_attributes(fd)) { close(fd); *why = "target-xattr"; return -1; }
+        if (!no_acl(fd)) { close(fd); *why = "target-acl"; return -1; }
         *parent_out = current;
         *target_out = fd;
         return 0;
@@ -432,6 +467,12 @@ static int open_parent(const int root, const char *path, int *parent_out, const 
             close(fd);
             if (current != root) close(current);
             *why = "component-unsafe-directory";
+            return -1;
+        }
+        if (!no_acl(fd)) {
+            close(fd);
+            if (current != root) close(current);
+            *why = "component-acl";
             return -1;
         }
         if (current != root) close(current);
@@ -519,6 +560,7 @@ static int open_tx_dir(const char *path, const char **why) {
     struct stat st;
     if (fstat(fd, &st) != 0) { close(fd); *why = "tx-dir-fstat-failure"; return -1; }
     if (!private_dir(&st) || !no_special_flags(&st)) { close(fd); *why = "tx-dir-unsafe"; return -1; }
+    if (!no_acl(fd)) { close(fd); *why = "tx-dir-acl"; return -1; }
     return fd;
 }
 
@@ -618,6 +660,40 @@ static void stop_here(const char *step) {
     }
 }
 
+/* ---------- inherited-descriptor fail-closed scan ----------
+ * Every pin the helper opens itself carries O_CLOEXEC. But if the CALLER exec'd
+ * this binary while holding a directory descriptor WITHOUT close-on-exec, that
+ * inherited fd pins an identity the helper never opened and cannot attribute.
+ * Refuse rather than trust an unattributed pin: an inherited directory fd whose
+ * (dev,ino) collides with the expected registered root identity means the caller
+ * leaked its own non-CLOEXEC project-root descriptor across the exec boundary.
+ * The scan runs BEFORE the helper opens anything, while the only descriptors
+ * above stdio still belong to the caller (the helper's own pins do not exist).
+ * This is a detection of leaked pins, not a race-free claim: a same-UID writer
+ * can still open the same directory concurrently; that is outside this scan. */
+static int scan_inherited_fds(long long exp_dev, long long exp_ino, const char **why) {
+    if (exp_dev == 0) return 0; /* bind-what-you-see mode has nothing to collide with */
+    int limit = getdtablesize();
+    if (limit < 3) {
+        *why = "inherited-fd-table-unavailable";
+        return -1;
+    }
+    if (limit > 4096) limit = 4096; /* bounded probe; the caller's leaks live low */
+    for (int fd = 3; fd < limit; ++fd) {
+        struct stat st;
+        if (fstat(fd, &st) != 0) {
+            if (errno == EBADF) continue;
+            *why = "inherited-fd-probe-failure";
+            return -1;
+        }
+        if (S_ISDIR(st.st_mode) && (long long)st.st_dev == exp_dev && (long long)st.st_ino == exp_ino) {
+            *why = "inherited-root-descriptor";
+            return -1;
+        }
+    }
+    return 0;
+}
+
 /* ---------- journal status record ---------- */
 static int write_record(int jdir, const char *status, const struct stat *target,
                         long long tdev, long long tino, const char **why) {
@@ -698,6 +774,7 @@ static int do_write(const char *subcommand) {
     if (parse_ll(SP_VALUES[SP_EXP_DEV], &exp_dev) != 0 || parse_ll(SP_VALUES[SP_EXP_INO], &exp_ino) != 0)
         return REJECT("expected-identity-unparseable");
     if (!safe_relative_path(SP_VALUES[SP_PATH])) return REJECT("path-unsafe");
+    if (scan_inherited_fds(exp_dev, exp_ino, &why) != 0) return REJECT(why);
 
     const int root = open_root_bound(SP_VALUES[SP_ROOT], exp_dev, exp_ino, &why);
     if (root < 0) return REJECT(why);
@@ -936,6 +1013,10 @@ static int do_write(const char *subcommand) {
             return REJECT("unlinkat-failure");
         }
     }
+    /* The entry swap is done. Stop point between the *at write and the directory
+     * fsync + audit record: a kill here models a crash after any renameat and
+     * before the journal reaches 'applied' (the recover classifier reads bytes). */
+    stop_here("renamed");
     if (sync_dir_fd(parent) != 0) {
         close(jdir); close(parent); if (target >= 0) { close(target); }
         close(root);
@@ -954,7 +1035,8 @@ static int do_write(const char *subcommand) {
             return REJECT("post-fstat-failure");
         }
         if (!S_ISREG(post.st_mode) || post.st_uid != geteuid() || post.st_nlink != 1 ||
-            !narrow_mode(post.st_mode) || !no_special_flags(&post) || !no_extended_attributes(fd)) {
+            !narrow_mode(post.st_mode) || !no_special_flags(&post) || !no_extended_attributes(fd) ||
+            !no_acl(fd)) {
             close(fd); close(jdir); close(parent); close(root);
             return REJECT("post-unsafe-target");
         }
@@ -1014,6 +1096,7 @@ static int do_recover(void) {
     if (parse_ll(SP_VALUES[SP_EXP_DEV], &exp_dev) != 0 || parse_ll(SP_VALUES[SP_EXP_INO], &exp_ino) != 0)
         return REJECT("expected-identity-unparseable");
     if (!safe_relative_path(SP_VALUES[SP_PATH])) return REJECT("path-unsafe");
+    if (scan_inherited_fds(exp_dev, exp_ino, &why) != 0) return REJECT(why);
     const int root = open_root_bound(SP_VALUES[SP_ROOT], exp_dev, exp_ino, &why);
     if (root < 0) return REJECT(why);
 
@@ -1094,6 +1177,33 @@ static int do_recover(void) {
     return 0;
 }
 
+/* ---------- read-only marker probe (argv form) ----------
+ * Node's lstat cannot observe Apple special flags, ACLs or extended attributes on
+ * this platform, so the operator-side 0600 journal markers (capability, preview,
+ * review, receipt, consumed, freeze, opt-in) are checked HERE, through a no-follow
+ * fd, with the same policy predicates the Apply path uses. This is tamper detection
+ * on the grant evidence, not an authenticated capability: a same-UID writer can
+ * still rewrite the marker's bytes (docs/022 threat 1). */
+static int do_marker(int argc, char **argv) {
+    if (argc != 3) return REJECT("usage");
+    const int fd = open(argv[2], O_RDONLY | O_CLOEXEC | O_NOFOLLOW);
+    if (fd < 0) return REJECT("marker-open-failure");
+    struct stat st;
+    if (fstat(fd, &st) != 0) { close(fd); return REJECT("marker-fstat-failure"); }
+    if (!S_ISREG(st.st_mode)) { close(fd); return REJECT("marker-not-regular"); }
+    if (st.st_uid != geteuid()) { close(fd); return REJECT("marker-not-owner"); }
+    if (st.st_nlink != 1) { close(fd); return REJECT("marker-hardlinked"); }
+    if (!narrow_mode(st.st_mode)) { close(fd); return REJECT("marker-unsafe-mode"); }
+    if (!no_special_flags(&st)) { close(fd); return REJECT("marker-flags"); }
+    if (!no_extended_attributes(fd)) { close(fd); return REJECT("marker-xattr"); }
+    if (!no_acl(fd)) { close(fd); return REJECT("marker-acl"); }
+    printf("OK MARKER %lld %lld %lld %lld\n",
+           st_dev(&st), st_ino(&st), (long long)(st.st_mode & 07777), (long long)st.st_nlink);
+    fflush(stdout);
+    close(fd);
+    return 0;
+}
+
 /* ---------- read-only inspect (argv form; preimage capture at issuance) ---------- */
 static int do_inspect(int argc, char **argv) {
     if (argc != 6) return REJECT("usage");
@@ -1102,6 +1212,7 @@ static int do_inspect(int argc, char **argv) {
         return REJECT("expected-identity-unparseable");
     if (!safe_relative_path(argv[5])) return REJECT("path-unsafe");
     const char *why = NULL;
+    if (scan_inherited_fds(exp_dev, exp_ino, &why) != 0) return REJECT(why);
     const int root = open_root_bound(argv[2], exp_dev, exp_ino, &why);
     if (root < 0) return REJECT(why);
     struct stat root_st;
@@ -1145,6 +1256,7 @@ int main(int argc, char **argv) {
     if (argc < 2) return REJECT("usage");
     const char *sub = argv[1];
     if (strcmp(sub, "inspect") == 0) return do_inspect(argc, argv);
+    if (strcmp(sub, "marker") == 0) return do_marker(argc, argv);
     if (spec_read() != 0) return REJECT("spec-invalid");
     if (strcmp(sub, "apply") == 0 || strcmp(sub, "rollback") == 0) return do_write(sub);
     if (strcmp(sub, "recover") == 0) return do_recover();
