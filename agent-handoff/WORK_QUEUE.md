@@ -1,17 +1,16 @@
-# WORK_QUEUE — OL-054 installed-product convergence, one autonomous batch
+# WORK_QUEUE — OL-054 ACKed; stabilize installed I3 and operator controls
 
-Current: `OL-20261125-054`, pending **direct operator-forwarded launch**, no watcher/auto-dispatch. See root `PLAN-OL054.md` for complete M0–M6 schedule, ≤3 concurrent offline subagents, source edits and final verdicts. PR #1 remains Draft/unmerged.
+Remote automation PAUSED, `no_auto_dispatch=true`, no current local task, no OL-055 auto-dispatch. PR #1 Draft/unmerged.
 
-| Phase | Work | Status |
-| --- | --- | --- |
-| Prev | OL-053 controlled real iLink/model and registered-test-project Apply+rollback | CLOSED `LIVE_BOTH_PASS` scoped, independently ACKed; CI #869/#870 each 3/3 |
-| Doc | Re-register if same-path registered root/ancestor replaced, new Ticket and capability | DONE `docs/020-postlive-i3-and-apply-operator-runbook.md` |
-| M0 | Private installed 3083 inventory and consistent backup/restore dry run | PENDING one trusted OL-054 launch |
-| M1 | Single account poll-owner lease/fencing + durable inbound dedup, no trigger 12 replay | NOT IMPLEMENTED, assigned |
-| M2 | Staged reversible new 3083 test-orchestrator cutover | NOT EXECUTED, assigned |
-| M3 | Real Tencent→**installed 3083**→genuine local model→Outbox→self-peer | NOT EXECUTED, assigned |
-| M4 | Operator-private auditable manual review hold terminal settlement, no resend | NOT IMPLEMENTED, assigned |
-| M5 | Native fd-relative Apply helper→private product review→real registered low-risk test source | NOT WIRED, assigned |
-| M6 | Cross-OS CI, host rollback/evidence and one final LO-054 | PENDING final |
+| Item | Status |
+| --- | --- |
+| OL-054 installed operator-owned TEST 3083 native iLink + genuine model Worker + durable Outbox real reply | **CLOSED `INSTALLED_I3_AND_APPLY_PASS`** for bounded installed pilot; ACK `agent-handoff/receipts/online/LO-20261125-054-done.md`, CI #892/#893 and #894/#895 all 3/3 |
+| Protected operator-reviewed fd-relative Apply + separate rollback on real low-risk registered test project | CLOSED scoped test project only, default product flag OFF |
+| Private operator terminal historical Trigger classification (no resend) | CLOSED for exactly one old pending Trigger, not general real-peer reconciliation under arbitrary ambiguity |
+| Separate SQLite ↔ journal crash consistency & file fd/symlink handling | **Next engineering, high priority** |
+| Account lease file/owner and duplicate message after seen-set FIFO 2000 eviction | **Next engineering, high priority** |
+| Operator UI and safe maintenance cutover/rollback proof, install/update docs | **Next milestone**, existing 3083 stays PAUSED+READY |
+| Same UID Apply capability forgery / external writer, ancestor/mount/power-loss behavior | **Next security-hardening track**, not generally production-ready |
+| PR #1 merge/main, unattended Weixin sends, broad production Apply/deploy | NOT authorized by previous task, Draft |
 
-Technical host/OS/identity gates are checked locally, NOT interpreted as need for another abstract consent. Lead-only live actions; no OL-055 auto issue; original OL-053 send/model/Apply budgets consumed.
+See `docs/021-installed-i3-operator-apply-stabilization.md`; no task runs from this public queue without direct operator-owned initiation.
