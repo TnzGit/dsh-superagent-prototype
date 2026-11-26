@@ -18,9 +18,11 @@ const ROTATED = 'SYNTHETIC_ROTATED_TOKEN_ONLY_NEVER_REAL'
 const journalOf = (h: Host) => join(h.directory, 'operator-review-journal.jsonl')
 const operator = (token = TOKEN) => ({ 'x-operator-token': token })
 /** A held native Weixin review receipt, landed straight in the durable outbox. */
-const holdReceipt = (h: Host, id: string, reason = 'ambiguous_send') => h.runtime.store.receipts.add({
-  id, kind: 'reply', text: 'synthetic', status: 'pending', claimed: false,
-  channel: { source: 'weixin', thread: 'weixin:s', address: { peer: 'approved-peer' } }, review: { at: '2026-11-26T00:00:00.000Z', reason } })
+const holdReceipt = (h: Host, id: string, reason = 'ambiguous_send') => {
+  h.runtime.store.receipts.add({ id, kind: 'reply', text: 'synthetic',
+    channel: { source: 'weixin', thread: 'weixin:s', address: { peer: 'approved-peer' } } })
+  h.runtime.store.receipts.holdForReview(id, reason)
+}
 /** Rebuilds the operator service over the same durable store, exactly as a restart would. */
 const reopen = (host: Host, journal = journalOf(host), token = TOKEN) =>
   new OperatorReview({ store: host.runtime.store, effects: host.runtime.effects, engine: host.runtime.engine, token, journal })
@@ -115,7 +117,7 @@ it('a terminal Trigger classification survives the external split: never lost, n
   expect(thread.pending).not.toContain(trigger.id)
   await h.runtime.settings.pause(false, 'panel')
   await h.runtime.idle()
-  expect(h.runtime.store.tickets.list().map(ticket => ticket.triggerId)).not.toContain(trigger.id)
+  expect(h.runtime.store.tickets.list()).toHaveLength(0)
 })
 
 it('the durable audit ledger is sanitized: never the token, never payload text, never a provider string', async () => {
@@ -137,7 +139,7 @@ it('the projection keeps a canonical field order, so a re-projection is exact an
   holdReceipt(h, 'canonical')
   await h.api('POST', 'operator/reconcile/canonical', { outcome: 'confirmed_sent' }, operator())
   const line = readFileSync(journalOf(h), 'utf8').trim()
-  const entry = h.runtime.store.operatorAudit.list(10)[0]!
+  const entry = h.runtime.operatorReview!.auditLedger(10)[0]!
   expect(journalLineOf(entry)).toBe(line)
   // Re-projecting the same ledger record adds nothing: the projection is idempotent.
   writeFileSync(journalOf(h), '', { mode: 0o600 })
@@ -241,4 +243,100 @@ it('already terminal receipts are replayed and refused: the projection stays app
   expect(readFileSync(journalOf(h), 'utf8').trim().split('\n')).toHaveLength(2)
   expect(h.runtime.store.receipts.get('append-one')!.status).toBe('dropped')
   expect(h.runtime.store.receipts.get('append-two')!.status).toBe('sent')
+})
+
+it('the bearer window bounds requests and never accepts a refused one: reads and mutations are capped separately', async () => {
+  const review = h.runtime.operatorReview!
+  // Reads: the window admits exactly its bound, then refuses with how long to wait, and the refusal changes nothing.
+  for (let i = 0; i < 120; i++) expect((await h.api('GET', 'operator/reconcile/ledger', undefined, operator())).status).toBe(200)
+  const read = await h.api('GET', 'operator/reconcile/ledger', undefined, operator())
+  expect(read.status).toBe(429)
+  expect(String(read.body.error)).toMatch(/rate limit/)
+  expect(Number(read.body.retry_after_ms)).toBeGreaterThan(0)
+  // Mutations: a held receipt reconciled after the mutation window is over is refused, and it stays pending: a refused
+  // request accepted nothing, so no send and no audit.
+  holdReceipt(h, 'rate-mutation')
+  for (let i = 0; i < 30; i++) {
+    holdReceipt(h, `mut-${i}`)
+    expect((await h.api('POST', `operator/reconcile/mut-${i}`, { outcome: 'no_resend' }, operator())).status).toBe(200)
+  }
+  const late = await h.api('POST', 'operator/reconcile/rate-mutation', { outcome: 'confirmed_sent' }, operator())
+  expect(late.status).toBe(429)
+  expect(h.runtime.store.receipts.get('rate-mutation')!.status).toBe('pending')
+  // A refused request accepted nothing: the hold stays pending and its audit count did not grow.
+  expect(h.runtime.store.operatorAudit.count()).toBe(30)
+  // A read-only view is bounded too: the status route counts against the read window, not the mutation window.
+  const status = await h.api('GET', 'operator/status', undefined, operator())
+  expect(status.status).toBe(429)
+  // The bound is per instance and per window: a fresh install admits its own first requests again.
+  const fresh = await startRuntime()
+  expect((await fresh.api('GET', 'operator/status', undefined, operator())).status).toBe(200)
+  await fresh.stop()
+})
+
+it('the private status route demands the grant, projects no secret, and its one mutation pauses without sending anything', async () => {
+  const unauthorized = await h.api('GET', 'operator/status', undefined, { 'x-operator-token': 'forged-forged-forged' })
+  expect(unauthorized.status).toBe(401)
+  const noHeader = await h.api('GET', 'operator/status', undefined, {})
+  expect(noHeader.status).toBe(401)
+  // Without the grant the whole operator surface is absent, not half-installed: the pause route answers 404 too.
+  vi.unstubAllEnvs()
+  const plain = await startRuntime()
+  expect((await plain.api('POST', 'operator/executor/pause', { paused: true }, operator(ROTATED))).status).toBe(404)
+  expect((await plain.api('GET', 'operator/status', undefined, operator(ROTATED))).status).toBe(404)
+  await plain.stop()
+  vi.stubEnv(OPERATOR_TOKEN_FILE_ENV, tokenFile)
+  const view = await h.api('GET', 'operator/status', undefined, operator())
+  expect(view.status).toBe(200)
+  // The view says what is installed and where its state lives, and carries no secret, no payload and no peer.
+  expect(view.body.build).toMatchObject({ name: 'dsh-superagent', version: expect.any(String) })
+  expect(view.body.stateDir).toBe(h.runtime.machine.stateDir)
+  expect(view.body.executor.paused).toBe(false)
+  expect(JSON.stringify(view.body)).not.toContain(TOKEN)
+  expect(JSON.stringify(view.body)).not.toContain('approved-peer')
+  expect(JSON.stringify(view.body)).not.toContain('synthetic')
+  // The one safe mutation: pausing and resuming the controlled Executor, idempotently, with no outbound send behind it.
+  const paused = await h.api('POST', 'operator/executor/pause', { paused: true }, operator())
+  expect(paused.status).toBe(200)
+  expect(paused.body).toEqual({ paused: true })
+  expect((await h.api('POST', 'operator/executor/pause', { paused: true }, operator())).body).toEqual({ paused: true })
+  expect((await h.api('GET', 'operator/status', undefined, operator())).body).toMatchObject({ executor: { paused: true } })
+  // A paused Executor with a held receipt sends nothing: the hold stays pending, and nothing is audited by the pause.
+  holdReceipt(h, 'paused-no-send')
+  expect(h.runtime.store.receipts.get('paused-no-send')!.status).toBe('pending')
+  expect(h.runtime.store.operatorAudit.count()).toBe(0)
+  const resumed = await h.api('POST', 'operator/executor/pause', { paused: false }, operator())
+  expect(resumed.body).toEqual({ paused: false })
+  // The body is strict: a field it does not take, or a value that is not a boolean, is refused outright.
+  expect((await h.api('POST', 'operator/executor/pause', { paused: 'yes' }, operator())).status).toBe(400)
+  expect((await h.api('POST', 'operator/executor/pause', { paused: true, send: true }, operator())).status).toBe(400)
+})
+
+it('a projection fsynced before its transaction committed is caught by corroboration and frozen, never re-sent', async () => {
+  // The split the other way round: the external line landed while the durable receipt stayed pending, as a crash between the
+  // file fsync and the SQLite commit would leave it. Corroboration refuses to trust that line.
+  holdReceipt(h, 'fsync-before-commit')
+  const journal = journalOf(h)
+  const line = JSON.stringify({ at: '2026-11-26T00:00:00.000Z', kind: 'receipt', id: 'fsync-before-commit',
+    principal: h.runtime.operatorReview!.principal, outcome: 'confirmed_sent' })
+  writeFileSync(journal, `${line}\n`, { mode: 0o600 })
+  const review = reopen(h)
+  expect(review.journalStatus().current).toBe(false)
+  // Frozen: the mutation stops rather than trusting the file, and the receipt is still pending, so nothing was ever accepted.
+  let message = ''
+  try { review.reconcile('fsync-before-commit', 'no_resend') } catch (error) { message = String(error) }
+  expect(message).toMatch(/cannot corroborate/)
+  expect(h.runtime.store.receipts.get('fsync-before-commit')!.status).toBe('pending')
+  expect(h.runtime.store.operatorAudit.count()).toBe(0)
+  // The hold was never claimed for a send: the ledger's own read of it says so, and the freeze reports the shape only.
+  expect(h.runtime.store.receipts.reviewLedger(50).find(item => item.id === 'fsync-before-commit')!.claimed).toBe(false)
+  expect(message).not.toContain('confirmed_sent')
+  // Recovery is a human step, not a repair: the ledger is the authority, so a human reconciles the file before mutating again.
+  writeFileSync(journal, '', { mode: 0o600 })
+  const recovered = reopen(h)
+  expect(recovered.journalStatus().current).toBe(true)
+  expect(recovered.ledger(50).map(receipt => receipt.id)).toContain('fsync-before-commit')
+  expect((await h.api('POST', 'operator/reconcile/fsync-before-commit', { outcome: 'no_resend' }, operator())).status).toBe(200)
+  expect(h.runtime.store.receipts.get('fsync-before-commit')!.status).toBe('dropped')
+  expect((await h.api('POST', 'operator/reconcile/fsync-before-commit', { outcome: 'no_resend' }, operator())).status).toBe(400)
 })

@@ -104,6 +104,36 @@ export const DECISION_KINDS: Readonly<Record<DecisionFilter, string>> = { work: 
 
 export type Call = <K extends keyof Api>(route: K, ...request: {} extends ApiRequest<K> ? [request?: ApiRequest<K>] : [request: ApiRequest<K>])
   => Promise<ApiResponse<K>>
+/**
+ * Calls one operator-private route with the operator's bearer grant. The panel's ordinary caller cannot carry a header, so the
+ * operator page passes the token it holds here. Carrying the token proves possession of a secret, never the identity of a named
+ * human, so the page states that instead of implying a login.
+ */
+export async function operatorCall<T>(messages: ApiMessages, route: keyof Api, request: Record<string, unknown> = {}, token = ''):
+  Promise<T> {
+  const [method, pattern] = route.split(' ') as [string, string]
+  const path = pattern.replace(/:(\w+)/g, (_match, name: string) => encodeURIComponent(String(request[name])))
+  const query = Object.entries((request.query ?? {}) as Record<string, unknown>).filter(([, value]) => value !== undefined && value !== '')
+    .map(([name, value]) => `${name}=${encodeURIComponent(String(value))}`).join('&')
+  const headers: Record<string, string> = { 'x-orchestrator-request': '1', ...token ? { 'x-operator-token': token } : {} }
+  let response: Response
+  try {
+    response = await fetch(`/orchestrator/api/${query ? `${path}?${query}` : path}`, { method, headers,
+      ...request.body === undefined ? {} : { body: JSON.stringify(request.body) } })
+  } catch { throw new ApiError(messages.offline, 0, { unreachable: true }) }
+  const text = await response.text()
+  let value: unknown
+  try { value = text ? JSON.parse(text) : {} } catch { value = undefined }
+  if (!response.ok) {
+    const failure = (value ?? {}) as { error?: unknown; code?: unknown; values?: Record<string, string> }
+    const user = isUserError(failure.code) ? { code: failure.code, values: failure.values ?? {} } : undefined
+    const { status } = response
+    const message = user ? messages.user(user) : typeof failure.error === 'string' ? failure.error
+      : !text && status === 404 ? messages.notRunning : status >= 500 ? messages.serverError(status) : messages.requestFailed(status)
+    throw new ApiError(message, status, { ...user ? { user } : {}, ...text ? {} : { unreachable: true } })
+  }
+  return value as T
+}
 /** Build a typed route caller that resolves localized error messages on each request. */
 export function caller(messages: () => ApiMessages): Call {
   return (route, ...[request]) => {
@@ -138,3 +168,4 @@ export type PromptsView = ApiResponse<'GET prompts'>
 export type PromptConfig = PromptsView['defaults']
 export type ThreadFacts = TicketRow['threads'][number]
 export type Actor = TriggerRow['actor']
+export type OperatorStatusView = ApiResponse<'GET operator/status'>

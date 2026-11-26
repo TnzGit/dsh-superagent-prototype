@@ -18,7 +18,9 @@ import type { Health } from '../sources/host.ts'
 import type { SourceRegistry } from '../sources/registry.ts'
 import type { Sessions } from './sessions.ts'
 import type { Store } from './store.ts'
-import type { OperatorReview, OperatorOutcome } from './operator-review.ts'
+import type { OperatorReview } from './operator-review.ts'
+import { OPERATOR_BODY_MAX_BYTES, OperatorRateLimited } from './operator-review.ts'
+import { operatorStatus as operatorStatusView } from './views/operator-status.ts'
 import type { TextCache } from './cache.ts'
 import type { LinkTarget, ViewHost } from './views/records.ts'
 import type { Variable } from './execution-environment.ts'
@@ -61,7 +63,7 @@ export interface HttpHost {
  * Represents a client-facing 400, 401 or 404 error raised during management route parsing or lookup.
  * Route handlers throw it when request bodies are malformed, a private operator grant is missing, or target records are missing, and registerHttp serializes its status and message in the HTTP response.
  */
-class RouteError extends Error { constructor(readonly status: 400 | 401 | 404, message: string) { super(message) } }
+class RouteError extends Error { constructor(readonly status: 400 | 401 | 404 | 429, message: string) { super(message) } }
 async function readBody(req: IncomingMessage, maxBytes = 128 * 1024): Promise<unknown> {
   let size = 0; const chunks: Buffer[] = []
   for await (const chunk of req) {
@@ -88,6 +90,7 @@ function failure(error: unknown): [number, Record<string, unknown>] {
   }
   if (error instanceof SetupError) return [400, { error: error.message, setup: error.problem }]
   if (error instanceof RouteError) return [error.status, { error: error.message }]
+  if (error instanceof OperatorRateLimited) return [429, { error: error.message, retry_after_ms: error.retryAfterMs }]
   if (error instanceof UserError) return [error.missing ? 404 : 400, { error: error.message, code: error.code, values: error.values }]
   if (error instanceof SettingsConflict || error instanceof PromptConflict) return [409, { error: error.message }]
   return [500, { error: error instanceof Error ? error.message : String(error) }]
@@ -150,6 +153,7 @@ const count = z.coerce.number().int().nonnegative()
 const PromptsQuery = z.object({ revision: count.optional(), offset: count.default(0) })
 const LedgerQuery = z.object({ limit: limit(50, 200) })
 const ReconcileBody = z.object({ outcome: z.enum(['confirmed_sent', 'no_resend']) }).strict()
+const PauseBody = z.object({ paused: z.boolean() }).strict()
 const SourceBlock = z.templateLiteral(['source:', z.string().regex(/^[a-z][a-z0-9-]*$/)])
 const SettingsBlockSchema = z.union([z.enum(['policy', 'eval', 'executor']), SourceBlock])
 const SaveRequest = z.object({ value: z.unknown(), revision: z.number().int().nonnegative() })
@@ -217,23 +221,46 @@ function routes(runtime: HttpHost): Routes {
     },
     'POST prompts/preview': async input => runtime.prompts.preview(await promptBody(input)),
     // Operator-private reconciliation (OL-054 M4): loopback, same-origin and a private token; absent the grant, these answer 404.
+    // The bearer proves possession of the secret, never a named human, so every operator route bounds its body and its rate.
     'GET operator/reconcile/ledger': ({ query, headers }) => {
       const review = runtime.operatorReview
       if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')
       if (!review.authorized(headers)) throw new RouteError(401, 'Private operator token required')
+      review.admitRead()
       return { receipts: review.ledger(LedgerQuery.parse(query).limit) }
     },
     'POST operator/reconcile/:id': async ({ params, body, headers }) => {
       const review = runtime.operatorReview
       if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')
       if (!review.authorized(headers)) throw new RouteError(401, 'Private operator token required')
-      return review.reconcile(params.id, ReconcileBody.parse(await body()).outcome)
+      review.admitMutation()
+      return review.reconcile(params.id, ReconcileBody.parse(await body(OPERATOR_BODY_MAX_BYTES)).outcome)
     },
     'POST operator/triggers/:id/terminal': ({ params, headers }) => {
       const review = runtime.operatorReview
       if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')
       if (!review.authorized(headers)) throw new RouteError(401, 'Private operator token required')
+      review.admitMutation()
       return review.classifyTrigger(params.id)
+    },
+    // The operator-private status view (OL-055 S3.1): installed build/manifest, paused Executor, source health, the poll owner's
+    // lease generation, queue and review state, model-route health and the last durable checkpoint. No secret is ever projected.
+    'GET operator/status': ({ headers }) => {
+      const review = runtime.operatorReview
+      if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')
+      if (!review.authorized(headers)) throw new RouteError(401, 'Private operator token required')
+      review.admitRead()
+      return operatorStatusView(runtime)
+    },
+    // The one safe mutation the operator UI exposes: pause or resume the controlled test Executor, idempotently, with the grant
+    // required, and never a send or an Apply behind it.
+    'POST operator/executor/pause': async ({ body, headers }) => {
+      const review = runtime.operatorReview
+      if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')
+      if (!review.authorized(headers)) throw new RouteError(401, 'Private operator token required')
+      review.admitMutation()
+      const { paused } = PauseBody.parse(await body(OPERATOR_BODY_MAX_BYTES))
+      return runtime.settings.pause(paused, 'panel')
     },
   }
 }

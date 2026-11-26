@@ -11,7 +11,7 @@
  * instances can share one credentials file while having different state directories (the OL-053 replay), and
  * only the shared credentials path fences them against each other.
  */
-import { chmodSync, closeSync, constants as fsConstants, fstatSync, mkdirSync, openSync, realpathSync, statSync } from 'node:fs'
+import { chmodSync, closeSync, constants as fsConstants, existsSync, fstatSync, mkdirSync, openSync, realpathSync, statSync } from 'node:fs'
 import { dirname, isAbsolute, join } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
@@ -100,4 +100,21 @@ export function acquireWeixinPollOwnerLease(credentialsFile: string, accountHash
       try { db.close() } catch { /* connection already dead */ }
     },
   }
+}
+
+/**
+ * Read-only peek of the durable fencing generation for one account fingerprint (the operator status view shows which owner
+ * generation currently holds the poll). Never blocks on the RESERVED lock a live holder keeps, and `undefined` when no lease
+ * database exists yet for this account — it never acquires or mutates anything.
+ */
+export function readWeixinPollLeaseGeneration(credentialsFile: string, accountHash: string): number | undefined {
+  const file = join(weixinPollLeaseDirectory(credentialsFile), `account-${accountHash}.sqlite`)
+  if (!existsSync(file)) return undefined
+  let reader: DatabaseSync | undefined
+  try {
+    reader = new DatabaseSync(file)
+    const row = reader.prepare('SELECT gen FROM fence').get()
+    return row ? Number(row.gen) : undefined
+  } catch { return undefined }
+  finally { if (reader) try { reader.close() } catch { /* connection already dead */ } }
 }

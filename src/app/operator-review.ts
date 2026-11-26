@@ -21,11 +21,59 @@ export interface OperatorAuditRecord { at: string; kind: OperatorAuditKind; id: 
 export interface OperatorAuditEntry extends OperatorAuditRecord { seq: number }
 /** The external projection may lag the ledger; this is what a caller needs to know to stay fail-closed. */
 export interface OperatorJournalStatus { entries: number; projected: number; current: boolean }
+/** What the installed operator interface enforces about its own bearer lifecycle; nothing here is a secret. */
+export interface OperatorLifecycle {
+  grant: string
+  bearer: string
+  transport: string
+  bodyMaxBytes: number
+  rate: { readsPerMinute: number; mutationsPerMinute: number }
+}
 
 /** The journal may never grow without bound: a human must reconcile a file past this size before it is used again. */
 export const OPERATOR_JOURNAL_MAX_BYTES = 64 * 1024 * 1024
 /** The token grant file is bounded the same way the native Weixin credentials are. */
 export const OPERATOR_TOKEN_MAX_BYTES = 64 * 1024
+/** An operator request body is bounded far below the panel's default: the reconcile body is one small JSON object. */
+export const OPERATOR_BODY_MAX_BYTES = 4 * 1024
+/** How many operator requests a sliding window admits, split by read and mutation (OL-055 S1 bearer-lifecycle bound). */
+export const OPERATOR_READS_PER_WINDOW = 120
+export const OPERATOR_MUTATIONS_PER_WINDOW = 30
+/** The window an operator rate limit slides over. */
+export const OPERATOR_WINDOW_MS = 60_000
+
+/** Thrown when the private operator interface has served too many requests in the current window; HTTP maps it to 429. */
+export class OperatorRateLimited extends Error {
+  readonly retryAfterMs: number
+  constructor(retryAfterMs: number) {
+    super(`Operator request rate limit reached; retry in ${retryAfterMs} ms`)
+    this.retryAfterMs = retryAfterMs
+  }
+}
+
+/**
+ * A sliding-window bound on how many requests one installed operator service admits, so a stuck page, a scripted retry or a
+ * token-guessing client can never hammer the loopback interface without limit. In-memory and per instance: it bounds this
+ * process's operator traffic, not the operator's intent.
+ */
+export class OperatorRateWindow {
+  private times: number[] = []
+  readonly limit: number
+  readonly windowMs: number
+  private readonly now: () => number
+  constructor(limit: number, windowMs = OPERATOR_WINDOW_MS, now: () => number = Date.now) {
+    this.limit = limit
+    this.windowMs = windowMs
+    this.now = now
+  }
+  /** Admits one request now, or throws how long a caller must wait before the window has room for it again. */
+  reserve(): void {
+    const now = this.now()
+    this.times = this.times.filter(time => now - time < this.windowMs)
+    if (this.times.length >= this.limit) throw new OperatorRateLimited(this.windowMs - (now - this.times[0]!))
+    this.times.push(now)
+  }
+}
 
 /**
  * Reads the private operator reconcile token from an owner-owned, owner-only (0600) regular file, never a symlink, read through one `O_NOFOLLOW` descriptor with its `fstat` checked before reading (the same guard as the native Weixin credentials).
@@ -81,6 +129,8 @@ export class OperatorReview {
   private readonly tokenHash: Buffer
   private readonly frozen?: string
   private readonly host: OperatorReviewHost
+  private readonly reads = new OperatorRateWindow(OPERATOR_READS_PER_WINDOW)
+  private readonly mutations = new OperatorRateWindow(OPERATOR_MUTATIONS_PER_WINDOW)
   constructor(host: OperatorReviewHost) {
     this.host = host
     this.tokenHash = createHash('sha256').update(host.token).digest()
@@ -96,6 +146,10 @@ export class OperatorReview {
     if (typeof supplied !== 'string') return false
     return timingSafeEqual(createHash('sha256').update(supplied).digest(), this.tokenHash)
   }
+  /** Admits one read-only operator request in the current window, or throws how long the caller must wait (HTTP 429). */
+  admitRead(): void { this.reads.reserve() }
+  /** Admits one mutation operator request in the current window, or throws how long the caller must wait (HTTP 429). */
+  admitMutation(): void { this.mutations.reserve() }
   /** The read-only sanitized reconciliation ledger (docs/018): it stays readable even when the journal is frozen. */
   ledger(limit = 50): { id: string; kind: 'acknowledgement' | 'reply' | 'notice'; ticketId?: string; claimed: boolean; claimedAt?: string; reviewAt: string; reason: WeixinReviewReason }[] {
     return this.host.store.receipts.reviewLedger(limit)
@@ -111,6 +165,20 @@ export class OperatorReview {
     const entries = this.host.store.operatorAudit.count()
     const projected = this.readJournal().length
     return { entries, projected, current: entries === projected }
+  }
+  /**
+   * The lifecycle facts this interface enforces, so the operator UI can state them instead of implying them: what the grant is,
+   * what the bounds are, and what this interface is NOT. Carrying the bearer token proves possession of a secret and NEVER the
+   * identity of a named human — there is no session, no login, and no per-person attribution behind it.
+   */
+  lifecycle(): OperatorLifecycle {
+    return {
+      grant: 'private 0600 token file, read when the service is installed and never hot-swapped',
+      bearer: 'possession of the token authenticates the request, not a named human',
+      transport: 'loopback 127.0.0.1 and same-origin only',
+      bodyMaxBytes: OPERATOR_BODY_MAX_BYTES,
+      rate: { readsPerMinute: OPERATOR_READS_PER_WINDOW, mutationsPerMinute: OPERATOR_MUTATIONS_PER_WINDOW },
+    }
   }
   /**
    * Reconciles ONE held receipt by exact ID: the single durable, irreversible terminal transition, recorded in the authoritative
