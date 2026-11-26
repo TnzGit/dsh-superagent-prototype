@@ -10,7 +10,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { threadKey } from '../src/core/index.ts'
-import { OperatorReview, OPERATOR_TOKEN_FILE_ENV, journalLineOf } from '../src/app/operator-review.ts'
+import { OperatorReview, OPERATOR_TOKEN_FILE_ENV, journalLineOf, readOperatorToken } from '../src/app/operator-review.ts'
 import { startRuntime, feishu, type Host } from './fixtures/host.ts'
 
 const TOKEN = 'SYNTHETIC_OPERATOR_TOKEN_ONLY_NEVER_REAL'
@@ -164,27 +164,47 @@ it('a stale journal root is frozen with a shape-only diagnostic and never mutate
   expect(h.runtime.store.receipts.get('stale-root')!.status).toBe('dropped')
 })
 
-it('token rotation takes effect on restart with no partial control: the old token is refused on every route', async () => {
+it('token rotation takes effect only on reinstall, never hot: one grant governs every operator route at once', async () => {
   holdReceipt(h, 'rotated')
   expect((await h.api('GET', 'operator/reconcile/ledger', undefined, operator())).status).toBe(200)
+  expect((await h.api('POST', 'operator/reconcile/rotated', { outcome: 'no_resend' }, operator())).status).toBe(200)
+  const before = h.runtime.store.operatorAudit.list(50)[0]!.principal
   writeFileSync(tokenFile, ROTATED, { mode: 0o600 })
-  await h.stop()
-  h = await startRuntime()
-  // The new token authorizes every operator route at once; the old one is refused everywhere (no partial control).
-  expect((await h.api('GET', 'operator/reconcile/ledger', undefined, operator(TOKEN))).status).toBe(401)
-  expect((await h.api('GET', 'operator/reconcile/ledger', undefined, operator(ROTATED))).status).toBe(200)
-  expect((await h.api('POST', 'operator/reconcile/rotated', { outcome: 'no_resend' }, operator(TOKEN))).status).toBe(401)
-  expect((await h.api('POST', 'operator/triggers/no-such-trigger/terminal', undefined, operator(TOKEN))).status).toBe(401)
-  expect((await h.api('POST', 'operator/triggers/no-such-trigger/terminal', undefined, operator(ROTATED))).status).toBe(404)
-  // The rotated grant is the only one the restarted Runtime holds, and it reconciles the hold exactly once.
-  holdReceipt(h, 'rotated')
-  expect((await h.api('POST', 'operator/reconcile/rotated', { outcome: 'no_resend' }, operator(ROTATED))).status).toBe(200)
+  // The grant is read once when the service is installed: the running service keeps the token it holds and never hot-swaps,
+  // so a replaced grant file cannot leave the routes half-rotated.
+  expect(h.runtime.operatorReview!.authorized(operator(TOKEN))).toBe(true)
+  expect(h.runtime.operatorReview!.authorized(operator(ROTATED))).toBe(false)
+  // What an install holds is exactly what the replaced file says: the old token is not read through.
+  expect(readOperatorToken(tokenFile)).toBe(ROTATED)
+  // A reinstall governs every operator route at once: the old token is refused everywhere, the new one accepted everywhere.
+  const reinstalled = await startRuntime()
+  expect((await reinstalled.api('GET', 'operator/reconcile/ledger', undefined, operator(TOKEN))).status).toBe(401)
+  expect((await reinstalled.api('POST', 'operator/reconcile/anything', { outcome: 'no_resend' }, operator(TOKEN))).status).toBe(401)
+  expect((await reinstalled.api('POST', 'operator/triggers/t1/terminal', undefined, operator(TOKEN))).status).toBe(401)
+  expect((await reinstalled.api('GET', 'operator/reconcile/ledger', undefined, operator(ROTATED))).status).toBe(200)
+  // A hold the reinstalled grant can reconcile lands exactly once; a replayed reviewed hold is refused, never a second send.
+  holdReceipt(reinstalled, 'rotated-fresh')
+  expect((await reinstalled.api('POST', 'operator/reconcile/rotated-fresh', { outcome: 'confirmed_sent' }, operator(ROTATED))).status).toBe(200)
+  expect((await reinstalled.api('POST', 'operator/reconcile/rotated-fresh', { outcome: 'confirmed_sent' }, operator(ROTATED))).status).toBe(400)
+  expect(reinstalled.runtime.store.receipts.get('rotated-fresh')!.status).toBe('sent')
+  // The new principal is a different hash of the new token, never the token itself.
+  const after = reinstalled.runtime.store.operatorAudit.list(50)[0]!.principal
+  expect(after).toMatch(/^[0-9a-f]{12}$/)
+  expect(after).not.toBe(before)
+  expect(JSON.stringify(reinstalled.runtime.store.operatorAudit.list(50))).not.toContain(ROTATED)
+  await reinstalled.stop()
+  // A missing grant is not a partially installed one: without the file every route answers 404, never a partial 401.
+  vi.unstubAllEnvs()
+  const plain = await startRuntime()
+  expect(plain.runtime.operatorReview).toBeUndefined()
+  expect((await plain.api('GET', 'operator/reconcile/ledger', undefined, operator(ROTATED))).status).toBe(404)
+  expect((await plain.api('POST', 'operator/reconcile/rotated', { outcome: 'no_resend' }, operator(ROTATED))).status).toBe(404)
+  expect((await plain.api('POST', 'operator/triggers/t1/terminal', undefined, operator(ROTATED))).status).toBe(404)
+  await plain.stop()
+  vi.stubEnv(OPERATOR_TOKEN_FILE_ENV, tokenFile)
+  // The pre-rotation terminal receipt on the original host stays terminal: rotation never reopens a closed outcome.
   expect(h.runtime.store.receipts.get('rotated')!.status).toBe('dropped')
-  // The new principal is a different hash of the new token, never the token itself; a replayed hold stays refused.
-  const principal = h.runtime.store.operatorAudit.list(50)[0]!.principal
-  expect(principal).toMatch(/^[0-9a-f]{12}$/)
-  expect(h.runtime.store.receipts.get('rotated')!.operator!.principal).toBe(principal)
-  expect((await h.api('POST', 'operator/reconcile/rotated', { outcome: 'no_resend' }, operator(ROTATED))).status).toBe(400)
+  expect((await h.api('POST', 'operator/reconcile/rotated', { outcome: 'confirmed_sent' }, operator())).status).toBe(400)
 })
 
 it('request bounds are enforced: an oversized body, a clamped ledger limit, a strict outcome, and nothing accepted by a refused request', async () => {
