@@ -289,9 +289,8 @@ it('the private status route demands the grant, projects no secret, and its one 
   const view = await h.api('GET', 'operator/status', undefined, operator())
   expect(view.status).toBe(200)
   // The view says what is installed and where its state lives, and carries no secret, no payload and no peer.
-  expect(view.body.build).toMatchObject({ name: 'dsh-superagent', version: expect.any(String) })
-  expect(view.body.stateDir).toBe(h.runtime.machine.stateDir)
-  expect(view.body.executor.paused).toBe(false)
+  expect(view.body).toMatchObject({ build: { name: 'dsh-superagent', version: expect.any(String) },
+    stateDir: h.runtime.machine.stateDir, executor: { paused: false } })
   expect(JSON.stringify(view.body)).not.toContain(TOKEN)
   expect(JSON.stringify(view.body)).not.toContain('approved-peer')
   expect(JSON.stringify(view.body)).not.toContain('synthetic')

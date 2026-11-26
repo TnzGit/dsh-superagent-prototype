@@ -19,8 +19,8 @@ it('offers the operator tab after the stage tabs and never reads the status rout
   expect(text()).toContain(zh.operatorRateValue)
   // Nothing is fetched without the grant, so no unauthenticated request is even attempted.
   expect(server.requests.filter(request => request.path === 'operator/status')).toEqual([])
-  // And the page offers no send or Apply: only the grant, the lifecycle and their bounds.
-  expect(all('button').map(button => button.textContent)).not.toContain(zh.send)
+  // And the page offers no send or Apply: only the grant and the lifecycle that bounds it.
+  expect(all('button').map(button => button.textContent ?? '').join(' ')).not.toMatch(/发送|Send|应用|Apply/)
 })
 
 it('shows the installed build, the paused Executor, the poll lease, the queues and the redacted review state with the grant', async () => {

@@ -125,7 +125,8 @@ export interface OperatorReviewHost {
  */
 export class OperatorReview {
   /** A stable hash of the token, published in audit records in place of the secret itself. */
-  private readonly principal: string
+  /** The sanitized 12-hex identity of the grant that attested an audit record; it is a hash, never the token itself. */
+  readonly principal: string
   private readonly tokenHash: Buffer
   private readonly frozen?: string
   private readonly host: OperatorReviewHost
