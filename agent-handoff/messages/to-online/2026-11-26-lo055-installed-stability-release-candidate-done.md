@@ -28,9 +28,12 @@ forward-fixed with a compiled `tests/fixtures/os-xattr-clearer.c` (`removexattr`
 
 Measured at the final source SHA (local macOS, Node v25.9.0): CI-exact Node **387/387** (baseline 340; +47 =
 SubA 8, SubB 22, SubC 17), focus Vitest **216/216 across 16 files** (baseline 190), full Vitest **1427/77 files**
-(baseline 1395/73), macOS proxy step **34/34** (baseline 5), `pnpm check` exit 0, docs tests 6/6. GitHub Push CI
-and Draft PR CI polled at the done head after this publication; each exact 3/3 (run ids in the done-receipt
-follow-up; honest intermediate runs recorded in the private ledger).
+(baseline 1395/73), macOS proxy step **34/34** (baseline 5), `pnpm check` exit 0, docs tests 6/6. GitHub CI: the
+authoritative green pair is at branch head `48c4c12b517270d7e6f51d64807d59d625dff152` — Push run **45898410605** and
+Draft PR run **45898414792** each exact 3/3 (`local-first-core`, `dsh-typecheck-and-build`, `macos-portability`);
+honest intermediate runs recorded in the report §8 and the private ledger (061163b failure → forward fix → superseded
+push cancelled). The docs-only evidence increment on top of that head was polled to completion and is recorded in the
+private ledger.
 
 S5 facts: clone rehearsal old→new→new→old passed with the DB stable and zero auto re-send; ONE logged supervised
 maintenance window rolled the pinned OL-055 build forward on the operator-owned test 3083 (two honest failed
