@@ -243,7 +243,7 @@ it('an interrupted journal record freezes reconciliation with a human-reconcilia
   const reopened = new OperatorReview({ store: h.runtime.store, effects: h.runtime.effects, engine: h.runtime.engine,
     token: TOKEN, journal: journalOf(h) })
   expect(reopened.ledger(50)).toEqual([{ id: 'frozen-receipt', kind: 'reply', claimed: false, reviewAt: expect.any(String), reason: 'ambiguous_send' }])
-  expect(() => reopened.reconcile('frozen-receipt', 'no_resend')).toThrow(/interrupted record; reconciliation is frozen until a human reconciles it/)
+  expect(() => reopened.reconcile('frozen-receipt', 'no_resend')).toThrow(/reconciliation is frozen until a human reconciles it/)
   expect(() => reopened.classifyTrigger('whatever-trigger')).toThrow(/frozen/)
   // Uncertain receipts stay frozen: the hold is untouched and no repair was attempted.
   expect(h.runtime.store.receipts.get('frozen-receipt')).toMatchObject({ status: 'pending', review: { reason: 'ambiguous_send' } })

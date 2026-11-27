@@ -64,20 +64,22 @@ it('an external write that cannot land never declares an uncommitted effect acce
   holdReceipt(h, 'unwritable')
   const journal = journalOf(h)
   rmSync(journal, { force: true })
-  // A foreign file behind a symlink at the journal path: the projection is refused after the durable commit.
+  // A foreign file behind a symlink at the journal path: the new pre-mutation
+  // inspection refuses it BEFORE the durable SQLite transaction can commit.
   const foreign = join(h.directory, 'foreign.txt')
   writeFileSync(foreign, 'SENSITIVE FOREIGN PAYTEXT\n', { mode: 0o644 })
   symlinkSync(foreign, journal)
   const response = await h.api('POST', 'operator/reconcile/unwritable', { outcome: 'no_resend' }, operator())
   expect(response.status).toBe(500)
   expect(JSON.stringify(response.body)).not.toContain('SENSITIVE FOREIGN PAYTEXT')
-  expect(String(response.body.error)).toMatch(/without following symlinks/)
-  // The foreign file is neither modified nor read through; the durable terminal transition still holds.
+  expect(String(response.body.error)).toMatch(/reconciliation is frozen until a human reconciles it: journal unavailable, unsafe/)
+  // The foreign file is neither modified nor read through, and NO terminal
+  // transition is committed on a journal path that failed the owner check.
   expect(statSync(foreign).mode & 0o777).toBe(0o644)
   expect(readFileSync(foreign, 'utf8')).toBe('SENSITIVE FOREIGN PAYTEXT\n')
-  expect(h.runtime.store.receipts.get('unwritable')!.status).toBe('dropped')
-  expect(h.runtime.store.operatorAudit.count()).toBe(1)
-  // The reply effect was cancelled in the same transaction: nothing retries the ambiguous send.
+  expect(h.runtime.store.receipts.get('unwritable')!.status).toBe('pending')
+  expect(h.runtime.store.operatorAudit.count()).toBe(0)
+  // The uncertain review hold stays frozen; no reply is automatically resent.
   expect(h.runtime.effects.pending('reply', 'unwritable')).toBe(false)
 })
 
