@@ -244,12 +244,36 @@ export class Evals extends EnginePart {
    * Record that the queued Triggers `ids` of a Thread start no Eval, for `reason`, and take them out of its queue. Its id
    * differs from an Eval's, so it never replaces the Decision of an earlier Eval of the same Triggers.
    */
-  private ignore(thread: Thread, ids: string[], reason: Reason[], policy: Policy, at: string): void {
+  private ignore(thread: Thread, ids: string[], reason: Reason[], policy: Policy, at: string): Decision {
     const evaluation = { id: key('eval', thread.key, 'ignored', policy.version, at, ...ids), threadKey: thread.key, triggerIds: ids, strength: 'inferred' as const,
       actor: { source: thread.ref.source, id: '' }, basis: { via: 'followup' as const }, policyVersion: policy.version, startedAt: at, deadline: at }
-    this.record(thread, evaluation, { kind: 'ignore', reason })
+    const decision = this.record(thread, evaluation, { kind: 'ignore', reason })
     thread.pending = thread.pending.filter(id => !ids.includes(id))
     delete thread.expired
+    return decision
+  }
+  /**
+   * The operator's terminal classification of a pending Trigger (OL-054 M4): records a durable `ignore` Decision reasoned
+   * `operatorTerminal` and takes the Trigger out of its Thread's queue, without deleting the Trigger row or any receipt, so it
+   * can never become a Ticket once processing resumes. Fails closed while a live Eval already holds the Trigger (it is being
+   * assessed, not pending), refuses a Trigger that already carries a different Decision, and is idempotent: a repeat reports the
+   * Decision the first classification made and changes nothing further.
+   */
+  classifyPending(triggerId: string): { decision: Decision; already: boolean } {
+    const trigger = this.repo.triggers.get(triggerId)
+    if (!trigger) throw new UserError('unknownTrigger')
+    const held = this.holding(triggerId)
+    if (held) throw new UserError('triggerEvaluated', { eval: held.evaluating!.id })
+    const thread = this.thread(trigger.threads[0]!)
+    for (const decision of this.repo.decisions.byThread(thread.key)) {
+      if (!decision.triggerIds.includes(triggerId)) continue
+      if (decision.reason.some(reason => reason.code === 'operatorTerminal')) return { decision, already: true }
+      throw new UserError('triggerSettled', { trigger: triggerId })
+    }
+    if (!thread.pending.includes(triggerId)) throw new UserError('triggerNotPending')
+    const decision = this.ignore(thread, [triggerId], [{ code: 'operatorTerminal', triggerId }], this.policy(), this.now())
+    this.repo.threads.save(thread)
+    return { decision, already: false }
   }
   /**
    * The accept Decisions of the Triggers whose primary Thread is `threadKey`, by Trigger: what each one started. An Eval and

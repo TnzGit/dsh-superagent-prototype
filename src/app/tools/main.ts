@@ -13,6 +13,7 @@ import type { Sessions } from '../sessions.ts'
 import type { Settings } from '../settings.ts'
 import type { Store } from '../store.ts'
 import { AcknowledgementSchema, readTool, tool, type Tool } from './tool.ts'
+import { selectorFeedback } from '../../local-first/request-selector-feedback.ts'
 
 const RoutingNoteSchema = z.string().trim()
   .refine(text => wordCount(text) <= NOTE_WORDS, `Routing note must not exceed ${NOTE_WORDS} words (Chinese uses word segmentation). Shorten it; do not split it across deliveries.`)
@@ -26,6 +27,8 @@ export interface MainToolsHost {
   readonly settings: Pick<Settings, 'view' | 'block' | 'save' | 'pause' | 'sync'>
   readonly assessor: Pick<MasterAssessor, 'context' | 'read' | 'decide'>
   readonly resources: ResourceHost
+  /** True when this deployment has no GitHub remote and every change ticket must name a registered local project on its first line. */
+  localOnly?(): boolean
   /** Schedules a pass to carry out work queued by an Engine command (such as an Eval or ticket resume). */
   requestPass(): void
   sendReplies(): Promise<void>
@@ -93,6 +96,11 @@ function route(host: MainToolsHost, item: RouteItem, decided: ReadonlyMap<string
   if (earlier && item.kind === 'ignore') return { refused: `Decided in this call with ${earlier}, whose Decision took its batch` }
   switch (item.kind) {
     case 'accept': {
+      // In a local-only deployment the project selector is the whole point of an explicit request, so its syntax is verified
+      // BEFORE the Engine creates the ticket and posts the acknowledgement: a mistyped selector costs no Worker session and no
+      // outbound message, and the correction is the exact accepted grammar. The parser itself is unchanged.
+      const feedback = host.localOnly?.() ? selectorFeedback(host.store.triggers.get(item.trigger_id)?.text ?? '') : undefined
+      if (feedback) return { refused: feedback }
       const before = host.store.triggers.disposition(item.trigger_id)?.decisionId
       const decision = host.engine.decide(item.trigger_id, { kind: 'accept', title: item.title!, scope: item.title!, reason: { code: 'explicitRouted' },
         acknowledgement: item.acknowledgement!, name: item.worktree_name!, ...note })

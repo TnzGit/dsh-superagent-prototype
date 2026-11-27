@@ -1,0 +1,36 @@
+# 020 — After OL-053: controlled REAL I3 pilot and dedicated registered-project Apply
+
+**UPDATE 2026-11-26:** OL-054 has completed the installed 3083 cutover + operator-private bounded registered-test-project Apply (see `docs/021-installed-i3-operator-apply-stabilization.md`; no host command is conferred). The OL-054-pending note below is HISTORICAL.
+
+**Historical OL-054 work item:** `OL-20261125-054` / root `PLAN-OL054.md` (public-safe path text, not an execution token) handles installed 3083 exclusive poll owner/rollback and operator-private Apply flow. OL-053's genuine staging pilot did not install new code into 3083. No action occurs merely by reading this runbook.
+
+**As of 2026-11-25.** Read the scoped `agent-reports/REPORT-ol053-controlled-live-i3-and-real-apply.md` and `agent-handoff/receipts/online/LO-20261125-053-done.md`. This is an operating runbook and engineering status; **not a public GitHub command, secret container, reusable send budget, or production deploy switch**. A first genuine staging-guest live I3 with real local model-driven edit and two self/consenting-peer outbound sends plus one genuine operator-registered **dedicated test-project** Apply/rollback passed under the owner's task-scoped run. PR #1 remains Draft.
+
+## Operator action: registered project root replaced at same path
+
+The new `LocalProjectRegistry.assertRegisteredRootIdentity(projectId)` records **dev + ino of the registered project root and each canonical ancestor**. Both `createProjectSnapshot` and `verifyProjectSnapshot` now fail closed if the current identity differs, even if the path string and project fingerprint are unchanged.
+
+- **When you see** `Registered synthetic project directory identity changed` or `Registered synthetic project ancestor identity changed`, do **not** retry snapshot, symlink the project back, reuse an old Ticket's fingerprint, or disable the check. This can be caused by external folder replacement or a renamed/recreated ancestor, not just an unsafe actor.
+- **Privately inspect** which local registered project the failed Ticket actually references, its canonical root and allowlisted ancestors. Use the operator's trusted registry UI/config, **not** a GitHub message, to determine whether the new real directory is the intended project. Do not publish the path, inode, registry JSON, or private project hashes.
+- If and only if the root was intentionally replaced and the intended new project has been verified, **explicitly re-register** it through the existing trusted operator configuration / normal registry construction, thereby capturing **new** root and ancestor identities. Create a **new** Ticket and a **new** snapshot. Previously issued Tickets, fingerprints, worker copies and Apply capabilities must remain invalid, never rebound automatically. Restart/reload only the smallest owning registry instance by a protected local procedure if re-registration requires it; no blanket 3080/3083/8123 restart.
+- If root replacement is unexpected, leave operation blocked, retain private evidence and inspect possible external writer/quiescence issues. The root identity check is a read-only comparison, **not an atomic filesystem barrier**; the native Apply helper still needs descriptor pinning and writer exclusion.
+
+## Real Weixin state: one active poll owner per account
+
+- OL-053 used a new isolated staging guest to own the real account's poll/cursor for the pilot, with the original 3083 poller paused or stopped. Restored 3083 used its previous cursor and re-ingested the single pilot message while executor remained paused, resulting in one extra stored Trigger (11→12) with **zero new Tickets and zero new sends**. That is a cursor ownership fact, not an instruction to replay the message or reset the cursor again.
+- Never simultaneously run a guest and installed 3083 poller for the same account without an independently verified **exclusive poll lease / fenced owner**. Establish a private operator-maintained account+cursor single-holder contract, shutdown/abort handshake, persisted cursors, replay deduplication and restart recovery; test takeover at a frozen pre-send point before real cutover.
+- On cutover, preserve immutable outbox receipts, account binding, context expiry, and reviewed holds. Never requeue a claimed `ambiguous_send` id or interpret server `client_id` as an established Tencent idempotency guarantee.
+- Do not publish QR, credential, account fingerprint, peer, cursor or chat contents. Any real live tests should use the known self/consenting peer and separately accounted small send budget, not the consumed OL-053 allowance.
+
+## Apply: what passed vs what remains to be installed
+
+- `research/real-apply-helper.c` + `src/local-first/real-apply-native-driver.ts` are a **separate operator-invoked pilot capability path**; OL-053 proved one registered fresh real test project mutation, unique consume marker, backup/fync journal and byte/mode rollback, NOT a production Runtime/Worker wiring.
+- The installed product must not expose `applyOnce` as a generic Agent tool. Provide a separate operator-owned, private capability UI/RPC with exact project, file, before/after plan and immutable transaction ID; Worker only proposes a diff. Maintain an explicit no-send/no-Apply dry run, one-use journal and separate rollback authority. Protect against cross-project writes, stale hash/inode, external writers, ancestor rebindings and unsafe manual recovery.
+- Documented residual risks: non-cooperating same-UID writer between final preimage and `renameat`, ancestor swap above the pinned root, mounts, tests using SIGKILL but not power-loss durability, same-UID fake approvals, and registration-time trust of frozen capabilities. If an untrusted writer can still operate, classify unsafe; do not claim race freedom.
+- A production-like read/write integration should start with **one new registered low-risk project**, prove private backup and recoverability, then evaluate a separate operator-owned target. This is an engineering sequencing recommendation, not a request for repeat generic authorization.
+
+## Installed 3083 next milestone
+
+The OL-053 staging guest **did** execute the real native I3 end-to-end. It did **not** install the new source into the running 3083 orchestrator. Next milestone should stage/pin the implementation with independent build, bootstrap/config compatibility, single-owner poll lease and reversible small-scope cutover. Validate native inbound→Engine→Ticket→isolated Worker→reviewed Outbox→consented real outbound **on that installed runtime**, distinguish read-only / paused vs enabled executor, and inspect duplicate trigger 12 without auto-executing it. Preserve original sessions, production DB, provider/model defaults, and the private vault. No uncontrolled peer send or mass replay.
+
+The OL-053 pilot is `LIVE_BOTH_PASS` **within its exact real staging/test-project scope**, not a general deployment or model/Apply authorization for unrelated targets.

@@ -489,3 +489,29 @@ it('gives a worker the other messages of the request its ticket was accepted fro
   expect(page).toMatchObject({ batch: [{ trigger_id: other, read: `trigger/${other}` }] })
   expect(await h.runTool(`worker-${ticket.id}`, 'orchestrator_read', { resource: `trigger/${other}` })).toMatchObject({ trigger_id: other })
 })
+
+it('verifies a local-only request\'s first-line selector before the accept, so a selector joined to the command line costs no Ticket and no outbound reply', async () => {
+  // A local-only deployment: every change ticket must name a registered project on its own first line.
+  const settings = h.runtime.store.settings()
+  h.runtime.store.saveSettings({ ...settings, sources: { ...settings.sources, github: { enabled: false, config: {} } } })
+  const joined = feishu('1', '/project demo-app 修复错字')
+  const clean = feishu('2', '/project demo-app\n修复错字')
+  h.runtime.receive(joined); h.runtime.receive(clean)
+  await h.runtime.idle()
+  const accept = { kind: 'accept', title: 'Fix', worktree_name: 'fix-selector', acknowledgement: '收到。' }
+  const { results } = await h.runTool(h.runtime.masterId, 'orchestrator_route', { decisions: [
+    { ...accept, trigger_id: joined.id },
+    { ...accept, trigger_id: clean.id },
+  ] }) as { results: Record<string, unknown>[] }
+  // The mistyped one is refused with the exact accepted grammar, in both languages, before the Engine is invoked.
+  expect(results[0]).toMatchObject({ trigger_id: joined.id, kind: 'accept',
+    refused: expect.stringMatching(/选择器必须独占第一行[\s\S]*selector must be alone on the first line/) })
+  expect(results[1]).toMatchObject({ trigger_id: clean.id, kind: 'accept', decision: 'accept',
+    ticket: expect.objectContaining({ title: 'Fix' }) })
+  // Refusing it created no Ticket and no acknowledgement for it: the expensive Router/Worker work was never paid for.
+  expect(h.runtime.store.tickets.list().map(ticket => ticket.origin.triggerId)).toEqual([clean.id])
+  const receipts = h.runtime.store.receipts.waiting()
+  expect(receipts.map(receipt => receipt.channel.thread)).toEqual([`feishu:${CHAT}`])
+  expect(JSON.stringify(receipts)).toContain('收到。')
+  expect(JSON.stringify(receipts.filter(receipt => receipt.text.includes('修复错字')))).not.toContain(joined.id)
+})

@@ -1,0 +1,22 @@
+message_id: LO-20261113-025
+from: local
+to: online
+type: result
+scope: OFFLINE_SYNTHETIC_ONLY
+code_sha: 0ed50723b57811b54129b4347ecea7651b2b6d50
+related_ci: https://github.com/TnzGit/dsh-superagent-prototype/actions/runs/43339186653
+requires_live_host_approval: false
+in_reply_to: OL-20261113-025
+
+# LO-20261113-025 — C6B2B5R nofollow receipt descriptor acceptance DONE (macOS)
+
+**Verdict: `ALL_OFFLINE_PASS`.** Report: `agent-reports/REPORT-c6b2b5r-offline-nofollow-receipt.md`.
+
+- Checked out pinned SOURCE `0ed50723b57811b54129b4347ecea7651b2b6d50` in a clean detached worktree (dispatch `3b76271` vs pinned diff = 4 handoff/docs files only, zero source/test changes → CI evidence valid for pinned). Claim once: `e8b87d1ea894202c6385b6de2a3dca34db630168` (non-force FF `3b76271..e8b87d1`, remote HEAD verified; no retry).
+- CI #390 run `43339186653`: 3/3 success at exact pinned head_sha. Job logs: Linux Node `225/225` + proxy `5/5`, new hardlink test `ok 160` executed; macOS leg genuinely allocated (`Image: macos-15`) shows `✔` for the same hardlink test; Vitest `62 files / 1208`, build success.
+- Local parity at pinned source (Node v25.9.0, pnpm 11.7.0, macOS arm64 26.3): `pnpm install --frozen-lockfile` exit 0; `pnpm check` exit 0 (Vitest 62/1208, build complete); CI-exact workflow Node command exit 0 `225/225`; standalone ledger suite exit 0 `43/43` (new hardlink test ✔); proxy suite exit 0 `5/5`.
+- Source reviewed at pinned SHA: receipt inspected via `open(file, O_RDONLY|O_NOFOLLOW|O_NONBLOCK)` → before-stat guard (`isFile`, `nlink===1`, exact `mode&0o777===0o600`, `size>4096` refused) → read → after-stat compare (`dev/ino/size/mtimeMs/ctimeMs` + `raw.byteLength>4096`) → parse. AUDITED behavior deltas (documented, not defects): (1) blanket catch converts every inner refusal (`Unsafe synthetic reservation`, `changed during inspection`, ELOOP) into `Corrupt synthetic reservation; human reconciliation required` — carried H5/P5/P6 error-message expectations now differ; (2) mode check TIGHTENED to exact `0o600` (old code accepted any `(mode&0o077)===0`, e.g. `0o400` — now refused, proved R3); (3) symlink refusal now via O_NOFOLLOW/ELOOP at open instead of lstat, target untouched (R2). Source comment itself states: still NOT descriptor-relative root isolation, NOT protection from a cooperating same-user in-place writer.
+- Independent adversarial harness: `ok=769 fail=0` (exit 0). New R1–R7: R1 hardlink alias (nlink=2) refused via descriptor stat, receipt bytes+ino+size+mode+mtime byte-identical after refusal, approval NOT reusable, zero new ledger entries; R2 symlinked hash path refused (O_NOFOLLOW), target untouched; R3 `0o400` refused / restored `0o600` inspects OK, same inode; R4 AUDITED LIMIT — cooperating same-user in-place rewrite (same inode, SAME size, changed bytes, atime/mtime restored via utimes) PASSES inspection with altered content (before==after within the window; ctime unforgable but matched); R5 4100-byte receipt refused, intact after refusal; R6 fresh OS child with no remembered identity inspects valid receipt (no cross-process state); R7 path ABA — fresh inode with identical bytes at same path inspects OK (descriptor self-consistent), approval still not reusable, restored original inode PASSES best-effort check (audited, not race-free). Exact 4096/4097 boundary, no-repair/no-reuse, guard ORDER, torn-parse controls, marker/pin gates, fresh-child DENIED, identity-changed, one-use fencing, strict schemas — all carried B4C–B5Q layers re-verified green at this SHA.
+- Gate A.5: zero production callers (module + exports scan over src/ + scripts/ excluding module/tests = 0 hits). Default-OFF read-only module; writes remain `wx` 0600 receipt + 0600 pin + dir fsync. Not wired into DSH Executor — remote owns integration.
+- Residual limits unchanged (audited): same-user forged/cooperating in-place rewrite passes inspection (R4); no descriptor-relative root isolation; cross-root generic-reserve fencing absent; path ABA restores original inode and passes (R7); realpath/lstat TOCTOU on ledger root persists; Proxy traps run user code; no private transaction authority; no backup/recovery; tmpdir is not an OS sandbox; real Apply gates unproven — no race-free real Apply claimed.
+- Synthetic-only: owner-only 0700 disposable fixtures under tmpdir; no live Apply, no DSH Prompt, no Weixin, no 3080/3083/8123, no model defaults, no production SQLite touched. STOP after this receipt: OL-20261113-025 must not be replayed; next owner: remote.

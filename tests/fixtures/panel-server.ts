@@ -5,7 +5,8 @@
 import { afterEach, beforeEach, expect, vi } from 'vitest'
 import { z } from 'zod'
 import type { ConfigForm, ConfigFormSnapshot } from '@deepseek-ai/dsh-client-ui-settings/client'
-import type { Api, ApiResponse, RouteParams } from '../../src/app/api.ts'
+import type { Api, ApiResponse, OperatorLedgerEntry, RouteParams } from '../../src/app/api.ts'
+import type { OperatorStatusView } from '../../src/app/views/operator-status.ts'
 import { SKILL_NAME, SKILL_PREFIX, TEAM_SECTIONS, builtInBase, builtInPart, builtInParts, composePrompt, composeSkill, defaultPrompts,
   environmentSection, policySection, promptParts } from '../../src/app/prompts.ts'
 import type { DroppedReply, HistoryView, Problem, PromptsView, SetupView, SourceStatusRow, SourceView, StateView, ThreadPageView,
@@ -108,6 +109,10 @@ export interface PanelServer {
   opened: string[]
   dropped: DroppedReply[]
   failing: Extract<Problem, { kind: 'outgoing' }>['outgoing'][]
+  /** Sanitized held-receipt ledger for the operator reconciliation routes; absent it, the ledger is empty. */
+  operatorLedger?: OperatorLedgerEntry[]
+  /** Synthetic operator status view for the private operator UI; absent it, the fixture's own default is served. */
+  operatorStatus?: OperatorStatusView
 }
 export let server: PanelServer
 
@@ -162,6 +167,21 @@ const stateView = (): StateView => ({
   masterId: 'master', paused: server.settings.paused,
   // The panel does not read health; the service script does.
   health: {},
+  weixinOutboxReview: { total: 0, reasons: {} },
+})
+/** The synthetic operator status view: an installed build, a paused Executor, one Source, one queue, one review hold and a checkpoint. */
+const operatorStatusView = (): OperatorStatusView => ({
+  build: { name: 'dsh-superagent', version: '0.1.0', manifestVersion: 1, node: '>=22' },
+  stateDir: '/synthetic/state',
+  executor: { paused: server.settings.paused, running: 0, queued: 0, maxWorkers: server.settings.executor.maxWorkers,
+    health: { state: 'ready' } },
+  sources: [],
+  poll: { account: 'syntheticaccountfingerprint0123456789', generation: 7 },
+  queue: [{ kind: 'reply', waiting: 1, oldest: '2026-11-26T00:00:00.000Z', state: 'ready' }],
+  review: { total: 1, reasons: { ambiguous_send: 1 }, journal: { entries: 3, projected: 3, current: true } },
+  models: { state: 'ready' },
+  policyVersion: 'abcdef1234567890',
+  checkpoint: { lastSeq: 3, lastAt: '2026-11-26T00:00:00.000Z', durableEntries: 3, projectionCurrent: true },
 })
 const settingsView = (): ApiResponse<'GET settings'> => ({
   policyVersion: 'abcdef1234567890',
@@ -396,6 +416,22 @@ const ROUTES: { [K in keyof Api]: Route<K> } = {
     return { parts: { orchestrator: promptParts(body, 'orchestrator', environment, policy), worker: promptParts(body, 'worker', environment) },
       skills: Object.fromEntries(skills),
       orchestrator: composePrompt(body, 'orchestrator'), worker: composePrompt(body, 'worker'), scope: '' }
+  } },
+  'GET operator/reconcile/ledger': { query: ['limit'], answer: () => ({ receipts: server.operatorLedger ?? [] }) },
+  'POST operator/reconcile/:id': { body: true, answer: ({ params, body }) => {
+    const entry = (server.operatorLedger ?? []).find(receipt => receipt.id === params.id)
+    if (!entry) return refuse(404, 'refused', { code: 'reviewHoldSettled' })
+    return { id: params.id, status: body.outcome === 'confirmed_sent' ? 'sent' : 'dropped', outcome: body.outcome, principal: 'synthetic', journal: true }
+  } },
+  'POST operator/triggers/:id/terminal': { answer: ({ params }) => ({ triggerId: params.id, classified: true, decision: 'decision-synthetic' }) },
+  // The operator-private status view: a synthetic installed build, a paused Executor, one Source, one queue and a review hold.
+  // It carries no secret, so the fixture can serve it without a grant, exactly as the service does for a granted request.
+  'GET operator/status': { answer: () => server.operatorStatus ?? operatorStatusView() },
+  // The one safe operator action: an idempotent pause or resume of the controlled test Executor, never a send or an Apply.
+  'POST operator/executor/pause': { body: true, answer: ({ body }) => {
+    server.settings = { ...server.settings, paused: body.paused }
+    server.revisions.pause = (server.revisions.pause ?? 0) + 1
+    return { paused: body.paused }
   } },
 }
 

@@ -43,7 +43,13 @@ export interface SourcePolicyPart<P extends Record<string, unknown>> {
 export interface ChannelLink { url: string; label: Localized; triggerId?: string }
 export type ChannelLinks = Partial<Pick<Deployment, 'repository' | 'feishu'>>
 /** Outbound messaging adapter for a source kind's threads. */
+/** A read-only, pre-network safety decision. Review outcomes persist with no automatic resend. */
+export type SourceSendPreflight =
+  | { status: 'ready' | 'waiting' | 'gone' }
+  | { status: 'review'; reason: string }
 export interface SourceChannel<C> {
+  /** Optional safety check BEFORE an Outbox's durable external-send claim. */
+  preflight?(message: OutboundMessage): SourceSendPreflight | Promise<SourceSendPreflight>
   /** Whether a reply may still go to `address`; without it, every address may receive replies. */
   allowed?(address: Record<string, string>, config: C): boolean
   /**

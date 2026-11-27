@@ -1,0 +1,474 @@
+/** C6B2: default-OFF, operator-gated MULTI-FILE STAGING ONLY.
+ * Writes private, out-of-source evidence copies and an immutable sealed manifest.
+ * NEVER modifies registered project source, and has NO apply/rollback methods.
+ * No Runtime/Weixin/Ticket caller; synthetic-only acceptance until separately authorized.
+ */
+import {createHash,randomUUID} from 'node:crypto'
+import {constants,createReadStream,lstatSync,readFileSync,realpathSync} from 'node:fs'
+import {copyFile,lstat,mkdir,open,readFile,readdir,unlink,stat} from 'node:fs/promises'
+import {isAbsolute,join,relative,resolve,sep} from 'node:path'
+import {previewNonGitProjectChanges,verifyProjectSnapshot,type NonGitChange,type SnapshotRequest} from './project-workspaces.ts'
+import {projectFingerprint} from './project-workspaces.ts'
+
+const ID=/^[a-z0-9][a-z0-9-]{7,79}$/
+const HEX64=/^[0-9a-f]{64}$/
+const MAX_FILES=24,MAX_COPY_BYTES=64*1024*1024
+const contained=(root:string,target:string):boolean=>{
+  const rel=relative(root,target)
+  return rel===''||(rel!=='..'&&!rel.startsWith('..'+sep)&&!isAbsolute(rel))
+}
+export interface NonGitBatchStageGrant {
+  version:1
+  operation:'stage-batch'
+  approvalId:string
+  batchId:string
+  projectId:string
+  rootFingerprint:string
+  previewDigest:string
+  expiresAt:string
+  operatorApproved:true
+}
+export interface StagedChange {
+  path:string
+  action:NonGitChange['action']
+  before?:string
+  after?:string
+  beforeExecutable?:boolean
+  afterExecutable?:boolean
+  beforeMode?:number
+  afterMode?:number
+  beforeImage?:string
+  afterImage?:string
+}
+export interface NonGitBatchSeal {
+  version:1
+  status:'sealed'
+  batchId:string
+  approvalId:string
+  projectId:string
+  rootFingerprint:string
+  sourceRevision:string
+  previewDigest:string
+  changes:StagedChange[]
+  /** SHA256 of stable manifest fields; does not grant apply authority. */
+  digest:string
+}
+const exactly=(value:unknown,keys:readonly string[]):boolean=>
+  !!value&&typeof value==='object'&&!Array.isArray(value)&&
+  Object.keys(value).every(x=>keys.includes(x))&&
+  Object.keys(value).length===keys.length
+
+function readGrant(file:string):NonGitBatchStageGrant{
+  if(!isAbsolute(file))throw Error('Stage approval must be private absolute file')
+  const info=lstatSync(file)
+  if(!info.isFile()||info.isSymbolicLink()||(info.mode&0o077)!==0)
+    throw Error('Stage approval must be owner-only regular file')
+  const v=JSON.parse(readFileSync(file,'utf8')) as NonGitBatchStageGrant
+  const keys=['version','operation','approvalId','batchId','projectId',
+    'rootFingerprint','previewDigest','expiresAt','operatorApproved']
+  if(!exactly(v,keys)||v.version!==1||v.operation!=='stage-batch'||
+    !ID.test(v.approvalId)||!ID.test(v.batchId)||typeof v.projectId!=='string'||
+    !HEX64.test(v.rootFingerprint)||!HEX64.test(v.previewDigest)||
+    v.operatorApproved!==true||typeof v.expiresAt!=='string'||
+    !Number.isFinite(Date.parse(v.expiresAt))||Date.parse(v.expiresAt)<=Date.now())
+    throw Error('Invalid or expired multi-file stage grant')
+  return v
+}
+function privateRoot(input:SnapshotRequest,folder:string):string{
+  if(!isAbsolute(folder))throw Error('Batch journal root must be absolute')
+  const info=lstatSync(folder)
+  if(!info.isDirectory()||info.isSymbolicLink()||(info.mode&0o077)!==0)
+    throw Error('Batch journal root must be private non-symlink directory')
+  const root=realpathSync(folder),source=realpathSync(input.registry.get(input.projectId).root),
+    worker=realpathSync(input.directory)
+  if(contained(root,source)||contained(source,root)||
+    contained(root,worker)||contained(worker,root))
+    throw Error('Batch journal root must not overlap source or worker')
+  return root
+}
+async function syncDirectory(folder:string):Promise<void>{
+  const h=await open(folder,'r')
+  try{await h.sync()}finally{await h.close()}
+}
+async function writeDurable(file:string,content:string):Promise<void>{
+  const h=await open(file,'wx',0o600)
+  try{await h.writeFile(content);await h.sync()}finally{await h.close()}
+  await syncDirectory(resolve(file,'..'))
+}
+function digest(content:unknown):string{
+  return createHash('sha256').update(JSON.stringify(content)).digest('hex')
+}
+function validRel(rel:string):boolean{
+  return !!rel&&!rel.includes('\\')&&!rel.includes('\0')&&!isAbsolute(rel)&&
+    rel.split('/').every(p=>!!p&&p!=='.'&&p!=='..')
+}
+async function hashedFile(file:string,sizeLimit:number,objectFormat:40|64):Promise<{oid:string,mode:number,size:number}>{
+  const before=await lstat(file)
+  if(!before.isFile()||before.isSymbolicLink()||before.size>sizeLimit)
+    throw Error('Unsafe or oversized source/worker file in batch')
+  const oid=createHash(objectFormat===40?'sha1':'sha256')
+  oid.update('blob '+before.size+'\0')
+  let bytes=0
+  for await(const chunk of createReadStream(file)){
+    const data=chunk as Buffer
+    bytes+=data.length
+    if(bytes>before.size)throw Error('File changed while staging')
+    oid.update(data)
+  }
+  const after=await lstat(file)
+  if(bytes!==before.size||after.size!==before.size||
+    after.ino!==before.ino||after.dev!==before.dev||
+    (after.mode&0o777)!==(before.mode&0o777)||
+    after.mtimeMs!==before.mtimeMs)
+    throw Error('File changed while staging')
+  return {oid:oid.digest('hex'),mode:before.mode&0o777,size:bytes}
+}
+/** Copy into 0600 sealed evidence image; source bytes remain untouched. */
+async function capture(from:string,to:string,expected:string,room:number):
+  Promise<{mode:number,size:number}>{
+  const format=expected.length===40||expected.length===64?expected.length:0
+  if(format!==40&&format!==64)throw Error('Unsupported baseline blob object')
+  const before=await hashedFile(from,room,format)
+  if(before.oid!==expected)throw Error('Source or worker changed since approved preview')
+  await copyFile(from,to,constants.COPYFILE_EXCL)
+  const image=await lstat(to)
+  if(!image.isFile()||image.isSymbolicLink())throw Error('Private batch image is unsafe')
+  const h=await open(to,'r+')
+  try{await h.chmod(0o600);await h.sync()}finally{await h.close()}
+  const captured=await hashedFile(to,room,format)
+  const sourceAgain=await hashedFile(from,room,format)
+  if(captured.oid!==expected||sourceAgain.oid!==expected||
+    sourceAgain.mode!==before.mode||sourceAgain.size!==before.size)
+    throw Error('Source or worker changed while staging')
+  // Barrier for the *directory entry* containing this fsynced image.
+  // A later sealed manifest must never become durable before its images.
+  await syncDirectory(resolve(to,'..'))
+  return {mode:before.mode,size:before.size}
+}
+function imageName(i:number,which:'before'|'after'):string {
+  return which+'-'+String(i).padStart(3,'0')+'.bin'
+}
+async function readPrivateJson(file:string):Promise<unknown>{
+  try {
+    const info=await lstat(file)
+    if(!info.isFile()||info.isSymbolicLink()||(info.mode&0o077)!==0)
+      throw Error('Unsafe batch journal file')
+    return JSON.parse(await readFile(file,'utf8')) as unknown
+  } catch(error) {
+    // Never expose private journal paths in ENOENT/ENOTDIR or JSON parsing
+    // diagnostics. A half-staged batch is evidence for manual review.
+    if(error instanceof SyntaxError||
+      (error as NodeJS.ErrnoException).code==='ENOENT'||
+      (error as NodeJS.ErrnoException).code==='ENOTDIR')
+      throw Error('Unsealed or corrupt batch requires manual reconciliation')
+    throw error
+  }
+}
+async function existingBatches(root:string,approvalId?:string):Promise<void>{
+  for(const entry of await readdir(root,{withFileTypes:true})){
+    if(!entry.name.startsWith('batch-'))continue
+    if(!entry.isDirectory()||entry.isSymbolicLink())
+      throw Error('Unsafe batch journal directory')
+    const folder=join(root,entry.name)
+    const dir=await lstat(folder)
+    if(dir.mode&0o077)throw Error('Unsafe batch permissions')
+    let intent:NonGitBatchStageGrant,seal:NonGitBatchSeal
+    try{
+      intent=await readPrivateJson(join(folder,'intent.json')) as NonGitBatchStageGrant
+      seal=await readPrivateJson(join(folder,'seal.json')) as NonGitBatchSeal
+    }catch{throw Error('Unsealed or corrupt batch requires manual reconciliation')}
+    if(!intent||!seal||seal.version!==1||seal.status!=='sealed'||
+      seal.batchId!==intent.batchId||seal.approvalId!==intent.approvalId||
+      seal.projectId!==intent.projectId||
+      seal.rootFingerprint!==intent.rootFingerprint||
+      seal.previewDigest!==intent.previewDigest||
+      entry.name!=='batch-'+seal.batchId||!Array.isArray(seal.changes))
+      throw Error('Unsealed or mismatched batch requires manual reconciliation')
+    const {digest:proof,...fields}=seal
+    if(proof!==digest(fields))
+      throw Error('Corrupt sealed batch requires manual reconciliation')
+    if(approvalId&&seal.approvalId===approvalId)
+      throw Error('Batch stage approval was already consumed')
+  }
+}
+function sealFields(row:Omit<NonGitBatchSeal,'digest'>):Omit<NonGitBatchSeal,'digest'>{
+  return row
+}
+export async function stageNonGitChangeBatch(input:SnapshotRequest,opts:{
+  journalRoot:string;approvalFile:string
+}):Promise<NonGitBatchSeal>{
+  const grant=readGrant(opts.approvalFile)
+  if(grant.projectId!==input.projectId||grant.rootFingerprint!==input.fingerprint)
+    throw Error('Batch stage grant does not match registered project')
+  const root=privateRoot(input,opts.journalRoot)
+  const lock=join(root,'.batch-stage.lock')
+  const lockHandle=await open(lock,'wx',0o600)
+  try{
+    await lockHandle.sync();await syncDirectory(root)
+    await existingBatches(root,grant.approvalId)
+    await verifyProjectSnapshot(input)
+    const project=input.registry.get(input.projectId)
+    if(project.kind!=='local'||project.readOnly||projectFingerprint(project)!==input.fingerprint)
+      throw Error('Batch staging requires original writable registered non-Git project')
+    const folder=join(root,'batch-'+grant.batchId)
+    // Reserve transaction ID permanently, even if we crash or fail later.
+    await mkdir(folder,{mode:0o700})
+    await syncDirectory(root)
+    await writeDurable(join(folder,'intent.json'),JSON.stringify(grant)+'\n')
+    const plan=await previewNonGitProjectChanges(input)
+    if(plan.digest!==grant.previewDigest||plan.changes.length===0||
+      plan.changes.length>MAX_FILES)
+      throw Error('Stage digest mismatch, empty batch or too many files')
+    const worker=realpathSync(input.directory)
+    let total=0
+    const changes:StagedChange[]=[]
+    for(const [i,change] of plan.changes.entries()){
+      if(!validRel(change.path))throw Error('Unsafe batch relative file path')
+      const original=input.registry.path(input.projectId,change.path,'read')
+      const output=resolve(worker,change.path)
+      if(!contained(worker,output))throw Error('Worker file path left workspace')
+      const item:StagedChange={path:change.path,action:change.action,
+        ...(change.before?{before:change.before}:{}),
+        ...(change.after?{after:change.after}:{}),
+        ...(change.before?{beforeExecutable:false}:{}),
+        ...(change.after?{afterExecutable:change.executable}:{})}
+      if(change.before){
+        const name=imageName(i,'before')
+        const result=await capture(original,join(folder,name),change.before,MAX_COPY_BYTES-total)
+        total+=result.size
+        item.beforeExecutable=(result.mode&0o111)!==0
+        item.beforeMode=result.mode
+        item.beforeImage=name
+      }
+      if(change.after){
+        const name=imageName(i,'after')
+        const result=await capture(output,join(folder,name),change.after,MAX_COPY_BYTES-total)
+        total+=result.size
+        item.afterMode=result.mode
+        item.afterExecutable=(result.mode&0o111)!==0
+        item.afterImage=name
+      }
+      if(item.afterExecutable!==undefined&&item.afterExecutable!==change.executable)
+        throw Error('Worker file executable mode changed during batch staging')
+      changes.push(item)
+    }
+    const planAgain=await previewNonGitProjectChanges(input)
+    if(planAgain.digest!==plan.digest)
+      throw Error('Original or Worker project drift during batch staging')
+    // Git blob OIDs capture content but NOT all file permission bits. Re-check
+    // both source and worker modes and bytes immediately before sealing.
+    for(const item of changes){
+      for(const [location,oid,expectedMode] of [
+        [item.before?input.registry.path(input.projectId,item.path,'read'):undefined,
+          item.before,item.beforeMode],
+        [item.after?resolve(worker,item.path):undefined,item.after,item.afterMode]
+      ] as const){
+        if(!location||!oid)continue
+        const actual=await hashedFile(location,MAX_COPY_BYTES,oid.length as 40|64)
+        if(actual.oid!==oid||actual.mode!==expectedMode)
+          throw Error('Source or Worker content/mode drift before batch seal')
+      }
+    }
+    // Explicit durability barrier: evidence image directory entries must be
+    // persisted BEFORE seal.json is ever created. If sync fails, the incomplete
+    // batch remains unsealed and blocks future stages pending human audit.
+    await syncDirectory(folder)
+    // Ownership-only grant file is rechecked before final seal, including expiry.
+    const current=readGrant(opts.approvalFile)
+    if(JSON.stringify(current)!==JSON.stringify(grant))
+      throw Error('Batch stage grant changed before sealing')
+    const fields=sealFields({version:1,status:'sealed',batchId:grant.batchId,
+      approvalId:grant.approvalId,projectId:plan.projectId,
+      rootFingerprint:plan.rootFingerprint,sourceRevision:plan.sourceRevision,
+      previewDigest:plan.digest,changes})
+    const sealed:NonGitBatchSeal={...fields,digest:digest(fields)}
+    await writeDurable(join(folder,'seal.json'),JSON.stringify(sealed)+'\n')
+    await syncDirectory(folder)
+    return sealed
+  }finally{
+    await lockHandle.close()
+    await unlink(lock)
+    await syncDirectory(root)
+  }
+}
+/** Read-only validation for sealed private evidence; refuses source/worker drift.
+ * NOT proof of safe atomic apply: never calls a mutating source method.
+ */
+export async function verifyNonGitStagedBatch(input:SnapshotRequest,opts:{
+  journalRoot:string;batchId:string;expectedPreviewDigest:string
+}):Promise<NonGitBatchSeal>{
+  if(!ID.test(opts.batchId)||!HEX64.test(opts.expectedPreviewDigest))
+    throw Error('Invalid batch verification scope')
+  const root=privateRoot(input,opts.journalRoot)
+  const folder=join(root,'batch-'+opts.batchId)
+  // Do not include private absolute paths in errors when the batch is absent.
+  let info: Awaited<ReturnType<typeof lstat>>
+  try { info=await lstat(folder) }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code==='ENOENT'||
+        (error as NodeJS.ErrnoException).code==='ENOTDIR')
+      throw Error('Batch directory is unsafe or unavailable')
+    throw error
+  }
+  if(!info.isDirectory()||info.isSymbolicLink()||(info.mode&0o077)!==0)
+    throw Error('Batch directory is unsafe or unavailable')
+  const intent=await readPrivateJson(join(folder,'intent.json')) as NonGitBatchStageGrant
+  const sealed=await readPrivateJson(join(folder,'seal.json')) as NonGitBatchSeal
+  if(!sealed||sealed.version!==1||sealed.status!=='sealed'||
+    sealed.batchId!==opts.batchId||intent.batchId!==sealed.batchId||
+    sealed.approvalId!==intent.approvalId||
+    sealed.projectId!==input.projectId||sealed.projectId!==intent.projectId||
+    sealed.rootFingerprint!==input.fingerprint||
+    sealed.previewDigest!==opts.expectedPreviewDigest||
+    sealed.previewDigest!==intent.previewDigest||
+    !Array.isArray(sealed.changes)||!sealed.changes.length||
+    sealed.changes.length>MAX_FILES)
+    throw Error('Batch seal metadata mismatch')
+  const {digest:proof,...fields}=sealed
+  if(proof!==digest(fields))throw Error('Batch seal digest mismatch')
+  const plan=await previewNonGitProjectChanges(input)
+  if(plan.digest!==sealed.previewDigest||plan.sourceRevision!==sealed.sourceRevision||
+    plan.changes.length!==sealed.changes.length)
+    throw Error('Source or worker drift since sealed batch')
+  let total=0
+  const allowed=new Set(['intent.json','seal.json'])
+  for(const [i,change] of sealed.changes.entries()){
+    const expected=plan.changes[i]!
+    if(!validRel(change.path)||change.path!==expected.path||
+      change.action!==expected.action||change.before!==expected.before||
+      change.after!==expected.after||change.afterExecutable!==undefined&&
+      change.afterExecutable!==expected.executable)
+      throw Error('Sealed batch change does not match immutable preview')
+    for(const [which,oid]of [['before',change.before],['after',change.after]] as const){
+      const key=which==='before'?'beforeImage':'afterImage'
+      const name=change[key]
+      if(!oid){if(name!==undefined)throw Error('Unexpected batch image');continue}
+      if(name!==imageName(i,which))throw Error('Batch image name mismatch')
+      allowed.add(name)
+      const file=join(folder,name),stat=await lstat(file)
+      if(!stat.isFile()||stat.isSymbolicLink()||(stat.mode&0o077)!==0)
+        throw Error('Unsafe private batch image')
+      const actual=await hashedFile(file,MAX_COPY_BYTES-total,oid.length as 40|64)
+      if(actual.oid!==oid||actual.mode!==0o600)
+        throw Error('Corrupted sealed batch image')
+      const current=which==='before'
+        ?input.registry.path(input.projectId,change.path,'read')
+        :resolve(realpathSync(input.directory),change.path)
+      const currentFile=await hashedFile(current,MAX_COPY_BYTES,oid.length as 40|64)
+      const expectedMode=which==='before'?change.beforeMode:change.afterMode
+      if(currentFile.oid!==oid||currentFile.mode!==expectedMode)
+        throw Error('Original or Worker file content/mode drift since seal')
+      total+=actual.size
+    }
+  }
+  for(const item of await readdir(folder)){
+    if(!allowed.has(item))throw Error('Unexpected file in private sealed batch')
+  }
+  return sealed
+}
+
+/** Read-only, source-independent pre-issue attestation of an EXISTING sealed
+ * batch. Unlike verifyNonGitStagedBatch this can run after earlier human
+ * steps have changed the original source. It checks EVERY private evidence
+ * image and EVERY worker after-image, not merely the next file. No seal digest
+ * is a signature or authorization to mutate registered source files.
+ */
+export async function verifyNonGitStagedWorkerAfterImages(input:SnapshotRequest,opts:{
+  journalRoot:string;seal:NonGitBatchSeal
+}):Promise<void>{
+  const requested=opts.seal
+  if(!requested||requested.version!==1||requested.status!=='sealed'||
+    !ID.test(requested.batchId)||!HEX64.test(requested.digest)||
+    requested.projectId!==input.projectId||requested.rootFingerprint!==input.fingerprint||
+    !Array.isArray(requested.changes)||!requested.changes.length||
+    requested.changes.length>MAX_FILES)
+    throw Error('Invalid staged worker verification scope')
+  const project=input.registry.get(input.projectId)
+  if(project.kind!=='local'||projectFingerprint(project)!==input.fingerprint)
+    throw Error('Staged worker project identity drift')
+  const root=privateRoot(input,opts.journalRoot)
+  const folder=join(root,'batch-'+requested.batchId)
+  try{
+    const info=await lstat(folder)
+    if(!info.isDirectory()||info.isSymbolicLink()||(info.mode&0o077)!==0)
+      throw Error('Unsafe staged worker journal')
+    const intent=await readPrivateJson(join(folder,'intent.json')) as NonGitBatchStageGrant
+    const persisted=await readPrivateJson(join(folder,'seal.json')) as NonGitBatchSeal
+    if(!intent||!persisted||persisted.status!=='sealed'||
+      intent.batchId!==requested.batchId||
+      persisted.batchId!==requested.batchId||
+      persisted.approvalId!==intent.approvalId||
+      persisted.projectId!==intent.projectId||
+      persisted.previewDigest!==intent.previewDigest||
+      persisted.rootFingerprint!==intent.rootFingerprint||
+      JSON.stringify(persisted)!==JSON.stringify(requested))
+      throw Error('Staged worker seal no longer matches private evidence')
+    const {digest:proof,...fields}=persisted
+    if(proof!==digest(fields))
+      throw Error('Staged worker seal integrity mismatch')
+    const worker=realpathSync(input.directory)
+    let total=0
+    const allowed=new Set(['intent.json','seal.json'])
+    for(const [i,change] of persisted.changes.entries()){
+      if(!change||!validRel(change.path)||!['add','modify','delete'].includes(change.action)||
+        change.before===undefined&&change.after===undefined)
+        throw Error('Invalid staged worker change metadata')
+      const parts=change.path.split('/')
+      let parent=worker
+      for(const component of parts.slice(0,-1)){
+        parent=join(parent,component)
+        const ancestor=await lstat(parent)
+        if(!ancestor.isDirectory()||ancestor.isSymbolicLink())
+          throw Error('Unsafe staged worker path ancestor')
+      }
+      const workerFile=join(parent,parts[parts.length-1]!)
+      for(const [which,oid] of [['before',change.before],['after',change.after]] as const){
+        const key=which==='before'?'beforeImage':'afterImage'
+        const image=change[key]
+        if(!oid){
+          if(image!==undefined)throw Error('Unexpected staged worker evidence image')
+          continue
+        }
+        if(!/^[0-9a-f]{40}$|^[0-9a-f]{64}$/.test(oid)||
+          image!==imageName(i,which))
+          throw Error('Invalid staged worker image metadata')
+        allowed.add(image)
+        const path=join(folder,image)
+        const info=await lstat(path)
+        if(!info.isFile()||info.isSymbolicLink()||(info.mode&0o777)!==0o600)
+          throw Error('Unsafe staged worker evidence image')
+        const actual=await hashedFile(path,MAX_COPY_BYTES-total,oid.length as 40|64)
+        if(actual.oid!==oid||actual.mode!==0o600)
+          throw Error('Staged worker evidence image changed since sealing')
+        total+=actual.size
+      }
+      if(change.after){
+        if(typeof change.afterMode!=='number'||change.afterMode<0||
+          change.afterMode>0o777||!Number.isInteger(change.afterMode)||
+          change.afterExecutable!==((change.afterMode&0o111)!==0))
+          throw Error('Invalid staged worker after-mode metadata')
+        const actual=await hashedFile(workerFile,MAX_COPY_BYTES,change.after.length as 40|64)
+        if(actual.oid!==change.after||actual.mode!==change.afterMode)
+          throw Error('Staged worker after-image content/mode drift before issue')
+      }else{
+        try{
+          await lstat(workerFile)
+        }catch(error){
+          if((error as NodeJS.ErrnoException).code==='ENOENT')continue
+          throw error
+        }
+        throw Error('Staged worker deleted path reappeared before issue')
+      }
+    }
+    for(const item of await readdir(folder)){
+      if(!allowed.has(item))
+        throw Error('Unexpected private file in staged worker evidence')
+    }
+  }catch(error){
+    // Do not leak absolute worker/staged paths in raw Node errors.
+    if(['ENOENT','ENOTDIR','EACCES','EPERM'].includes(
+      (error as NodeJS.ErrnoException).code??''))
+      throw Error('Staged worker evidence is missing or inaccessible')
+    throw error
+  }
+}

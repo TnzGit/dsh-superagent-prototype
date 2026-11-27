@@ -21,6 +21,10 @@ import type { Deployment, Machine } from '../deployment.ts'
 import { environmentOf, ticketEnvironment, type Variable } from './execution-environment.ts'
 import type { SetupProblem } from '../setup.ts'
 import { DshExecutor, sourceTrigger, triggerMessage, workerSessionId } from '../executor/dsh.ts'
+import { readLocalProjects } from '../local-first/project-workspaces.ts'
+import { readDshCatalog } from '../local-first/existing-dsh-projects.ts'
+import { readNativeRelayApproval } from '../local-first/dsh-relay-routing.ts'
+import { NativeRelayCoordinator } from '../local-first/dsh-relay-coordinator.ts'
 import { ticketCard } from './cards.ts'
 import { MasterAssessor } from './assessment.ts'
 import { KV } from '../kv.ts'
@@ -30,6 +34,7 @@ import { TextCache } from './cache.ts'
 import { Effects } from './effects.ts'
 import { Prompts } from './prompts.ts'
 import { registerHttp, type HttpHost } from './http.ts'
+import { OperatorReview, readOperatorToken } from './operator-review.ts'
 import type { LinkTarget } from './views/records.ts'
 import { candidateCard, repliedTo, sourceLink, type LinkHost } from './links.ts'
 import { eventNotice, followupNotice } from './notices.ts'
@@ -68,7 +73,10 @@ export class Runtime extends Service implements SourceHost {
   readonly executor: DshExecutor
   readonly assessor: MasterAssessor
   readonly outbox: Outbox
+  private nativeRelay?: NativeRelayCoordinator
   readonly engine: Engine
+  /** The operator-private reconciliation service (OL-054 M4), installed only with the private 0600 grant file; absent it, its routes answer 404. */
+  readonly operatorReview?: OperatorReview
   readonly passes: Passes
   readonly ready: Promise<void>
   private readonly board = new HealthBoard()
@@ -97,8 +105,12 @@ export class Runtime extends Service implements SourceHost {
       const report = (error: unknown) => { ctx.logger.warn('dsh-superagent: %s', String(error)) }
       const store = opened = this.store = new Store(join(machine.stateDir, 'orchestrator.sqlite'), report)
       const setup = this.setup = new Setup({ context: ctx, machine, lifetime: this.lifetime, restart })
+      const localProjects = readLocalProjects()
+      const existingDshProjects = readDshCatalog()
       const deployed = () => setup.configured()
-        ? environmentOf({ deployment: setup.deployment, sources: this.sources, settings: store.settings() }) : undefined
+        ? environmentOf({ deployment: setup.deployment, sources: this.sources, settings: store.settings(),
+          projectIds: localProjects?.list().map(p => p.id),
+          existingDshProjects: existingDshProjects.map(p => ({ id: p.projectId, title: p.title })) }) : undefined
       const feishu = () => setup.configured() && !!setup.deployment.feishu
       const prompts = this.prompts = new Prompts(store, () => machine.promptMaxChars.get(), deployed, feishu)
       const masterId = this.masterId = store.get(KV.runtime.masterId) ?? `orchestrator-${key(machine.stateDir)}`
@@ -126,12 +138,29 @@ export class Runtime extends Service implements SourceHost {
       this.settings = new Settings({ store, sources, engine: { policyChanged }, health: board, context: ctx, lifetime: this.lifetime, sessions,
         sourceHost: this, setup, requestPass: () => { this.passes.request() } })
       this.executor = new DshExecutor({ context: ctx, get engine() { return runtime.engine }, store, effects, health: board.claim('worker'), machine,
+        localProjects, existingDshProjects, localOnly: () => store.settings().sources.github?.enabled === false,
         lifetime: this.lifetime, sessions, closing: () => this.closing(), paused: () => this.paused(), environment, sourceLink: link,
         repliedTo: trigger => repliedTo({ store, sources }, trigger) })
       this.assessor = new MasterAssessor({ get engine() { return runtime.engine }, commands, get deployment() { return setup.deployment }, effects,
         settings: () => store.settings(), paused: () => this.paused(), threadContext: trigger => sources.threadContext(trigger),
         deliver: (id, text) => sessions.prompt(masterId, id, text, 'steer'), candidateCard: candidate => candidateCard(links, candidate) })
       const outbox = this.outbox = new Outbox({ store, effects, sources, commands, paused: () => this.paused() })
+      // Absent a private, 0600 operator grant, this service is never installed and
+      // all native Weixin messages continue through the unchanged Engine.
+      const relayApproval = readNativeRelayApproval()
+      if (relayApproval) {
+        if (!existingDshProjects.length) throw Error('A private 3080 Workspace catalog is required for native relay')
+        this.nativeRelay = new NativeRelayCoordinator({
+          store, effects, outbox, projects: existingDshProjects, approval: relayApproval,
+          authorized: trigger => {
+            const current = store.settings()
+            const scope = sources.scope({ source: trigger.source, meta: trigger.meta })
+            return !current.paused && !!trigger.human && trigger.addressed === 'direct' &&
+              !!allowedSender(current, trigger.actor) && scope.listened &&
+              !!trigger.channel && sources.channelAllowed(trigger.channel)
+          }
+        })
+      }
       const { assessor, executor } = this
       const policy = () => settingsPolicy(store.settings(), sources)
       const engine = this.engine = new Engine({ repo: store, scope: sources, policy, assessor, executor,
@@ -151,6 +180,10 @@ export class Runtime extends Service implements SourceHost {
             for (const message of pullEndNotices(ended, request, setup.deployment.repository)) outbox.send(message)
           }
         } })
+      // Absent the private 0600 operator grant, the reconciliation service is never installed and its routes answer 404 (OL-054 M4).
+      const operatorToken = readOperatorToken()
+      if (operatorToken) this.operatorReview = new OperatorReview({ store, effects, engine, token: operatorToken,
+        journal: join(machine.stateDir, 'operator-review-journal.jsonl') })
       // Update the `evals` health entry on every pass if an evaluation failed as unavailable within the last hour.
       const evals = board.claim('evals', { state: 'ready', detail: 'No unavailable Eval in the last hour' })
       const evaluateDue = () => { engine.evaluateDue(); evals.set(evalsHealth(store)) }
@@ -160,6 +193,7 @@ export class Runtime extends Service implements SourceHost {
         get deployment() { return setup.deployment }, configured: () => setup.configured(),
         get setupProblem() { return setup.problem }, get feishuProblem() { return setup.feishuProblem }, receive: trigger => passes.receive(trigger) }
       this.toolHost = { context: ctx, engine, store, prompts, sessions, settings: this.settings, assessor, resources,
+        localOnly: () => store.settings().sources.github?.enabled === false,
         get github() { return runtime.context({ kind: 'github', health: ['github'] }) },
         requestPass: () => { passes.request() }, sendReplies: () => outbox.sent(),
         quietly: run => { this.quiet++; try { return run() } finally { this.quiet-- } } }
@@ -191,6 +225,8 @@ export class Runtime extends Service implements SourceHost {
     return ticketEnvironment({ deployment, sources, settings: this.store.settings(), ticket, ...trigger ? { trigger } : {} })
   }
   checkSetup(): void { this.setup.check() }
+  /** Optional one-shot 3080 route; absent grant means ordinary Weixin chat unchanged. */
+  routeNativeWeixin(trigger: Trigger): boolean { return this.nativeRelay?.receive(trigger) ?? false }
   receive(trigger: Trigger): ReceiveResult { return this.passes.receive(trigger) }
   idle(): Promise<void> { return this.passes.idle() }
   pump(): Promise<void> { return this.passes.pump() }
@@ -220,6 +256,9 @@ export class Runtime extends Service implements SourceHost {
     const runtime = this
     const { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks, setup, passes } = this
     return { store, sources, prompts, sessions, settings, engine, executor, health, machine, masterId, ready, sourceLinks,
+      // The grant is read when the service is installed and never hot-swapped; a reinstall replaces the whole service at once,
+      // so every operator route honors the same grant and none of it is left half-rotated.
+      get operatorReview() { return runtime.operatorReview },
       get deployment() { return setup.deployment },
       get setupProblem() { return setup.problem }, get feishuProblem() { return setup.feishuProblem },
       configured: () => setup.configured(), links: () => runtime.links(), ticketEnvironment: ticket => runtime.ticketEnvironment(ticket),

@@ -12,10 +12,20 @@ import { storeReads } from './store-read.ts'
 
 /** A Trigger's position on its thread timeline, ordered by timestamp and then `id` as tie-breaker. */
 export interface TimelinePlace { at: string; id: string }
-/** Why a message was dropped: its conversation can never receive it (`channelGone`), or its Source no longer listens to it (`channelIgnored`). */
-export type DropReason = 'channelGone' | 'channelIgnored'
+/** Why a message was dropped: its conversation can never receive it (`channelGone`), its Source no longer listens to it (`channelIgnored`), or the operator reconciled its review hold as terminal without sending (`operatorNoResend`). */
+export type DropReason = 'channelGone' | 'channelIgnored' | 'operatorNoResend'
 /** Outbound message receipt tracked in the outbox from the moment it is queued (`pending`, `sent`, or `dropped`); delivery attempt counts live on its `reply` effect. */
-export interface Receipt extends OutboundMessage { status: ReplyStatus; dropped?: { at: string; reason: DropReason } }
+/** Durable fail-closed review: pending is intentional and has no automatic retry effect. */
+/** Stable review codes for public-safe summaries: plugin/provider error strings are never exposed. */
+export const WEIXIN_REVIEW_REASONS = [
+  'ambiguous_send', 'account_mismatch', 'account_unbound',
+  'context_expired_or_unbounded', 'context_missing', 'unclassified_hold',
+] as const
+export type WeixinReviewReason = typeof WEIXIN_REVIEW_REASONS[number]
+const safeWeixinReviewReason = (reason: string): WeixinReviewReason =>
+  (WEIXIN_REVIEW_REASONS as readonly string[]).includes(reason) ? reason as WeixinReviewReason : 'unclassified_hold'
+export interface OutboxReview { at: string; reason: WeixinReviewReason }
+export interface Receipt extends OutboundMessage { status: ReplyStatus; dropped?: { at: string; reason: DropReason }; singleSendAttemptAt?: string; review?: OutboxReview }
 /** A dropped outbound message receipt, with the timestamp and reason it was dropped. */
 export type Dropped = Receipt & { dropped: { at: string; reason: DropReason } }
 /** Saved settings snapshot with the policy version and ticket notifications it produced (`internal` saves have no origin). */
@@ -50,12 +60,14 @@ export { SCHEMA_VERSION }
  */
 export class Store implements Repositories {
   readonly db: DatabaseSync
+  private readonly report: (error: unknown) => void
   /**
    * Opens or creates the SQLite database at `path`, migrating schema 10 to schema 11 in a single transaction.
    * @param report - Receives errors thrown by `afterCommit` callbacks without failing the committed transaction.
    * @throws When the database schema is older than `OLDEST_SCHEMA` (10), newer than `SCHEMA_VERSION` (11), or when migration fails; in every case the database file is left unchanged and the SQLite handle is closed so a later attempt in the same process can open it.
    */
-  constructor(path: string, private readonly report: (error: unknown) => void = () => {}) {
+  constructor(path: string, report: (error: unknown) => void = () => {}) {
+    this.report = report
     mkdirSync(dirname(path), { recursive: true, mode: 0o700 })
     this.db = new DatabaseSync(path)
     this.read = storeReads(this.db)
@@ -80,6 +92,8 @@ export class Store implements Repositories {
             CREATE TABLE IF NOT EXISTS effect (kind TEXT NOT NULL, key TEXT NOT NULL, value TEXT NOT NULL, seq INTEGER NOT NULL,
               generation INTEGER NOT NULL DEFAULT 0, attempts INTEGER NOT NULL DEFAULT 0, error TEXT NOT NULL DEFAULT '', due INTEGER NOT NULL,
               since TEXT NOT NULL, PRIMARY KEY (kind, key));
+            CREATE TABLE IF NOT EXISTS operator_audit (seq INTEGER PRIMARY KEY AUTOINCREMENT, at TEXT NOT NULL, kind TEXT NOT NULL,
+              id TEXT NOT NULL, outcome TEXT NOT NULL DEFAULT '', principal TEXT NOT NULL, UNIQUE (kind, id, principal));
             CREATE INDEX IF NOT EXISTS trigger_at ON trigger(at);
             CREATE INDEX IF NOT EXISTS trigger_thread_at ON trigger_thread(thread, at);
             CREATE INDEX IF NOT EXISTS decision_thread ON decision(thread);
@@ -245,6 +259,27 @@ export class Store implements Repositories {
     save: (decision: Decision): void => { this.db.prepare('INSERT INTO decision VALUES (?,?,?) ON CONFLICT(id) DO UPDATE SET value=excluded.value, thread=excluded.thread').run(decision.id, decision.threadKey, JSON.stringify(decision)) },
     byThread: (threadKeyValue: string): Decision[] => this.db.prepare('SELECT value FROM decision WHERE thread=? ORDER BY rowid').all(threadKeyValue).map(row => JSON.parse(String(row.value)) as Decision),
   }
+  /**
+   * The operator's authoritative durable audit ledger (OL-055 S1): ONE row per durable terminal action, committed in the SAME
+   * transaction as the change it attests to. The external JSONL journal is only a projection of it. First-writer-wins: the same
+   * (kind, ID, principal) may be attested only once, so a replayed reviewed hold can never authorize a second send.
+   */
+  readonly operatorAudit = {
+    /** Appends one audit record; `false` when this exact action was already durably attested (the first-writer-wins refusal). */
+    append: (record: { at: string; kind: string; id: string; outcome?: string; principal: string }): boolean =>
+      Number(this.db.prepare(`INSERT INTO operator_audit (at, kind, id, outcome, principal) VALUES (?,?,?,?,?)
+        ON CONFLICT(kind, id, principal) DO NOTHING`).run(record.at, record.kind, record.id, record.outcome ?? '', record.principal).changes) === 1,
+    /** Drops an audit record this transaction has not committed yet (the CAS refused after the append was made). */
+    remove: (record: { kind: string; id: string; principal: string }): void =>
+      { this.db.prepare('DELETE FROM operator_audit WHERE kind=? AND id=? AND principal=?').run(record.kind, record.id, record.principal) },
+    /** The ledger in commit order, oldest first, capped by `limit`; sanitized columns only. */
+    list: (limit: number): { seq: number; at: string; kind: string; id: string; outcome?: string; principal: string }[] =>
+      this.db.prepare('SELECT seq, at, kind, id, outcome, principal FROM operator_audit ORDER BY seq LIMIT ?').all(limit)
+        .map(row => ({ seq: Number(row.seq), at: String(row.at), kind: String(row.kind), id: String(row.id), principal: String(row.principal),
+          ...(row.outcome ? { outcome: String(row.outcome) } : {}) })),
+    /** How many durable audit records the ledger carries (the projection is current when it matches this). */
+    count: (): number => Number(this.db.prepare('SELECT COUNT(*) AS total FROM operator_audit').get()?.total ?? 0),
+  }
   /** Read-only queries for management views, orchestrator tools, and source polling (see `storeReads`). */
   readonly read: ReturnType<typeof storeReads>
 
@@ -253,6 +288,55 @@ export class Store implements Repositories {
   /** Outbox message receipts for channel delivery; only `Outbox` writes to `receipts`. */
   readonly receipts = {
     get: (id: string): Receipt | undefined => this.values<Receipt>('SELECT value FROM outbox WHERE id = ?', id)[0],
+    /** Redacted review queue summary; never projects peer IDs, tokens, payloads or private receipt IDs. */
+    reviewSummary: (): { total: number; reasons: Record<string, number> } => {
+      const rows = this.db.prepare(`SELECT json_extract(value, '$.review.reason') AS reason, COUNT(*) AS count
+        FROM outbox WHERE json_extract(value, '$.channel.source')='weixin'
+          AND json_extract(value, '$.status')='pending'
+          AND json_extract(value, '$.review.reason') IS NOT NULL
+        GROUP BY json_extract(value, '$.review.reason')`).all()
+      const reasons: Record<string, number> = Object.create(null)
+      let total = 0
+      for (const row of rows) {
+        const n = Number(row.count)
+        total += n
+        const code = safeWeixinReviewReason(String(row.reason))
+        reasons[code] = (reasons[code] ?? 0) + n
+      }
+      return { total, reasons }
+    },
+    /**
+     * Read-only operator reconciliation ledger of pending native Weixin review holds, oldest first, capped by `limit`.
+     * Projects only sanitized audit fields (receipt ID, message kind, ticket, durable claim flag with its time, review time,
+     * whitelisted reason code); never payload text, peer IDs, context tokens, credentials or provider error strings.
+     * This view is strictly read-only: no mutation, resend, claim reset or terminal marking is wired here —
+     * live reconciliation remains GATED (docs/018 runbook), and the installed runtime exposes no mutating reconcile route.
+     */
+    reviewLedger: (limit = 50): { id: string; kind: Receipt['kind']; ticketId?: string; claimed: boolean; claimedAt?: string; reviewAt: string; reason: WeixinReviewReason }[] =>
+      this.values<Receipt>(`SELECT value FROM outbox WHERE json_extract(value, '$.channel.source')='weixin'
+        AND json_extract(value, '$.status')='pending' AND json_extract(value, '$.review.reason') IS NOT NULL
+        ORDER BY rowid LIMIT ?`, limit).map(receipt => ({
+          id: receipt.id, kind: receipt.kind, ...(receipt.ticketId ? { ticketId: receipt.ticketId } : {}),
+          claimed: receipt.singleSendAttemptAt !== undefined,
+          ...(receipt.singleSendAttemptAt !== undefined ? { claimedAt: receipt.singleSendAttemptAt } : {}),
+          reviewAt: receipt.review!.at, reason: safeWeixinReviewReason(receipt.review!.reason),
+        })),
+    /**
+     * Test-only dry-run projection of ONE manual terminal marking of a review hold: reports what a resolve WOULD write
+     * (with its audit fields) without touching SQLite, sending anything, or resetting the durable claim.
+     * It is never wired to the installed runtime's routes (the management API exposes only the read-only `reviewSummary`);
+     * real live reconciliation against a genuine peer with server-side idempotency remains GATED (docs/018 runbook).
+     */
+    reviewResolveDryRun: (id: string, outcome: 'sent' | DropReason = 'sent'): { found: boolean; id?: string; status?: ReplyStatus;
+      wouldSettle?: { status: 'sent' | DropReason; at: string };
+      audit?: { reason: WeixinReviewReason; claimed: boolean; claimedAt?: string; reviewAt: string } } => {
+      const receipt = this.receipts.get(id)
+      if (!receipt || receipt.channel.source !== 'weixin' || receipt.status !== 'pending' || !receipt.review) return { found: false }
+      return { found: true, id, status: receipt.status,
+        wouldSettle: { status: outcome, at: new Date().toISOString() },
+        audit: { reason: safeWeixinReviewReason(receipt.review.reason), claimed: receipt.singleSendAttemptAt !== undefined,
+          ...(receipt.singleSendAttemptAt === undefined ? {} : { claimedAt: receipt.singleSendAttemptAt }), reviewAt: receipt.review.at } }
+    },
     /** Pending message receipts, oldest first. */
     waiting: (): Receipt[] => this.values("SELECT value FROM outbox WHERE value ->> '$.status' = 'pending' ORDER BY rowid"),
     /** True if an earlier message for the same ticket and conversation is still pending with fewer than `failures` consecutive failed `reply` effect attempts. */
@@ -267,9 +351,33 @@ export class Store implements Repositories {
       const receipt: Receipt = { ...message, status: 'pending' }
       return Number(this.db.prepare('INSERT OR IGNORE INTO outbox (id, value) VALUES (?, ?)').run(message.id, JSON.stringify(receipt)).changes) > 0
     },
+    /** Durable one-shot claim for ALL native Weixin outbound kinds, before any external request.
+     * In particular ordinary replies and acknowledgements MUST NOT retry an ambiguous acceptance.
+     */
+    claimOneShotSend: (id: string): boolean => {
+      const changed = this.db.prepare(`UPDATE outbox SET value=json_set(value, '$.singleSendAttemptAt', ?)
+        WHERE id=? AND json_extract(value, '$.status')='pending'
+          AND json_extract(value, '$.channel.source')='weixin'
+          AND json_extract(value, '$.singleSendAttemptAt') IS NULL
+          AND json_extract(value, '$.review') IS NULL`)
+        .run(new Date().toISOString(), id)
+      return Number(changed.changes)===1
+    },
+    /** Hold a receipt for an operator's manual reconciliation, never for automatic resend.
+     * Reasons are fixed local codes: never persist provider errors, credentials or context tokens here.
+     */
+    holdForReview: (id: string, reason: string): void => {
+      this.db.prepare(`UPDATE outbox SET value=json_set(value, '$.review', json(?))
+        WHERE id=? AND json_extract(value, '$.status')='pending'
+          AND json_extract(value, '$.channel.source')='weixin'
+          AND json_extract(value, '$.review') IS NULL`)
+        .run(JSON.stringify({ at: new Date().toISOString(), reason: safeWeixinReviewReason(reason) }), id)
+    },
     /**
      * Marks a pending receipt as sent or dropped (with drop reason and timestamp), recreating the receipt if the message
      * was withdrawn while being sent so its ID cannot be queued again.
+     * `json_patch` keeps the durable forensic fields (`singleSendAttemptAt`, `review` audit) on the terminal row, and
+     * already-terminal receipts are never rewritten by a replayed settle (the recreate is `INSERT OR IGNORE`).
      */
     settle: (message: OutboundMessage, outcome: 'sent' | DropReason): void => {
       const settled = outcome === 'sent' ? { status: 'sent' } : { status: 'dropped', dropped: { at: new Date().toISOString(), reason: outcome } }
@@ -280,11 +388,31 @@ export class Store implements Repositories {
         .run(id, JSON.stringify({ id, channel, text, kind, ...ticketId ? { ticketId } : {}, ...settled }))
     },
     /**
-     * Withdraws a pending message that has not yet been sent.
-     * @returns Whether a pending message with `id` was waiting and removed.
+     * The operator's single durable terminal transition of a pending native Weixin review hold (OL-054 M4): first-writer-wins,
+     * so exactly one reconcile takes effect — a duplicate click or the loser of a controller race changes nothing.
+     * `json_patch` keeps the forensic `review` and `singleSendAttemptAt` on the terminal row and adds the sanitized operator
+     * audit (`at`, `outcome`, `principal` hash); the claim is NEVER reset, the same ID is never resent, and only an explicit
+     * `confirmed_sent` outcome marks a hold sent — an ambiguous hold ends as `dropped`/`operatorNoResend` instead.
+     * @returns Whether this call made the transition (false when the hold was already settled or never a review hold).
+     */
+    operatorSettleReview: (id: string, outcome: 'confirmed_sent' | 'no_resend', principal: string): boolean => {
+      const terminal = outcome === 'confirmed_sent'
+        ? { status: 'sent', operator: { at: new Date().toISOString(), outcome, principal } }
+        : { status: 'dropped', dropped: { at: new Date().toISOString(), reason: 'operatorNoResend' }, operator: { at: new Date().toISOString(), outcome, principal } }
+      const changed = this.db.prepare(`UPDATE outbox SET value = json_patch(value, ?)
+        WHERE id=? AND json_extract(value, '$.status')='pending'
+          AND json_extract(value, '$.channel.source')='weixin'
+          AND json_extract(value, '$.review') IS NOT NULL`)
+        .run(JSON.stringify(terminal), id)
+      return Number(changed.changes) === 1
+    },
+    /**
+     * Withdraws only a genuinely unclaimed, unreviewed pending message.
+     * A Weixin manual-review hold survives withdraw/duplicate queue to prevent later id reuse.
+     * @returns Whether a safely withdrawable pending message was removed.
      */
     withdraw: (id: string): boolean =>
-      Number(this.db.prepare("DELETE FROM outbox WHERE id = ? AND value ->> '$.status' = 'pending'").run(id).changes) > 0,
+      Number(this.db.prepare("DELETE FROM outbox WHERE id = ? AND value ->> '$.status' = 'pending' AND json_extract(value, '$.singleSendAttemptAt') IS NULL AND json_extract(value, '$.review') IS NULL").run(id).changes) > 0,
   }
 }
 export { key, threadKey }

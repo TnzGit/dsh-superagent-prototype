@@ -1,11 +1,13 @@
 /** Type-only management API contract between the web panel and host routes, imported by the panel without bundling host code. */
 import type { ModelCatalog } from '@deepseek-ai/dsh-api-session-controller/types'
 import type { PromptConfig, Prompts } from './prompts.ts'
+import type { OperatorOutcome } from './operator-review.ts'
 import type { PromptsView, StateView, TicketPageView } from './http.ts'
 import type { HistoryView } from './settings-history.ts'
 import type { OverviewView } from './views/overview.ts'
 import type { SettingsView } from './views/settings.ts'
 import type { SourceStatusView } from './views/sources.ts'
+import type { OperatorStatusView } from './views/operator-status.ts'
 import type { DecisionListView, SearchView, ThreadDetailView, ThreadListView } from './views/threads.ts'
 import type { TicketListView } from './views/tickets.ts'
 
@@ -43,7 +45,14 @@ export interface Api {
   'GET prompts': { query?: { revision?: number; offset?: number }; response: PromptsView }
   'PUT prompts': { body: { config: PromptConfig; baseRevision: number }; response: { revision: number; context_delivery: Delivery } }
   'POST prompts/preview': { body: PromptConfig; response: ReturnType<Prompts['preview']> }
+  'GET operator/reconcile/ledger': { query?: { limit?: number }; response: { receipts: OperatorLedgerEntry[] } }
+  'POST operator/reconcile/:id': { body: { outcome: OperatorOutcome }; response: { id: string; status: 'sent' | 'dropped'; outcome: OperatorOutcome; principal: string; journal: true } }
+  'POST operator/triggers/:id/terminal': { response: { triggerId: string; classified: boolean; decision: string } }
+  'GET operator/status': { response: OperatorStatusView }
+  'POST operator/executor/pause': { body: { paused: boolean }; response: { paused: boolean } }
 }
+/** A sanitized ledger row: receipt ID, kind, ticket, the durable claim flag, review time and reason code — never payload text, peer IDs, tokens or credentials. */
+export type OperatorLedgerEntry = { id: string; kind: 'acknowledgement' | 'reply' | 'notice'; ticketId?: string; claimed: boolean; claimedAt?: string; reviewAt: string; reason: string }
 type Path<K> = K extends `${string} ${infer P}` ? P : never
 type Params<P> = P extends `${string}:${infer Name}/${infer Rest}` ? Record<Name, string> & Params<Rest>
   : P extends `${string}:${infer Name}` ? Record<Name, string> : unknown
