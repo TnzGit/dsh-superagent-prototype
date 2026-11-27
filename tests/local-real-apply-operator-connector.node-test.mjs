@@ -184,6 +184,26 @@ test('bounded limits: three files and any change over 8KiB are refused before re
     registry: reg, projectId: PROJECT_ID, journalDirectory: journal, helperBinary,
     sourceRevision: REVISION, changes: [modifyChange('a.txt', 'A\n', big)]
   }), /bounded 8KiB review limit/)
+  // A same-length large replacement changes EVERY byte, not zero bytes. Its
+  // equal before/after size must not bypass the review budget.
+  const sameSizeBefore = 'A'.repeat(OPERATOR_PREVIEW_MAX_TOTAL_BYTES + 1)
+  const sameSizeAfter = 'B'.repeat(OPERATOR_PREVIEW_MAX_TOTAL_BYTES + 1)
+  writeFileSync(join(root, 'equal-size.txt'), sameSizeBefore)
+  chmodSync(join(root, 'equal-size.txt'), 0o600)
+  assert.throws(() => buildOperatorApplyPreview({
+    registry: reg, projectId: PROJECT_ID, journalDirectory: journal, helperBinary,
+    sourceRevision: REVISION, changes: [modifyChange('equal-size.txt', sameSizeBefore, sameSizeAfter)]
+  }), /bounded 8KiB review limit/)
+  // Two individually modest changes must not add up beyond the total budget.
+  const modestBefore = 'A'.repeat(5 * 1024)
+  const modestAfter = 'B'.repeat(5 * 1024)
+  writeFileSync(join(root, 'second.txt'), modestBefore)
+  chmodSync(join(root, 'second.txt'), 0o600)
+  assert.throws(() => buildOperatorApplyPreview({
+    registry: reg, projectId: PROJECT_ID, journalDirectory: journal, helperBinary,
+    sourceRevision: REVISION,
+    changes: [modifyChange('a.txt', 'A\n', modestAfter), modifyChange('second.txt', modestBefore, modestAfter)]
+  }), /bounded 8KiB review limit/)
   // The refusals left no preview or capability file behind.
   assert.equal(readdirSync(journal).filter(f => f.startsWith('preview-') || f.startsWith('cap-')).length, 0)
 }))

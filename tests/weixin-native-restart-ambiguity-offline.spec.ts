@@ -68,10 +68,24 @@ function fakeFetch() {
 }
 async function pollPage(controller: AbortController) {
   const ctx = h.runtime.context(nativeWeixinKind)
+  // A fixed 80ms sleep can abort before the first page is processed on a busy macOS CI
+  // runner. Wait for the actual durable cursor commit or the expected error state instead.
+  const previousCalls = (vi.mocked(fetch).mock.calls as unknown as Array<[string, RequestInit]>)
+    .filter(([url, init]) => url === POLL && init.method === 'POST').length
   const running = pollNativeWeixin(ctx, controller.signal, trigger => h.runtime.routeNativeWeixin(trigger))
-  await new Promise(resolve => setTimeout(resolve, 80))
-  controller.abort()
-  await running
+  try {
+    await waitUntil(() => {
+      const calls = (vi.mocked(fetch).mock.calls as unknown as Array<[string, RequestInit]>)
+        .filter(([url, init]) => url === POLL && init.method === 'POST')
+      if (calls.length <= previousCalls) return false
+      return httpStatus === 200 && pollRet === 0
+        ? h.runtime.store.get(KV.weixin.nativeCursor) === 'cursor-after-page'
+        : h.runtime.health['weixin']?.state === 'error'
+    }, 15_000)
+  } finally {
+    controller.abort()
+    await running
+  }
   return ctx
 }
 

@@ -254,11 +254,13 @@ function readOperatorPreviewRecord(previewFile: string, journalDirectory: string
 }
 
 function inspectBoundedTotal(changes: readonly ProposedApplyChange[]): number {
+  // A same-length replacement is still a full-file edit. Absolute byte-length DELTA
+  // would count e.g. an 8 MiB A→B replacement as 0 bytes and bypass the 8 KiB
+  // operator canary limit. Budget the larger image for every touched file, including
+  // reverse (rollback) plans, rather than interpreting the limit as file-size growth.
   let total = 0
   for (const change of changes) {
-    if (change.action === 'add') total += change.afterBytes ?? 0
-    else if (change.action === 'modify') total += Math.abs((change.afterBytes ?? 0) - (change.beforeBytes ?? 0))
-    else if (change.action === 'delete') total += change.beforeBytes ?? 0
+    total += Math.max(change.beforeBytes ?? 0, change.afterBytes ?? 0)
   }
   return total
 }
