@@ -167,8 +167,14 @@ export class OperatorReview {
   /** Whether the external projection has caught up with the authoritative ledger (read-only; never repairs anything). */
   journalStatus(): OperatorJournalStatus {
     const entries = this.host.store.operatorAudit.count()
-    const projected = this.readJournal().length
-    return { entries, projected, current: entries === projected }
+    // A corrupted/replaced journal must not prevent the operator's read-only
+    // status view from reporting that the durable projection is NOT current.
+    try {
+      const projected = this.readJournal().length
+      return { entries, projected, current: !this.frozen && entries === projected }
+    } catch {
+      return { entries, projected: 0, current: false }
+    }
   }
   /**
    * The lifecycle facts this interface enforces, so the operator UI can state them instead of implying them: what the grant is,
@@ -301,6 +307,11 @@ export class OperatorReview {
     const fd = this.openJournal(constants.O_RDONLY)
     let text: string
     try { text = readFileSync(fd, 'utf8') } finally { closeSync(fd) }
+    // A complete fsynced JSONL record always ends with a newline. A crash
+    // after a partial write can leave syntactically valid JSON but no newline;
+    // accepting that as committed would conceal an interrupted projection.
+    if (text.length > 0 && !text.endsWith('\n'))
+      throw new Error('Operator review journal has an unterminated record')
     return text.split('\n').filter(line => line.length > 0)
   }
   /** The journal must be a regular file on its own inode, owned by the current user, and of a bounded size — never a symlink target or a hardlink to a foreign inode. */
@@ -338,7 +349,8 @@ export class OperatorReview {
    */
   private inspectJournal(): string | undefined {
     let lines: string[]
-    try { lines = this.readJournal() } catch { return undefined }
+    try { lines = this.readJournal() }
+    catch { return 'journal unavailable, unsafe, or unterminated' }
     if (!lines.length) return undefined
     // Corroboration: ALL lines, not just the last, must be syntactically sound
     // and tied to the durable state. Old pre-ledger terminal records remain

@@ -206,3 +206,34 @@ test('a journal corrupted AFTER a clean startup freezes the next operator mutati
   assert.equal(store.receipts.get('pending').status, 'pending')
   assert.equal(store.operatorAudit.count(), 0)
 })
+
+
+test('an unterminated syntactically valid JSONL line is not treated as an fsynced record', () => {
+  const dir = fixture()
+  const journal = join(dir, 'journal.jsonl')
+  const store = fakeStore(held('pending'))
+  const record = { at: '2026-11-26T00:00:00.000Z', kind: 'receipt', id: 'pending',
+    principal: 'aaaaaaaaaaaa', outcome: 'no_resend' }
+  writeFileSync(journal, journalLineOf(record), { mode: 0o600 }) // no final newline
+  const service = review(store, journal)
+  assert.equal(service.journalStatus().current, false)
+  assert.throws(() => service.reconcile('pending', 'no_resend'), /unterminated/)
+  assert.equal(store.operatorAudit.count(), 0)
+  assert.equal(store.receipts.get('pending').status, 'pending')
+})
+
+test('post-start symlink substitution freezes BEFORE any SQLite terminal transition', () => {
+  const dir = fixture()
+  const journal = join(dir, 'journal.jsonl')
+  const foreign = join(dir, 'foreign')
+  writeFileSync(foreign, 'FOREIGN CONTENT\n', { mode: 0o600 })
+  const store = fakeStore(held('pending'))
+  const service = review(store, journal)
+  rmSync(journal)
+  symlinkSync(foreign, journal)
+  assert.equal(service.journalStatus().current, false)
+  assert.throws(() => service.reconcile('pending', 'no_resend'), /journal unavailable, unsafe/)
+  assert.equal(store.operatorAudit.count(), 0)
+  assert.equal(store.receipts.get('pending').status, 'pending')
+  assert.equal(readFileSync(foreign, 'utf8'), 'FOREIGN CONTENT\n')
+})
