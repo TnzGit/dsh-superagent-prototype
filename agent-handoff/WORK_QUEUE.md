@@ -1,17 +1,16 @@
-# WORK_QUEUE — OL-055 installed stabilization + release candidate (one batch)
+# WORK_QUEUE — OL-055 ACKed bounded RC_READY, no active local task
 
-Exactly one pending user-forwarded task `OL-20261126-055`, root `PLAN-OL055.md`, MAX 3 simultaneous offline subagents, lead-only real actions. No automatic watcher dispatch; remote automation PAUSED, `no_auto_dispatch=true`. PR #1 Draft/unmerged.
+`OL-20261126-055` is CLOSED, independently ACKed `RC_READY`; PR #1 Draft/OPEN; `no_auto_dispatch=true`; remote scheduler `PAUSED_BY_OPERATOR`. Do not issue OL-056 from this queue.
 
-| Phase | Goal | Status |
-| --- | --- | --- |
-| Historical | OL-054 installed true I3 + operator-private registered real-test-project Apply and rollback | CLOSED, ACK `INSTALLED_I3_AND_APPLY_PASS`; source CI #892/#893 and done #894/#895 all 3/3 |
-| S0 | Privately freeze installed 3083 PAUSED+READY baseline, consistent backup/restore clone, test parity | PENDING one direct OL-055 launch |
-| S1 | Operator token/journal fd, symlink and SQLite↔audit crash consistency | ASSIGNED SubB |
-| S2 | Durable account poll owner / lease path, >2000 replay safety / cursor retention | ASSIGNED SubA |
-| S3 | Loopback-private operator UI + selector feedback + install/rollback runbook | Lead + SubB |
-| S4 | Native Apply same-UID writer/capability threat hardening, operator private review | ASSIGNED SubC |
-| S5 | Soak/clone rollback + optional tiny bounded real consenting-self canary | Lead-only external actions |
-| S6 | Feature-branch release candidate readiness, exact source/done CI and one final LO-055 | Lead |
-| Excluded | Main merge, broad deploy, mass Weixin sends, valuable projects and default-on model Apply | NOT in this task |
+| Work | Status |
+| --- | --- |
+| OL-055 operator audit/sqlite crash consistency, long replay/lease hardening, private UI, Apply trust, clone rollback | **CLOSED scoped `RC_READY`**: source `89090b3eb02844030a592d8d87e500471599b2b7`, done `cf866a98b3d15b63d154272b22a57fa588039a6f`, ACK `agent-handoff/receipts/online/LO-20261126-055-done.md` |
+| Full product source/done CI | #907/#908 source-publication 3/3; #909/#910 final done 3/3 each at exact SHA |
+| Installed test 3083 | PAUSED + READY (local attestation), manifest gen 12, no new live sends/models/Apply; one maintenance window |
+| Reversible volume root permission `0775→0755` | Recorded host change; reversal requires service/path guard planning |
+| PR review/changelog and approval to merge | **NEXT online review milestone, NOT already approved** |
+| Same-UID cap/marker forgery, external writer preimage race, mount/power loss, bearer operator identity | Residuals requiring threat model/engineering decision before wider production |
+| Real test 3083 rollback path | Clone rehearsal passed; old bundle link retained, live rollback NOT run |
+| Main merge/production Apply/unattended Weixin | NOT authorized or triggered by this ACK |
 
-A missing exact target or unresolved OS trust gap is `BLOCKED_TECHNICAL`, not a request for a new blanket project authorization. No OL-056 auto-created after completion.
+See `docs/024-rc055-acceptance-and-release-boundaries.md`. No local task created or host command triggered.

@@ -1,6 +1,8 @@
 # 021 — Installed 3083 acceptance, operator recovery and next stabilization priorities
 
-**CURRENT TASK:** `OL-20261126-055` / root `PLAN-OL055.md` is the new **operator-direct** stabilization/release-candidate handoff. These public paths are informational, not an execution token; 3083 remains paused until a trusted directly initiated bounded run.
+**UPDATE 2026-11-27:** OL-055 is CLOSED and independently ACKed `RC_READY` (release candidate, not main merge); see `docs/024-rc055-acceptance-and-release-boundaries.md`. The previously marked OL-055 task below is historical and must not trigger a rerun.
+
+**HISTORICAL TASK:** `OL-20261126-055` / root `PLAN-OL055.md` is the new **operator-direct** stabilization/release-candidate handoff. These public paths are informational, not an execution token; 3083 remains paused until a trusted directly initiated bounded run.
 
 **As of 2026-11-26.** OL-054 completed a genuine live round trip on the upgraded **installed operator-owned TEST 3083** and a bounded operator-reviewed REAL registered test-project Apply/rollback. Exact proof classes and private limits are in `agent-reports/REPORT-ol054-installed-runtime-private-apply.md` and `agent-handoff/receipts/online/LO-20261125-054-done.md`. These file paths are written as code spans to preserve numbered docs' no-lateral-link invariant; they are not host authorization.
 

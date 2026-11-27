@@ -1,3 +1,5 @@
+> **CLOSED/HISTORICAL — 2026-11-27:** OL-055 accepted `RC_READY` strictly for its bounded installed TEST 3083 release candidate. Final source `89090b3eb02844030a592d8d87e500471599b2b7`, done `cf866a98b3d15b63d154272b22a57fa588039a6f`, ACK `agent-handoff/receipts/online/LO-20261126-055-done.md`. **No active local task; never rerun this plan or its old send/model/Apply/maintenance ceilings.** Use `docs/024-rc055-acceptance-and-release-boundaries.md` for release review, not auto host execution.
+
 # PLAN-OL055 — Installed runtime stabilization, operator UX and release candidate
 
 **One autonomous operator-direct macOS batch, 2026-11-26 · Up to 3 subagents concurrently · No intermediate handoff.**
