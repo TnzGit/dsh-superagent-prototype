@@ -67,6 +67,12 @@ it('pauses the controlled Executor through its own grant, idempotently, and neve
   // Resuming is the same route with the opposite value: one action governs both directions, idempotently.
   server.requests.length = 0
   await click(zh.operatorResume)
+  // The confirm must not misleadingly say "sends nothing": resuming can release
+  // already-queued real model/tool/outbound work even though this route has no
+  // direct send side effect.
+  expect(text()).toContain(zh.operatorResumeConfirm)
+  expect(zh.operatorResumeConfirm).toMatch(/可能触发真实模型调用/)
+  expect(en.operatorResumeConfirm).toMatch(/downstream side effects/)
   await click(zh.confirm)
   expect(server.requests.find(request => request.path === 'operator/executor/pause')?.body).toEqual({ paused: false })
   expect(text()).toContain(zh.operatorPausedNo)

@@ -252,8 +252,9 @@ function routes(runtime: HttpHost): Routes {
       review.admitRead()
       return operatorStatusView(runtime)
     },
-    // The one safe mutation the operator UI exposes: pause or resume the controlled test Executor, idempotently, with the grant
-    // required, and never a send or an Apply behind it.
+    // The only operator UI mutation is idempotent pause/resume with bearer auth. This handler itself never sends
+    // or Applies, but RESUME may dispatch queued work and cause subsequent model/tools/outbound delivery;
+    // the UI must warn explicitly and the operator must bound the real execution window.
     'POST operator/executor/pause': async ({ body, headers }) => {
       const review = runtime.operatorReview
       if (!review) throw new RouteError(404, 'Operator reconciliation is not installed')

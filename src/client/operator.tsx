@@ -2,8 +2,10 @@
  * Operator page (OL-055 S3.1): the owner's private status view of the installed service, reachable only over loopback with the
  * operator's own bearer grant. It states what is installed and what is paused, who owns the Weixin poll, what the queues and the
  * review holds look like (redacted, never payload text), how the model route is doing, and where the last durable checkpoint is.
- * The one action it offers is an idempotent pause/resume of the controlled test Executor; nothing on this page sends a message or
- * applies a change behind a generic confirm, and carrying the token is stated as possession, never a named login.
+ * The one action it offers is an idempotent pause/resume of the controlled test Executor; this page itself never directly
+ * sends or Applies. HOWEVER RESUME can dispatch queued/new work (real model/tools/outbound delivery), so its confirmation
+ * explicitly warns about downstream effects and should only be used in a bounded operator-controlled run window.
+ * Carrying the token is possession of a bearer secret, never a named-human login.
  */
 import { useState, type ReactNode } from 'react'
 import { operatorCall, usePoll, type OperatorStatusView } from './api.ts'
