@@ -132,7 +132,7 @@ test('an interrupted journal tail freezes every mutation with a human-reconcilia
   const reopened = new OperatorReview({ store: fakeStore(receipt, other), effects: { cancel: () => {} },
     engine: { classifyPendingTrigger: () => ({ decision: { id: 'd' }, already: false }) }, token: TOKEN, journal })
   assert.deepEqual(reopened.ledger(50).map(row => row.id), ['still-held']) // sanitized ledger still answers
-  assert.throws(() => reopened.reconcile('still-held', 'no_resend'), /interrupted record; reconciliation is frozen until a human reconciles it/)
+  assert.throws(() => reopened.reconcile('still-held', 'no_resend'), /reconciliation is frozen until a human reconciles it: journal unavailable, unsafe, or unterminated/)
   assert.throws(() => reopened.classifyTrigger('some-trigger'), /frozen/)
   // The uncertain receipt stays frozen, and no repair was attempted on the journal.
   assert.equal(other.status, 'pending')
