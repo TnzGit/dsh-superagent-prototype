@@ -167,11 +167,16 @@ export class OperatorReview {
   /** Whether the external projection has caught up with the authoritative ledger (read-only; never repairs anything). */
   journalStatus(): OperatorJournalStatus {
     const entries = this.host.store.operatorAudit.count()
-    // A corrupted/replaced journal must not prevent the operator's read-only
-    // status view from reporting that the durable projection is NOT current.
+    // A matching LINE COUNT does not prove the projection matches the
+    // authoritative SQLite audit: a same-length substituted line could show
+    // "current" in the operator UI despite having foreign content. Verify
+    // exact canonical rows, without writing or reconciling during this read.
     try {
-      const projected = this.readJournal().length
-      return { entries, projected, current: !this.frozen && entries === projected }
+      const lines = this.readJournal()
+      const canonical = new Set(this.ledgerEntries(Number.MAX_SAFE_INTEGER).map(journalLineOf))
+      const current = !this.frozen && !this.inspectJournal() &&
+        lines.length === entries && canonical.size === entries && lines.every(line => canonical.has(line))
+      return { entries, projected: lines.length, current }
     } catch {
       return { entries, projected: 0, current: false }
     }

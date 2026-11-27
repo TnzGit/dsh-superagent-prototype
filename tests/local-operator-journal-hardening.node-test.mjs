@@ -237,3 +237,21 @@ test('post-start symlink substitution freezes BEFORE any SQLite terminal transit
   assert.equal(store.receipts.get('pending').status, 'pending')
   assert.equal(readFileSync(foreign, 'utf8'), 'FOREIGN CONTENT\n')
 })
+
+
+test('status reports a same-count journal content substitution as NOT current, never silently green', () => {
+  const dir = fixture()
+  const journal = join(dir, 'journal.jsonl')
+  const store = fakeStore(held('settled'))
+  const service = review(store, journal)
+  service.reconcile('settled', 'no_resend')
+  assert.deepEqual(service.journalStatus(), { entries: 1, projected: 1, current: true })
+  const original = readFileSync(journal, 'utf8')
+  const changed = original.replace(service.principal, 'aaaaaaaaaaaa')
+  assert.notEqual(changed, original)
+  assert.equal(changed.length, original.length, 'same-length substitution must not evade the check')
+  writeFileSync(journal, changed, { mode: 0o600 })
+  assert.deepEqual(service.journalStatus(), { entries: 1, projected: 1, current: false })
+  assert.equal(store.operatorAudit.count(), 1, 'read-only probe cannot rewrite the authority')
+  assert.equal(store.receipts.get('settled').status, 'dropped')
+})
