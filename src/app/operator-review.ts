@@ -137,9 +137,12 @@ export class OperatorReview {
     this.tokenHash = createHash('sha256').update(host.token).digest()
     this.principal = this.tokenHash.toString('hex').slice(0, 12)
     this.validateJournal()
-    // The ledger is the authority: whatever it already committed must be projected, even if a crash lost the external write.
-    this.reprojectLedger()
-    this.frozen = this.inspectJournal()
+    // Check the existing projection BEFORE replaying authoritative rows. A truncated
+    // or forged tail must freeze the operator, not become an ignored middle line
+    // after re-projection has appended a fresh well-formed final record.
+    const initialFailure = this.inspectJournal()
+    if (!initialFailure) this.reprojectLedger()
+    this.frozen = initialFailure ?? this.inspectJournal()
   }
   /** Whether `headers` carry the operator's private token (constant-time over SHA-256 digests, so length and content do not leak). */
   authorized(headers: IncomingMessage['headers']): boolean {
@@ -226,7 +229,10 @@ export class OperatorReview {
     return { triggerId, classified: !result.already, decision: result.decision.id }
   }
   private assertUnfrozen(): void {
-    if (this.frozen) throw new Error(`Operator review journal has an interrupted record; reconciliation is frozen until a human reconciles it: ${this.frozen}`)
+    // A separate local process can corrupt or replace the journal AFTER startup.
+    // Verify again before each operator mutation, not only in the constructor.
+    const problem = this.frozen ?? this.inspectJournal()
+    if (problem) throw new Error(`Operator review journal is inconsistent; reconciliation is frozen until a human reconciles it: ${problem}`)
   }
   /** Creates the journal owner-only when absent, or validates the file that already exists, through one `O_NOFOLLOW` descriptor that is closed explicitly. */
   private validateJournal(): void {
@@ -276,12 +282,19 @@ export class OperatorReview {
     try { fd = openSync(path, flags | constants.O_NOFOLLOW) }
     catch { throw new Error(`Operator review journal must be opened without following symlinks: ${path}`) }
     // Identity first: a foreign inode is refused before any descriptor operation can change it.
-    this.assertJournalOwnership(fstatSync(fd), path)
-    // A file this descriptor just created is made owner-only immediately; a pre-existing journal of ours is tightened the way the
-    // installed constructor always did, so an older valid journal keeps working without a migration.
-    if (!existed || (Number(fstatSync(fd).mode) & 0o077) !== 0) fchmodSync(fd, 0o600)
-    if ((Number(fstatSync(fd).mode) & 0o077) !== 0) throw new Error('Operator review journal must be an owner-only file (0600)')
-    return fd
+    // A failed fstat/ownership/fchmod must ALSO close the descriptor; otherwise a
+    // repeated hostile journal path can exhaust the operator process's FD budget.
+    try {
+      this.assertJournalOwnership(fstatSync(fd), path)
+      // A file this descriptor just created is made owner-only immediately; a pre-existing journal of ours is tightened the way the
+      // installed constructor always did, so an older valid journal keeps working without a migration.
+      if (!existed || (Number(fstatSync(fd).mode) & 0o077) !== 0) fchmodSync(fd, 0o600)
+      if ((Number(fstatSync(fd).mode) & 0o077) !== 0) throw new Error('Operator review journal must be an owner-only file (0600)')
+      return fd
+    } catch (error) {
+      try { closeSync(fd) } catch { /* Preserve the original failed validation. */ }
+      throw error
+    }
   }
   /** Reads the journal through its own `O_NOFOLLOW` descriptor, so a swapped root or a symlink can never be read through. */
   private readJournal(): string[] {
@@ -327,25 +340,28 @@ export class OperatorReview {
     let lines: string[]
     try { lines = this.readJournal() } catch { return undefined }
     if (!lines.length) return undefined
-    const last = lines[lines.length - 1]!
-    try {
-      const record = JSON.parse(last) as OperatorAuditRecord
-      if (record.kind !== 'receipt' && record.kind !== 'trigger') return 'unrecognized journal record'
-      if (typeof record.at !== 'string' || typeof record.id !== 'string' || typeof record.principal !== 'string') return 'incomplete journal record'
-    } catch { return 'interrupted journal record' }
-    // Corroboration: every well-formed projection must match a durable fact. A line the ledger never carried, or a receipt the
-    // durable state still shows as pending, means the projection is not trustworthy and reconciliation must stop.
+    // Corroboration: ALL lines, not just the last, must be syntactically sound
+    // and tied to the durable state. Old pre-ledger terminal records remain
+    // readable for an additive migration, but malformed/duplicate lines freeze.
     const ledger = new Set(this.ledgerEntries(Number.MAX_SAFE_INTEGER).map(entry => journalLineOf(entry)))
+    const seen = new Set<string>()
     for (const line of lines) {
-      if (ledger.has(line)) continue
       let record: OperatorAuditRecord
-      try { record = JSON.parse(line) as OperatorAuditRecord } catch { continue }
+      try { record = JSON.parse(line) as OperatorAuditRecord }
+      catch { return 'interrupted journal record' }
+      if (record.kind !== 'receipt' && record.kind !== 'trigger') return 'unrecognized journal record'
+      if (typeof record.at !== 'string' || typeof record.id !== 'string' || typeof record.principal !== 'string')
+        return 'incomplete journal record'
+      if (seen.has(line)) return 'duplicate journal record'
+      seen.add(line)
+      if (ledger.has(line)) continue
+      // Compatibility with pre-SQLite-audit journal entries: legacy terminal
+      // receipt/trigger records may not yet have an authoritative ledger row.
       if (record.kind === 'receipt') {
         const receipt = this.host.store.receipts.get(record.id)
         if (!receipt || receipt.status === 'pending') return 'journal record the durable receipt state cannot corroborate'
         continue
       }
-      // A Trigger classification is durable in its Decision; a projection the ledger lost is still corroborated by that Decision.
       if (this.host.store.triggers.get(record.id)) continue
       return 'journal record the durable Trigger state cannot corroborate'
     }

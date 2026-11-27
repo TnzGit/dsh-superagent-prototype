@@ -152,3 +152,57 @@ test('a projection the ledger and the durable state cannot corroborate freezes r
   assert.equal(receipt.status, 'pending') // frozen: no mutation, no false "accepted"
   // The diagnostic never echoes the foreign line's content (only the corroboration reason).
 })
+
+
+test('rejecting a hardlinked journal closes the attempted descriptor on every failure', () => {
+  const dir = fixture()
+  const foreign = join(dir, 'hardlink-target')
+  const journal = join(dir, 'journal.jsonl')
+  writeFileSync(foreign, 'original\n', { mode: 0o600 })
+  linkSync(foreign, journal)
+  const before = openDescriptors()
+  for (let i = 0; i < 24; i++) assert.throws(() => review(fakeStore(), journal), /exactly one hard link/)
+  const after = openDescriptors()
+  if (before !== undefined && after !== undefined)
+    assert.ok(after <= before + 1, `failed owner checks leaked descriptors: ${before} -> ${after}`)
+  assert.equal(readFileSync(foreign, 'utf8'), 'original\n')
+})
+
+test('a truncated pre-existing tail freezes BEFORE SQLite replay can append and conceal it', () => {
+  const dir = fixture()
+  const journal = join(dir, 'journal.jsonl')
+  const store = fakeStore(held('durable'))
+  store.operatorAudit.append({ at: '2026-11-26T00:00:00.000Z', kind: 'receipt',
+    id: 'durable', principal: 'aaaaaaaaaaaa', outcome: 'confirmed_sent' })
+  const truncated = '{"at":"2026-11-26T00:00:00.000Z","kind":'
+  writeFileSync(journal, truncated + '\n', { mode: 0o600 })
+  const service = review(store, journal)
+  assert.throws(() => service.reconcile('durable', 'no_resend'), /interrupted journal record/)
+  assert.equal(readFileSync(journal, 'utf8'), truncated + '\n', 'no reproject over a corrupt tail')
+})
+
+test('a malformed middle record or duplicate projection freezes even when the last line is valid', () => {
+  const dir = fixture()
+  const journal = join(dir, 'journal.jsonl')
+  const store = fakeStore()
+  const record = { at: '2026-11-26T00:00:00.000Z', kind: 'trigger',
+    id: 'legacy', principal: 'aaaaaaaaaaaa' }
+  const good = journalLineOf(record)
+  writeFileSync(journal, 'BROKEN RECORD\n' + good + '\n', { mode: 0o600 })
+  const malformed = review(store, journal)
+  assert.throws(() => malformed.classifyTrigger('legacy'), /interrupted journal record/)
+  writeFileSync(journal, good + '\n' + good + '\n', { mode: 0o600 })
+  const duplicate = review(store, journal)
+  assert.throws(() => duplicate.classifyTrigger('legacy'), /duplicate journal record/)
+})
+
+test('a journal corrupted AFTER a clean startup freezes the next operator mutation', () => {
+  const dir = fixture()
+  const journal = join(dir, 'journal.jsonl')
+  const store = fakeStore(held('pending'))
+  const service = review(store, journal)
+  writeFileSync(journal, 'truncated{\n', { mode: 0o600 })
+  assert.throws(() => service.reconcile('pending', 'no_resend'), /interrupted journal record/)
+  assert.equal(store.receipts.get('pending').status, 'pending')
+  assert.equal(store.operatorAudit.count(), 0)
+})
